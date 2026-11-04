@@ -1,0 +1,9 @@
+module_video = "Video"
+
+mt_video_overview = "videos"
+md_video_overview = "Overview of video"
+video_error = "Video connector error: %s"
+video_started = "Video connector started."
+video_stopped = "Video connector stopped."
+video_status = "Video connector: %s"
+video_composition_pending = "Video composition is not implemented yet; capture was not started."
