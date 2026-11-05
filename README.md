@@ -36,6 +36,10 @@ broadcasting.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
+- `$video.asciiart [duration]` applies a timed full-frame ASCII filter to the
+  virtual-webcam composite (default 5 seconds, maximum 5 minutes). Configure
+  the desktop source if the desktop itself should be transformed. The command
+  queues the effect for Dog. Screensharing and rectangle selection are TODO.
 - `$starwars <text>` (also `$video.starwars`) queues a timed, upward-scrolling text effect in the
   active composite or desktop-overlay mode. A new invocation replaces the
   previous text. Nested GDO commands can supply the text, for example
@@ -47,6 +51,14 @@ broadcasting.
   as public when a screen or virtual webcam is being shared.
   A short AI-to-human demo inspired by The Mentor's Hacker Manifesto is in
   `gdo/video/demo/mentor.txt`.
+- Effect layers are identified by key. A new key is placed above existing
+  effects by default; updating a key keeps its position, and an explicit
+  integer z-index controls order (equal values retain insertion order). In the
+  virtual-webcam worker, plugins can call `put_effect(key, effect, z=None)`
+  and `remove_effect(key)`; effects draw on the frame and return false when
+  finished. Starwars uses the key `starwars`. Screensharing currently uses the
+  same ordering for its text effects, while the image overlay remains a
+  separate window and cannot yet be reordered with them.
 - `$video.status` shows the compositor and layer state; `$video.stop` stops it.
 
 ## GDTs
@@ -75,7 +87,9 @@ requirements and availability before implementing multi-platform publishing.
 - `off`: no capture or video output.
 - `virtualwebcam`: optional layers → compositor → preview and/or virtual webcam.
 - `screensharing`: show the overlay image and render effects over the full X11
-  desktop in a transparent, click-through window for desktop sharing.
+  desktop in a transparent, click-through window for desktop sharing. The
+  composite background image (`video_bg_image_url`) is not used in this mode;
+  the separately configured `video_overlay_image_url` is an overlay.
 
 Desktop overlays currently require X11, a compositing window manager, and
 system Python with GTK 3, PyGObject and Cairo. `video_overlay_image_url`

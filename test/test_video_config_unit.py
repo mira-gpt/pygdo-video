@@ -25,3 +25,15 @@ class VideoConfigTest(unittest.TestCase):
             module.start_compositor()
         overlay.assert_called_once_with(screensharing=True)
         overlay.return_value.start.assert_called_once_with('/image.png')
+
+    def test_screensharing_does_not_use_composite_background(self):
+        module = module_video()
+        with patch.object(module, 'get_config_value', return_value='screensharing'), \
+             patch.object(module, 'get_config_val', return_value='/overlay.png') as config, \
+             patch('gdo.video.module_video.DesktopOverlay') as overlay:
+            module.start_compositor()
+        config.assert_called_once_with('video_overlay_image_url')
+        overlay.return_value.start.assert_called_once_with('/overlay.png')
+        with self.assertRaises(ValueError):
+            from gdo.video.DesktopOverlay import DesktopOverlay
+            DesktopOverlay().set_layer('bg_image', True)

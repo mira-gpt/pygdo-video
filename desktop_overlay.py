@@ -10,6 +10,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from LayerStack import LayerStack
 
 
 def main(image_path, screensharing=False):
@@ -42,7 +43,7 @@ def main(image_path, screensharing=False):
     effect_height = screen.get_height() if screensharing else 360
     effect.set_default_size(effect_width, effect_height)
     effect.stick()
-    state = {'lines': [], 'start': 0.0}
+    layers = LayerStack()
 
     def draw_effect(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)
@@ -53,21 +54,25 @@ def main(image_path, screensharing=False):
         context.scale(effect_width / 640, effect_height / 360)
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-        scroll = (time.monotonic() - state['start']) * 36
-        for i, line in enumerate(state['lines']):
-            y = 360 - scroll + i * 28
-            if not -40 <= y < 360:
-                continue
-            context.set_font_size(max(10, 12 + 15 * max(0, y) / 360))
-            extents = context.text_extents(line)
-            context.move_to((640 - extents.width) / 2, y)
-            context.show_text(line)
+        for key, layer in layers.ordered():
+            scroll = (time.monotonic() - layer['start']) * 36
+            for i, line in enumerate(layer['lines']):
+                y = 360 - scroll + i * 28
+                if not -40 <= y < 360:
+                    continue
+                context.set_font_size(max(10, 12 + 15 * max(0, y) / 360))
+                extents = context.text_extents(line)
+                context.move_to((640 - extents.width) / 2, y)
+                context.show_text(line)
         return False
 
     def tick_effect():
         if not effect.get_visible():
             return False
-        if (time.monotonic() - state['start']) * 36 > 360 + (len(state['lines']) + 2) * 28:
+        for key, layer in layers.ordered():
+            if (time.monotonic() - layer['start']) * 36 > 360 + (len(layer['lines']) + 2) * 28:
+                layers.remove(key)
+        if not layers.ordered():
             effect.hide()
             return False
         effect.queue_draw()
@@ -97,8 +102,8 @@ def main(image_path, screensharing=False):
                 request = json.loads(line)
                 text = request.get('text', '')
                 if request.get('effect') == 'starwars' and isinstance(text, str) and text.strip() and len(text) <= 4096:
-                    state['lines'] = [part for item in text.splitlines() for part in (textwrap.wrap(item, 36) or [''])]
-                    state['start'] = time.monotonic()
+                    lines = [part for item in text.splitlines() for part in (textwrap.wrap(item, 36) or [''])]
+                    layers.put('starwars', {'lines': lines, 'start': time.monotonic()})
                     already_visible = effect.get_visible()
                     effect.show_all()
                     effect.move(0 if screensharing else max(0, (screen.get_width() - 640) // 2),

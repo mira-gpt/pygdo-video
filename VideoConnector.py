@@ -9,6 +9,7 @@ from urllib.parse import unquote, urlsplit
 
 from PIL import Image, ImageOps
 from gdo.video.StarWars import StarWars
+from gdo.video.LayerStack import LayerStack
 
 
 class VideoConnector:
@@ -22,7 +23,7 @@ class VideoConnector:
         self.outputs = []
         self.frame = None
         self.error = None
-        self.effect = None
+        self.effects = LayerStack()
         self.enabled = {'desktop': False, 'bg_image': False}
 
     @staticmethod
@@ -86,7 +87,8 @@ class VideoConnector:
             self.desktop, self.background = desktop, background
             self.image_configured = bool(image)
             self.enabled = {'desktop': bool(desktop), 'bg_image': bool(image)}
-            self.frame, self.error, self.effect = None, None, None
+            self.frame, self.error = None, None
+            self.effects.clear()
             self.stop_event.clear()
             self.outputs = []
             try:
@@ -155,7 +157,18 @@ class VideoConnector:
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Video connector is not running')
-            self.effect = effect
+            self.effects.put('starwars', effect)
+
+    def put_effect(self, key, effect, z=None):
+        """Install a frame-drawing effect; called by plugins in the Dog process."""
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Video connector is not running')
+            self.effects.put(key, effect, z)
+
+    def remove_effect(self, key):
+        with self.lock:
+            return self.effects.remove(key)
 
     def _run(self):
         try:
@@ -169,10 +182,11 @@ class VideoConnector:
                     if frame is None:
                         frame = (self.background if self.enabled['bg_image'] else
                                  Image.new('RGB', (self.WIDTH, self.HEIGHT), 'black')).tobytes()
-                    if self.effect:
+                    if self.effects.ordered():
                         canvas = Image.frombytes('RGB', (self.WIDTH, self.HEIGHT), frame)
-                        if not self.effect.draw(canvas):
-                            self.effect = None
+                        for key, effect in self.effects.ordered():
+                            if not effect.draw(canvas):
+                                self.effects.remove(key)
                         frame = canvas.tobytes()
                 for output in self.outputs:
                     output.stdin.write(frame)
