@@ -169,6 +169,8 @@ class VideoConnector:
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Video connector is not running')
+            if key == 'image':
+                effect.output_size(self.WIDTH, self.HEIGHT)
             self.effects.put(key, effect, z)
 
     def remove_effect(self, key):

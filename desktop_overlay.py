@@ -1,6 +1,7 @@
 """GTK 3 X11 helper: an image in a transparent click-through desktop window."""
 
 import sys
+import base64
 import json
 import random
 import textwrap
@@ -56,6 +57,13 @@ def main(image_path, screensharing=False):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'image':
+                context.save()
+                context.scale(640 / effect_width, 360 / effect_height)
+                Gdk.cairo_set_source_pixbuf(context, layer['pixbuf'], layer['x'], layer['y'])
+                context.paint()
+                context.restore()
+                continue
             if key == 'vintage':
                 if random.random() < .15:
                     context.set_source_rgba(0, 0, 0, random.uniform(.02, .12))
@@ -84,6 +92,8 @@ def main(image_path, screensharing=False):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
+            if key == 'image':
+                continue
             if key == 'vintage':
                 now = time.monotonic()
                 layer['scratches'] = [item for item in layer['scratches'] if item[4] > now]
@@ -132,6 +142,11 @@ def main(image_path, screensharing=False):
                         layers.put('vintage', {'scratches': []})
                     else:
                         layers.remove('vintage')
+                elif request.get('effect') == 'image':
+                    if request.get('remove') is True:
+                        layers.remove('image')
+                    else:
+                        install_image(request)
                 else:
                     return True
                 if layers.ordered():
@@ -144,9 +159,32 @@ def main(image_path, screensharing=False):
                         GLib.timeout_add(33, tick_effect)
                 else:
                     effect.hide()
-            except (ValueError, AttributeError, TypeError):
+            except (ValueError, AttributeError, TypeError, KeyError, GLib.Error):
                 pass
         return True
+
+    def install_image(request):
+        def resolve(value, reference):
+            if value.endswith('%'):
+                return round(float(value[:-1]) * reference / 100)
+            if value.lower().endswith('px'):
+                return round(float(value[:-2]))
+            raise ValueError('Invalid CSS length')
+        w = resolve(request['width'], effect_width)
+        h = resolve(request['height'], effect_height)
+        x = resolve(request['x'], effect_width)
+        y = resolve(request['y'], effect_height)
+        if not 0 < w <= effect_width * 4 or not 0 < h <= effect_height * 4:
+            raise ValueError('Invalid image dimensions')
+        loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+        loader.write(base64.b64decode(request['png'], validate=True))
+        loader.close()
+        pixbuf = loader.get_pixbuf()
+        scale = min(w / pixbuf.get_width(), h / pixbuf.get_height())
+        pixbuf = pixbuf.scale_simple(max(1, round(pixbuf.get_width() * scale)),
+                                     max(1, round(pixbuf.get_height() * scale)),
+                                     GdkPixbuf.InterpType.BILINEAR)
+        layers.put('image', {'pixbuf': pixbuf, 'x': x, 'y': y})
 
     window.connect('draw', draw)
     effect.connect('draw', draw_effect)

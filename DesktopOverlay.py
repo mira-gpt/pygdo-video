@@ -1,6 +1,8 @@
 """Controller for one X11 desktop image overlay; no capture or video output."""
 
 import os
+import base64
+import io
 import json
 import subprocess
 import threading
@@ -75,6 +77,37 @@ class DesktopOverlay:
                 raise RuntimeError('Desktop overlay is not running')
             try:
                 self.process.stdin.write((json.dumps({'effect': 'vintage', 'enabled': bool(enabled)}) + '\n').encode())
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError) as exc:
+                raise RuntimeError('Desktop overlay stopped') from exc
+
+    def put_effect(self, key, layer, z=None):
+        from gdo.video.ImageLayer import ImageLayer
+        if key != 'image' or not isinstance(layer, ImageLayer) or z is not None:
+            raise ValueError('Desktop overlay currently accepts only the image layer')
+        buffer = io.BytesIO()
+        layer.image.save(buffer, format='PNG')
+        if buffer.tell() > ImageLayer.MAX_BYTES:
+            raise ValueError('Decoded image is too large for desktop overlay')
+        payload = {'effect': 'image', 'png': base64.b64encode(buffer.getvalue()).decode('ascii'),
+                   'width': layer.width, 'height': layer.height, 'x': layer.x, 'y': layer.y}
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            try:
+                self.process.stdin.write((json.dumps(payload) + '\n').encode())
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError) as exc:
+                raise RuntimeError('Desktop overlay stopped') from exc
+
+    def remove_effect(self, key):
+        if key != 'image':
+            raise ValueError('Desktop overlay currently supports removing only the image layer')
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            try:
+                self.process.stdin.write(b'{"effect":"image","remove":true}\n')
                 self.process.stdin.flush()
             except (BrokenPipeError, OSError) as exc:
                 raise RuntimeError('Desktop overlay stopped') from exc

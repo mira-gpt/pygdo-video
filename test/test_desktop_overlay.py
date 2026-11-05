@@ -5,6 +5,8 @@ import time
 import unittest
 
 from gdo.video.DesktopOverlay import DesktopOverlay
+from gdo.video.ImageLayer import ImageLayer
+from PIL import Image
 
 
 @unittest.skipUnless(os.environ.get('PYGDO_VIDEO_GUI_TEST') == '1', 'requires an X11 desktop')
@@ -88,6 +90,33 @@ class DesktopOverlayTest(unittest.TestCase):
             self.assertIn(f'Height: {height}', result.stdout)
             self.assertIn('Absolute upper-left X:  0', result.stdout)
             self.assertIn('Absolute upper-left Y:  0', result.stdout)
+        finally:
+            overlay.stop()
+
+    def test_screensharing_image_layer_shows_and_removes(self):
+        overlay = DesktopOverlay(screensharing=True)
+        image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
+        overlay.start(os.path.abspath(image))
+        try:
+            self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            overlay.put_effect('image', ImageLayer(Image.new('RGBA', (20, 20), 'red')))
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                                        capture_output=True, text=True)
+                if result.returncode == 0 and 'IsViewable' in result.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsViewable', result.stdout)
+            overlay.remove_effect('image')
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                                        capture_output=True, text=True)
+                if 'IsUnMapped' in result.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsUnMapped', result.stdout)
         finally:
             overlay.stop()
 

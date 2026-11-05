@@ -39,6 +39,12 @@ broadcasting.
 - `$video.vintage <1|0>` enables or disables the keyed vintage layer: randomly
   varying vertical scratches and gentle flicker in both video modes. It is
   queued for Dog; flicker can affect viewers sensitive to flashing.
+- `$video.image <url>` displays an image, with `--width`, `--height`, `--x`
+  and `--y` accepting CSS `px` or `%`. Defaults are `25%` × `25%`, at `2%`,
+  `2%` from the top left. The image preserves its proportions within that box;
+  file, HTTP and HTTPS URLs are supported (maximum 4 MiB). A new image replaces
+  the `image` layer; `$video.image off` removes it. Loading is queued for Dog;
+  only show images and URLs appropriate for the audience.
 - `$video.magnify <1|0> [--zoom=2] [--radius=90]` toggles a mouse-following
   lens in virtual-webcam mode. It requires an enabled X11 desktop source;
   the radius is in composite pixels. Screensharing magnification is TODO.
