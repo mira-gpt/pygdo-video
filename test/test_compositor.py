@@ -18,6 +18,8 @@ class CompositorTest(unittest.TestCase):
             with patch.dict(os.environ, {'SDL_VIDEODRIVER': 'dummy', 'SDL_AUDIODRIVER': 'dummy'}):
                 connector.start(None, image, True, False, None)
                 try:
+                    self.assertEqual(connector.background.getpixel((0, 0)), (0, 0, 255))
+                    self.assertEqual(connector.background.getpixel((639, 359)), (0, 0, 255))
                     time.sleep(1)
                     self.assertIn('running', connector.status())
                     self.assertIsNone(connector.outputs[0].poll())

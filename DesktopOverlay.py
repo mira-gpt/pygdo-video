@@ -69,6 +69,16 @@ class DesktopOverlay:
             except (BrokenPipeError, OSError) as exc:
                 raise RuntimeError('Desktop overlay stopped') from exc
 
+    def vintage(self, enabled):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            try:
+                self.process.stdin.write((json.dumps({'effect': 'vintage', 'enabled': bool(enabled)}) + '\n').encode())
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError) as exc:
+                raise RuntimeError('Desktop overlay stopped') from exc
+
     def status(self):
         if self.is_running():
             return f'running; desktop overlay={"on" if self.enabled else "off"}'

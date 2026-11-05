@@ -28,6 +28,24 @@ class DesktopOverlayTest(unittest.TestCase):
         overlay.start(os.path.abspath(image))
         try:
             self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            overlay.vintage(True)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                vintage_window = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                                                capture_output=True, text=True)
+                if vintage_window.returncode == 0 and 'IsViewable' in vintage_window.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsViewable', vintage_window.stdout)
+            overlay.vintage(False)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                vintage_window = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                                                capture_output=True, text=True)
+                if 'IsUnMapped' in vintage_window.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsUnMapped', vintage_window.stdout)
             overlay.set_layer('overlay', False)
             self.assertTrue(self.wait_for('IsUnMapped'))
             overlay.set_layer('overlay', True)

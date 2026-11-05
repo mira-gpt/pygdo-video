@@ -2,6 +2,7 @@
 
 import sys
 import json
+import random
 import textwrap
 import time
 
@@ -55,6 +56,19 @@ def main(image_path, screensharing=False):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'vintage':
+                if random.random() < .15:
+                    context.set_source_rgba(0, 0, 0, random.uniform(.02, .12))
+                    context.rectangle(0, 0, 640, 360)
+                    context.fill()
+                for x, y1, y2, alpha, expiry in layer['scratches']:
+                    context.set_source_rgba(1, 1, .85, alpha)
+                    context.set_line_width(random.choice((.4, .6, 1)))
+                    context.move_to(x, y1)
+                    context.line_to(x + random.uniform(-1, 1), y2)
+                    context.stroke()
+                continue
+            context.set_source_rgb(1, .86, .18)
             scroll = (time.monotonic() - layer['start']) * 36
             for i, line in enumerate(layer['lines']):
                 y = 360 - scroll + i * 28
@@ -70,6 +84,15 @@ def main(image_path, screensharing=False):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
+            if key == 'vintage':
+                now = time.monotonic()
+                layer['scratches'] = [item for item in layer['scratches'] if item[4] > now]
+                if random.random() < .3:
+                    y = random.uniform(0, 360)
+                    layer['scratches'].append((random.uniform(0, 640), y, min(360, y + random.uniform(30, 250)),
+                                               random.uniform(.15, .65), now + random.uniform(.08, .7)))
+                layer['scratches'] = layer['scratches'][-12:]
+                continue
             if (time.monotonic() - layer['start']) * 36 > 360 + (len(layer['lines']) + 2) * 28:
                 layers.remove(key)
         if not layers.ordered():
@@ -104,6 +127,14 @@ def main(image_path, screensharing=False):
                 if request.get('effect') == 'starwars' and isinstance(text, str) and text.strip() and len(text) <= 4096:
                     lines = [part for item in text.splitlines() for part in (textwrap.wrap(item, 36) or [''])]
                     layers.put('starwars', {'lines': lines, 'start': time.monotonic()})
+                elif request.get('effect') == 'vintage' and isinstance(request.get('enabled'), bool):
+                    if request['enabled']:
+                        layers.put('vintage', {'scratches': []})
+                    else:
+                        layers.remove('vintage')
+                else:
+                    return True
+                if layers.ordered():
                     already_visible = effect.get_visible()
                     effect.show_all()
                     effect.move(0 if screensharing else max(0, (screen.get_width() - 640) // 2),
@@ -111,6 +142,8 @@ def main(image_path, screensharing=False):
                     effect.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
                     if not already_visible:
                         GLib.timeout_add(33, tick_effect)
+                else:
+                    effect.hide()
             except (ValueError, AttributeError, TypeError):
                 pass
         return True

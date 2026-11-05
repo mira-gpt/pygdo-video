@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 from PIL import Image, ImageOps
 from gdo.video.StarWars import StarWars
 from gdo.video.LayerStack import LayerStack
+from gdo.video.Vintage import Vintage
 
 
 class VideoConnector:
@@ -82,7 +83,8 @@ class VideoConnector:
             background = Image.new('RGB', (self.WIDTH, self.HEIGHT), 'black')
             if image:
                 with Image.open(self.local_file(image)) as original:
-                    background = ImageOps.pad(original.convert('RGB'), (self.WIDTH, self.HEIGHT))
+                    background = ImageOps.fit(original.convert('RGB'), (self.WIDTH, self.HEIGHT),
+                                              method=Image.Resampling.LANCZOS)
             commands = self.output_commands(preview, live, device, preview_w, preview_h)
             self.desktop, self.background = desktop, background
             self.image_configured = bool(image)
@@ -169,6 +171,12 @@ class VideoConnector:
     def remove_effect(self, key):
         with self.lock:
             return self.effects.remove(key)
+
+    def vintage(self, enabled):
+        if enabled:
+            self.put_effect('vintage', Vintage())
+        else:
+            self.remove_effect('vintage')
 
     def _run(self):
         try:

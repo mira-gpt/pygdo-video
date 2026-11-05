@@ -36,6 +36,9 @@ broadcasting.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
+- `$video.vintage <1|0>` enables or disables the keyed vintage layer: randomly
+  varying vertical scratches and gentle flicker in both video modes. It is
+  queued for Dog; flicker can affect viewers sensitive to flashing.
 - `$video.asciiart [duration]` applies a timed full-frame ASCII filter to the
   virtual-webcam composite (default 5 seconds, maximum 5 minutes). Configure
   the desktop source if the desktop itself should be transformed. The command
@@ -118,8 +121,10 @@ window size in pixels (default 320 × 180), independently of output resolution.
 Both outputs default to off. Enable at least one before
 `video.start` or before starting the Video connector, and select `virtualwebcam`;
 mode and output settings are read
-at start. The bundled ITMB logo is the default background. A configured desktop covers
-the background until its layer is disabled. Previewing the captured desktop can
+at start. The bundled ITMB logo is the default background. Background images fill
+the composite while preserving their proportions; excess edges may be cropped. A
+configured desktop covers the background until its layer is disabled. Previewing
+the captured desktop can
 show the preview window recursively. Source capture and preview need X11 access
 from the Dog process. The connector starts the worker on Dog startup only when
 the mode and an output have explicitly been enabled. Changes take effect on the
