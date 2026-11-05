@@ -1,4 +1,6 @@
 module_video = "Video"
+video_duck_overlay = "Duck overlay"
+tt_video_duck_overlay = "Show Mira's thinking process as a duck assistant speech bubble."
 
 mt_video_overview = "videos"
 md_video_overview = "Overview of video"

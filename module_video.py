@@ -3,6 +3,7 @@ from __future__ import annotations
 from gdo.base.GDO_Module import GDO_Module
 from gdo.base.GDO import GDO
 from gdo.base.GDT import GDT
+from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_String import GDT_String
 from gdo.ui.GDT_Link import GDT_Link
 from gdo.video.VideoConnector import VideoConnector
@@ -27,6 +28,7 @@ class module_video(GDO_Module):
             GDT_String('video_desktop_url').maxlen(2048),
             GDT_String('video_file_url').maxlen(2048),
             GDT_String('video_webcam_url').maxlen(2048),
+            GDT_Bool('video_duck_overlay').not_null().initial('0').tooltip('tt_video_duck_overlay'),
             GDT_String('video_output_device').not_null().initial('/dev/video2').maxlen(255),
         ]
 
