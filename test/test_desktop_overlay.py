@@ -11,8 +11,11 @@ from PIL import Image
 
 @unittest.skipUnless(os.environ.get('PYGDO_VIDEO_GUI_TEST') == '1', 'requires an X11 desktop')
 class DesktopOverlayTest(unittest.TestCase):
+    def setUp(self):
+        self.suffix = f' [test-{os.getpid()}]'
+
     def window_state(self):
-        result = subprocess.run(['xwininfo', '-name', 'Mira Desktop Overlay'],
+        result = subprocess.run(['xwininfo', '-name', 'Mira Desktop Overlay' + self.suffix],
                                 capture_output=True, text=True)
         return result.stdout if result.returncode == 0 else ''
 
@@ -25,7 +28,7 @@ class DesktopOverlayTest(unittest.TestCase):
         return False
 
     def test_image_overlay_shows_hides_and_stops(self):
-        overlay = DesktopOverlay()
+        overlay = DesktopOverlay(window_suffix=self.suffix)
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
@@ -33,7 +36,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.vintage(True)
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                vintage_window = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                vintage_window = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix],
                                                 capture_output=True, text=True)
                 if vintage_window.returncode == 0 and 'IsViewable' in vintage_window.stdout:
                     break
@@ -42,7 +45,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.vintage(False)
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                vintage_window = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                vintage_window = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix],
                                                 capture_output=True, text=True)
                 if 'IsUnMapped' in vintage_window.stdout:
                     break
@@ -55,7 +58,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.starwars('Hello moderator')
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix],
                                         capture_output=True, text=True)
                 if result.returncode == 0 and 'IsViewable' in result.stdout:
                     break
@@ -70,7 +73,7 @@ class DesktopOverlayTest(unittest.TestCase):
         root = subprocess.run(['xwininfo', '-root'], capture_output=True, text=True, check=True).stdout
         width = int(re.search(r'Width:\s+(\d+)', root).group(1))
         height = int(re.search(r'Height:\s+(\d+)', root).group(1))
-        overlay = DesktopOverlay(screensharing=True)
+        overlay = DesktopOverlay(screensharing=True, window_suffix=self.suffix)
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
@@ -79,7 +82,7 @@ class DesktopOverlayTest(unittest.TestCase):
             deadline = time.monotonic() + 5
             result = None
             while time.monotonic() < deadline:
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix],
                                         capture_output=True, text=True)
                 if result.returncode == 0 and 'IsViewable' in result.stdout:
                     break
@@ -94,7 +97,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.stop()
 
     def test_screensharing_image_layer_shows_and_removes(self):
-        overlay = DesktopOverlay(screensharing=True)
+        overlay = DesktopOverlay(screensharing=True, window_suffix=self.suffix)
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
@@ -102,7 +105,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.put_effect('media', ImageLayer(Image.new('RGBA', (20, 20), 'red')))
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix],
                                         capture_output=True, text=True)
                 if result.returncode == 0 and 'IsViewable' in result.stdout:
                     break
@@ -111,7 +114,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.remove_effect('media')
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix],
                                         capture_output=True, text=True)
                 if 'IsUnMapped' in result.stdout:
                     break
@@ -121,7 +124,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.stop()
 
     def test_screensharing_drawing_appears_and_clears(self):
-        overlay = DesktopOverlay(screensharing=True)
+        overlay = DesktopOverlay(screensharing=True, window_suffix=self.suffix)
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
@@ -129,7 +132,7 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.draw_line(10, 10, 90, 90, '#ff0000', 1)
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'], capture_output=True, text=True)
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix], capture_output=True, text=True)
                 if 'IsViewable' in result.stdout:
                     break
                 time.sleep(.05)
@@ -139,7 +142,33 @@ class DesktopOverlayTest(unittest.TestCase):
             overlay.clear_drawing()
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'], capture_output=True, text=True)
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix], capture_output=True, text=True)
+                if 'IsUnMapped' in result.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsUnMapped', result.stdout)
+        finally:
+            overlay.stop()
+
+    def test_close_all_hides_effects_and_logo(self):
+        overlay = DesktopOverlay(screensharing=True, window_suffix=self.suffix)
+        image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
+        overlay.start(os.path.abspath(image))
+        try:
+            self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            overlay.draw_line(10, 10, 90, 90, '#ff0000', 1)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix], capture_output=True, text=True)
+                if 'IsViewable' in result.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsViewable', result.stdout)
+            overlay.close_effects('all')
+            self.assertTrue(self.wait_for('IsUnMapped'))
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + self.suffix], capture_output=True, text=True)
                 if 'IsUnMapped' in result.stdout:
                     break
                 time.sleep(.05)

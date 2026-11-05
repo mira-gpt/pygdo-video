@@ -17,13 +17,13 @@ from LayerStack import LayerStack
 from DrawingProtocol import validate_line
 
 
-def main(image_path, screensharing=False):
+def main(image_path, screensharing=False, window_suffix=''):
     screen = Gdk.Screen.get_default()
     if not screen or not screen.is_composited() or not screen.get_rgba_visual():
         raise RuntimeError('An X11 display with a compositor and RGBA visual is required')
     image = GdkPixbuf.Pixbuf.new_from_file_at_scale(image_path, 240, 135, True)
     window = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
-    window.set_title('Mira Desktop Overlay')
+    window.set_title('Mira Desktop Overlay' + window_suffix)
     window.set_visual(screen.get_rgba_visual())
     window.set_app_paintable(True)
     window.set_decorated(False)
@@ -35,7 +35,7 @@ def main(image_path, screensharing=False):
     window.stick()
 
     effect = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
-    effect.set_title('Mira Starwars Effect')
+    effect.set_title('Mira Starwars Effect' + window_suffix)
     effect.set_visual(screen.get_rgba_visual())
     effect.set_app_paintable(True)
     effect.set_decorated(False)
@@ -162,6 +162,14 @@ def main(image_path, screensharing=False):
                         if len(drawing['lines']) < 2000:
                             drawing['lines'].append(line)
                             layers.put('drawing', drawing)
+                elif request.get('effect') == 'close':
+                    key = request.get('key')
+                    if key == 'all':
+                        layers.clear()
+                    elif isinstance(key, str):
+                        layers.remove('image' if key == 'media' else key)
+                    else:
+                        return True
                 else:
                     return True
                 if layers.ordered():
@@ -231,4 +239,5 @@ def main(image_path, screensharing=False):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], len(sys.argv) > 2 and sys.argv[2] == 'screensharing')
+    main(sys.argv[1], len(sys.argv) > 2 and sys.argv[2] == 'screensharing',
+         sys.argv[3] if len(sys.argv) > 3 else '')

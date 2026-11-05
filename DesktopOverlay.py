@@ -14,11 +14,12 @@ from gdo.video.DrawingProtocol import validate_line
 
 
 class DesktopOverlay:
-    def __init__(self, screensharing=False):
+    def __init__(self, screensharing=False, window_suffix=''):
         self.lock = threading.RLock()
         self.process = None
         self.enabled = False
         self.screensharing = screensharing
+        self.window_suffix = window_suffix
         self.media_layer = None
 
     def start(self, image):
@@ -28,7 +29,8 @@ class DesktopOverlay:
                 raise RuntimeError('Desktop overlay is already running')
             script = os.path.join(os.path.dirname(__file__), 'desktop_overlay.py')
             self.process = subprocess.Popen(['/usr/bin/python3', script, image,
-                                             'screensharing' if self.screensharing else 'overlay'], stdin=subprocess.PIPE,
+                                             'screensharing' if self.screensharing else 'overlay',
+                                             self.window_suffix], stdin=subprocess.PIPE,
                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.enabled = True
 
@@ -171,6 +173,22 @@ class DesktopOverlay:
                 self.process.stdin.flush()
             except (BrokenPipeError, OSError) as exc:
                 raise RuntimeError('Desktop overlay stopped') from exc
+        if media and hasattr(media, 'close'):
+            media.close()
+
+    def close_effects(self, key):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            media = None
+            if key in ('all', 'media'):
+                media, self.media_layer = self.media_layer, None
+            if key in ('all', 'overlay'):
+                self.process.stdin.write(b'hide\n')
+                self.process.stdin.flush()
+                self.enabled = False
+            if key != 'overlay':
+                self._send_payload({'effect': 'close', 'key': key})
         if media and hasattr(media, 'close'):
             media.close()
 

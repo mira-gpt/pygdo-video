@@ -38,6 +38,11 @@ broadcasting.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
+- `$video.close <key>` removes an effect such as `media`, `vintage`,
+  `starwars`, `asciiart`, `magnify`, or `drawing`; `$video.close --all`
+  removes all effects and hides the screensharing logo overlay. Neither stops
+  the video worker nor changes its desktop/background input sources. These
+  commands queue their work for Dog.
 - `$video.draw <prompt>` clears the drawing layer and sends the prompt to Mira
   to draw live. Mira adds lines one by one using `$video.stroke x1 y1 x2 y2`;
   coordinates are percentages (0–100), with optional `--color=#RRGGBB` and

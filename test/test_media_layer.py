@@ -45,7 +45,8 @@ class MediaLayerTest(unittest.TestCase):
             path = Path(directory) / 'video.mp4'
             self.make_video(path)
             layer = load_media(path.as_uri())
-            overlay = DesktopOverlay(screensharing=True)
+            suffix = f' [test-media-{os.getpid()}]'
+            overlay = DesktopOverlay(screensharing=True, window_suffix=suffix)
             logo = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png'))
             overlay.start(logo)
             try:
@@ -57,7 +58,7 @@ class MediaLayerTest(unittest.TestCase):
                     time.sleep(.05)
                 self.assertGreaterEqual(layer.generation, 2)
                 self.assertTrue(overlay.is_running())
-                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect' + suffix],
                                         capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0)
                 self.assertIn('IsViewable', result.stdout)

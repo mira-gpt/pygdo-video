@@ -190,6 +190,14 @@ class VideoConnector:
                 previous.close()
             return removed
 
+    def close_effects(self, key):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Video connector is not running')
+            keys = [name for name, _ in self.effects.ordered()] if key == 'all' else [key]
+            for name in keys:
+                self.remove_effect(name)
+
     def vintage(self, enabled):
         if enabled:
             self.put_effect('vintage', Vintage())
