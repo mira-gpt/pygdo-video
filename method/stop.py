@@ -1,3 +1,5 @@
+import asyncio
+
 from gdo.base.Method import Method
 from gdo.video.module_video import module_video
 
@@ -7,5 +9,6 @@ class stop(Method):
         return 'owner'
 
     async def gdo_execute(self):
-        await module_video.instance().connector.stop()
+        if not await asyncio.to_thread(module_video.instance().connector.stop):
+            return self.err('video_error', ('Connector is not running or did not stop',))
         return self.reply('video_stopped')

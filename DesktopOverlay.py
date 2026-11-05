@@ -1,0 +1,61 @@
+"""Controller for one X11 desktop image overlay; no capture or video output."""
+
+import os
+import subprocess
+import threading
+
+from gdo.video.VideoConnector import VideoConnector
+
+
+class DesktopOverlay:
+    def __init__(self):
+        self.lock = threading.RLock()
+        self.process = None
+        self.enabled = False
+
+    def start(self, image):
+        image = VideoConnector.local_file(image)
+        with self.lock:
+            if self.is_running():
+                raise RuntimeError('Desktop overlay is already running')
+            script = os.path.join(os.path.dirname(__file__), 'desktop_overlay.py')
+            self.process = subprocess.Popen(['/usr/bin/python3', script, image], stdin=subprocess.PIPE,
+                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.enabled = True
+
+    def is_running(self):
+        return bool(self.process and self.process.poll() is None)
+
+    def set_layer(self, name, enabled):
+        if name != 'overlay':
+            raise ValueError('Available desktop overlay layer: overlay')
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            try:
+                self.process.stdin.write(b'show\n' if enabled else b'hide\n')
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError) as exc:
+                raise RuntimeError('Desktop overlay stopped') from exc
+            self.enabled = enabled
+
+    def stop(self):
+        with self.lock:
+            if not self.is_running():
+                return False
+            process = self.process
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+            process.stdin.close()
+            return True
+
+    def status(self):
+        if self.is_running():
+            return f'running; desktop overlay={"on" if self.enabled else "off"}'
+        if self.process and self.process.returncode:
+            return f'stopped (desktop overlay exited with code {self.process.returncode})'
+        return 'stopped'
