@@ -39,6 +39,33 @@ broadcasting.
 - `$video.vintage <1|0>` enables or disables the keyed vintage layer: randomly
   varying vertical scratches and gentle flicker in both video modes. It is
   queued for Dog; flicker can affect viewers sensitive to flashing.
+- `$video.magnify <1|0> [--zoom=2] [--radius=90]` toggles a mouse-following
+  lens in virtual-webcam mode. It requires an enabled X11 desktop source;
+  the radius is in composite pixels. Screensharing magnification is TODO.
+  The request is queued and does not confirm that the worker accepted it.
+
+#### Testing the magnifier on X11
+
+Install and enable the Video module and connector in the intended PyGDO
+instance. In its module configuration set `video_mode` to `virtualwebcam`,
+`video_desktop_url` to the X11 display to capture (for example `:0.0`), and
+enable `video_output_preview` and/or `video_live`. Set `video_output_device`
+to the virtual camera when using live output. The Dog process needs access to
+the chosen X11 display and output device. Start the connector after changing
+these settings; the desktop layer starts enabled when its URL is configured.
+
+For the isolated Test Dog, once configured and started:
+
+```sh
+pygdotest '$video.magnify 1 --zoom=2 --radius=90'
+pygdotest '$video.magnify 0'
+```
+
+The desktop source may contain private information and can be visible to
+applications consuming the virtual camera. Previewing it on that same desktop
+can also create visual recursion. The lens requires the desktop layer to be on;
+turning that layer off removes the lens. The X11 implementation maps pointer
+coordinates onto the scaled desktop frame. Screensharing support is TODO.
 - `$video.asciiart [duration]` applies a timed full-frame ASCII filter to the
   virtual-webcam composite (default 5 seconds, maximum 5 minutes). Configure
   the desktop source if the desktop itself should be transformed. The command

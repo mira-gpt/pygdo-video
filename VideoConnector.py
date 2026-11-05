@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 from gdo.video.StarWars import StarWars
 from gdo.video.LayerStack import LayerStack
 from gdo.video.Vintage import Vintage
+from gdo.video.Magnify import Magnify, X11Pointer
 
 
 class VideoConnector:
@@ -153,6 +154,8 @@ class VideoConnector:
             if enabled and name == 'bg_image' and not self.image_configured:
                 raise ValueError('Configure video_bg_image_url first')
             self.enabled[name] = enabled
+            if name == 'desktop' and not enabled:
+                self.effects.remove('magnify')
 
     def starwars(self, text):
         effect = StarWars(text)
@@ -177,6 +180,15 @@ class VideoConnector:
             self.put_effect('vintage', Vintage())
         else:
             self.remove_effect('vintage')
+
+    def magnify(self, enabled, zoom=2.0, radius=90):
+        if not enabled:
+            self.remove_effect('magnify')
+            return
+        with self.lock:
+            if not self.desktop or not self.enabled['desktop']:
+                raise ValueError('Enable an X11 desktop source before magnifying')
+            self.put_effect('magnify', Magnify(X11Pointer(self.desktop), zoom, radius))
 
     def _run(self):
         try:
