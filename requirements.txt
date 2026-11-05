@@ -1,1 +1,2 @@
 Pillow
+# System dependency: FFmpeg executable (e.g. apt install ffmpeg); not a pip package.
