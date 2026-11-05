@@ -120,6 +120,33 @@ class DesktopOverlayTest(unittest.TestCase):
         finally:
             overlay.stop()
 
+    def test_screensharing_drawing_appears_and_clears(self):
+        overlay = DesktopOverlay(screensharing=True)
+        image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
+        overlay.start(os.path.abspath(image))
+        try:
+            self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            overlay.draw_line(10, 10, 90, 90, '#ff0000', 1)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'], capture_output=True, text=True)
+                if 'IsViewable' in result.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsViewable', result.stdout)
+            for i in range(10):
+                overlay.draw_line(i, i, i + 1, i + 1, '#00ff00', 1)
+            overlay.clear_drawing()
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'], capture_output=True, text=True)
+                if 'IsUnMapped' in result.stdout:
+                    break
+                time.sleep(.05)
+            self.assertIn('IsUnMapped', result.stdout)
+        finally:
+            overlay.stop()
+
 
 if __name__ == '__main__':
     unittest.main()

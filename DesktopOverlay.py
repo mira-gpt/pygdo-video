@@ -10,6 +10,7 @@ import time
 
 from gdo.video.VideoConnector import VideoConnector
 from gdo.video.StarWars import StarWars
+from gdo.video.DrawingProtocol import validate_line
 
 
 class DesktopOverlay:
@@ -85,6 +86,19 @@ class DesktopOverlay:
                 self.process.stdin.flush()
             except (BrokenPipeError, OSError) as exc:
                 raise RuntimeError('Desktop overlay stopped') from exc
+
+    def draw_line(self, *line):
+        line = validate_line(*line)
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            self._send_payload({'effect': 'drawing', 'line': line})
+
+    def clear_drawing(self):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            self._send_payload({'effect': 'drawing', 'clear': True})
 
     def put_effect(self, key, layer, z=None):
         from gdo.video.ImageLayer import ImageLayer

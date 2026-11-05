@@ -3,6 +3,7 @@
 import sys
 import base64
 import json
+import os
 import random
 import textwrap
 import time
@@ -13,6 +14,7 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 from LayerStack import LayerStack
+from DrawingProtocol import validate_line
 
 
 def main(image_path, screensharing=False):
@@ -57,6 +59,14 @@ def main(image_path, screensharing=False):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'drawing':
+                for x1, y1, x2, y2, color, stroke_width in layer['lines']:
+                    context.set_source_rgb(*(int(color[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+                    context.set_line_width(max(1, stroke_width * 360 / 100))
+                    context.move_to(x1 * 640 / 100, y1 * 360 / 100)
+                    context.line_to(x2 * 640 / 100, y2 * 360 / 100)
+                    context.stroke()
+                continue
             if key == 'image':
                 context.save()
                 context.scale(640 / effect_width, 360 / effect_height)
@@ -92,7 +102,7 @@ def main(image_path, screensharing=False):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
-            if key == 'image':
+            if key in ('image', 'drawing'):
                 continue
             if key == 'vintage':
                 now = time.monotonic()
@@ -121,11 +131,7 @@ def main(image_path, screensharing=False):
         context.paint()
         return False
 
-    def command(stream, condition):
-        if condition & (GLib.IO_HUP | GLib.IO_ERR):
-            Gtk.main_quit()
-            return False
-        line = stream.readline().strip()
+    def process_line(line):
         if line == 'hide':
             window.hide()
         elif line == 'show':
@@ -147,6 +153,15 @@ def main(image_path, screensharing=False):
                         layers.remove('image')
                     else:
                         install_image(request)
+                elif request.get('effect') == 'drawing':
+                    if request.get('clear') is True:
+                        layers.remove('drawing')
+                    else:
+                        line = validate_line(*request['line'])
+                        drawing = layers.get('drawing') or {'lines': []}
+                        if len(drawing['lines']) < 2000:
+                            drawing['lines'].append(line)
+                            layers.put('drawing', drawing)
                 else:
                     return True
                 if layers.ordered():
@@ -161,6 +176,26 @@ def main(image_path, screensharing=False):
                     effect.hide()
             except (ValueError, AttributeError, TypeError, KeyError, GLib.Error):
                 pass
+        return True
+
+    pending = bytearray()
+
+    def command(stream, condition):
+        if condition & (GLib.IO_HUP | GLib.IO_ERR):
+            Gtk.main_quit()
+            return False
+        chunk = os.read(sys.stdin.fileno(), 65536)
+        if not chunk:
+            Gtk.main_quit()
+            return False
+        pending.extend(chunk)
+        while b'\n' in pending:
+            line, _, rest = pending.partition(b'\n')
+            pending[:] = rest
+            try:
+                process_line(line.decode('utf-8').strip())
+            except UnicodeDecodeError:
+                continue
         return True
 
     def install_image(request):

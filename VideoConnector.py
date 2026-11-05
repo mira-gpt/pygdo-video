@@ -12,6 +12,7 @@ from gdo.video.StarWars import StarWars
 from gdo.video.LayerStack import LayerStack
 from gdo.video.Vintage import Vintage
 from gdo.video.Magnify import Magnify, X11Pointer
+from gdo.video.Drawing import Drawing
 
 
 class VideoConnector:
@@ -203,6 +204,22 @@ class VideoConnector:
             if not self.desktop or not self.enabled['desktop']:
                 raise ValueError('Enable an X11 desktop source before magnifying')
             self.put_effect('magnify', Magnify(X11Pointer(self.desktop), zoom, radius))
+
+    def draw_line(self, *line):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Video connector is not running')
+            drawing = self.effects.get('drawing')
+            if drawing is None:
+                drawing = Drawing()
+                self.effects.put('drawing', drawing)
+            drawing.add(*line)
+
+    def clear_drawing(self):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Video connector is not running')
+            return self.effects.remove('drawing')
 
     def _run(self):
         try:

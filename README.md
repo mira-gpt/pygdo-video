@@ -38,6 +38,14 @@ broadcasting.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
+- `$video.draw <prompt>` clears the drawing layer and sends the prompt to Mira
+  to draw live. Mira adds lines one by one using `$video.stroke x1 y1 x2 y2`;
+  coordinates are percentages (0–100), with optional `--color=#RRGGBB` and
+  `--width` as a percentage of the smaller frame dimension. `$video.draw off`
+  clears the drawing. Both methods are owner-only and queue work through Dog;
+  drawing requires a running video worker and the Mira delivery bridge. A
+  queued reply does not guarantee the agent has drawn yet. The request is
+  interpreted as drawing content, not permission for unrelated actions.
 - `$video.vintage <1|0>` enables or disables the keyed vintage layer: randomly
   varying vertical scratches and gentle flicker in both video modes. It is
   queued for Dog; flicker can affect viewers sensitive to flashing.
