@@ -36,6 +36,13 @@ broadcasting.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
+- `$video.starwars <text>` shows a timed, upward-scrolling text effect in the
+  active composite or desktop-overlay mode. A new invocation replaces the
+  previous text. Nested GDO commands can supply the text, for example
+  `$video.starwars $(wget file:///absolute/path/message.txt)`. Local `wget`
+  reads are restricted to authenticated owners and UTF-8 regular files of at
+  most 16 KiB; the effect accepts up to 4096 characters. Treat displayed text
+  as public when a screen or virtual webcam is being shared.
 - `$video.status` shows the compositor and layer state; `$video.stop` stops it.
 
 ## GDTs

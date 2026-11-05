@@ -1,6 +1,9 @@
 """GTK 3 X11 helper: an image in a transparent click-through desktop window."""
 
 import sys
+import json
+import textwrap
+import time
 
 import cairo
 import gi
@@ -26,6 +29,46 @@ def main(image_path):
     window.set_default_size(240, 135)
     window.stick()
 
+    effect = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
+    effect.set_title('Mira Starwars Effect')
+    effect.set_visual(screen.get_rgba_visual())
+    effect.set_app_paintable(True)
+    effect.set_decorated(False)
+    effect.set_keep_above(True)
+    effect.set_accept_focus(False)
+    effect.set_skip_taskbar_hint(True)
+    effect.set_skip_pager_hint(True)
+    effect.set_default_size(640, 360)
+    effect.stick()
+    state = {'lines': [], 'start': 0.0}
+
+    def draw_effect(widget, context):
+        context.set_operator(cairo.OPERATOR_SOURCE)
+        context.set_source_rgba(0, 0, 0, 0)
+        context.paint()
+        context.set_operator(cairo.OPERATOR_OVER)
+        context.set_source_rgb(1, .86, .18)
+        context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        scroll = (time.monotonic() - state['start']) * 36
+        for i, line in enumerate(state['lines']):
+            y = 360 - scroll + i * 28
+            if not -40 <= y < 360:
+                continue
+            context.set_font_size(max(10, 12 + 15 * max(0, y) / 360))
+            extents = context.text_extents(line)
+            context.move_to((640 - extents.width) / 2, y)
+            context.show_text(line)
+        return False
+
+    def tick_effect():
+        if not effect.get_visible():
+            return False
+        if (time.monotonic() - state['start']) * 36 > 360 + (len(state['lines']) + 2) * 28:
+            effect.hide()
+            return False
+        effect.queue_draw()
+        return True
+
     def draw(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)
         context.set_source_rgba(0, 0, 0, 0)
@@ -45,9 +88,26 @@ def main(image_path):
             window.hide()
         elif line == 'show':
             window.show_all()
+        else:
+            try:
+                request = json.loads(line)
+                text = request.get('text', '')
+                if request.get('effect') == 'starwars' and isinstance(text, str) and text.strip() and len(text) <= 4096:
+                    state['lines'] = [part for item in text.splitlines() for part in (textwrap.wrap(item, 36) or [''])]
+                    state['start'] = time.monotonic()
+                    already_visible = effect.get_visible()
+                    effect.show_all()
+                    effect.move(max(0, (screen.get_width() - 640) // 2),
+                                max(0, (screen.get_height() - 360) // 2))
+                    effect.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
+                    if not already_visible:
+                        GLib.timeout_add(33, tick_effect)
+            except (ValueError, AttributeError, TypeError):
+                pass
         return True
 
     window.connect('draw', draw)
+    effect.connect('draw', draw_effect)
     window.show_all()
     window.move(max(0, screen.get_width() - 250), 10)
     window.get_window().input_shape_combine_region(cairo.Region(), 0, 0)

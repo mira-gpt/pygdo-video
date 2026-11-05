@@ -1,10 +1,12 @@
 """Controller for one X11 desktop image overlay; no capture or video output."""
 
 import os
+import json
 import subprocess
 import threading
 
 from gdo.video.VideoConnector import VideoConnector
+from gdo.video.StarWars import StarWars
 
 
 class DesktopOverlay:
@@ -52,6 +54,18 @@ class DesktopOverlay:
                 process.wait()
             process.stdin.close()
             return True
+
+    def starwars(self, text):
+        StarWars(text)  # validate before sending untrusted text to the helper
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            try:
+                command = json.dumps({'effect': 'starwars', 'text': text}, ensure_ascii=True)
+                self.process.stdin.write((command + '\n').encode('utf-8'))
+                self.process.stdin.flush()
+            except (BrokenPipeError, OSError) as exc:
+                raise RuntimeError('Desktop overlay stopped') from exc
 
     def status(self):
         if self.is_running():

@@ -31,6 +31,16 @@ class DesktopOverlayTest(unittest.TestCase):
             self.assertTrue(self.wait_for('IsUnMapped'))
             overlay.set_layer('overlay', True)
             self.assertTrue(self.wait_for('IsViewable'))
+            overlay.starwars('Hello moderator')
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                                        capture_output=True, text=True)
+                if result.returncode == 0 and 'IsViewable' in result.stdout:
+                    break
+                time.sleep(0.05)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn('IsViewable', result.stdout)
         finally:
             self.assertTrue(overlay.stop())
         self.assertFalse(overlay.is_running())

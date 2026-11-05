@@ -8,6 +8,7 @@ import threading
 from urllib.parse import unquote, urlsplit
 
 from PIL import Image, ImageOps
+from gdo.video.StarWars import StarWars
 
 
 class VideoConnector:
@@ -21,6 +22,7 @@ class VideoConnector:
         self.outputs = []
         self.frame = None
         self.error = None
+        self.effect = None
         self.enabled = {'desktop': False, 'bg_image': False}
 
     @staticmethod
@@ -84,7 +86,7 @@ class VideoConnector:
             self.desktop, self.background = desktop, background
             self.image_configured = bool(image)
             self.enabled = {'desktop': bool(desktop), 'bg_image': bool(image)}
-            self.frame, self.error = None, None
+            self.frame, self.error, self.effect = None, None, None
             self.stop_event.clear()
             self.outputs = []
             try:
@@ -148,6 +150,13 @@ class VideoConnector:
                 raise ValueError('Configure video_bg_image_url first')
             self.enabled[name] = enabled
 
+    def starwars(self, text):
+        effect = StarWars(text)
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Video connector is not running')
+            self.effect = effect
+
     def _run(self):
         try:
             while not self.stop_event.is_set():
@@ -160,6 +169,11 @@ class VideoConnector:
                     if frame is None:
                         frame = (self.background if self.enabled['bg_image'] else
                                  Image.new('RGB', (self.WIDTH, self.HEIGHT), 'black')).tobytes()
+                    if self.effect:
+                        canvas = Image.frombytes('RGB', (self.WIDTH, self.HEIGHT), frame)
+                        if not self.effect.draw(canvas):
+                            self.effect = None
+                        frame = canvas.tobytes()
                 for output in self.outputs:
                     output.stdin.write(frame)
                     output.stdin.flush()
