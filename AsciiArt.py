@@ -7,18 +7,24 @@ from PIL import Image, ImageDraw, ImageFont
 class AsciiArt:
     CHARACTERS = ' .:-=+*#%@'
 
-    def __init__(self, duration, now=None):
+    def __init__(self, duration, now=None, flash=False):
         if not 0 < duration <= 300:
             raise ValueError('Duration must be greater than zero and at most 5 minutes')
-        self.deadline = (time.monotonic() if now is None else now) + duration
+        self.started = time.monotonic() if now is None else now
+        self.deadline = self.started + duration
+        self.flash = flash
         try:
             self.font = ImageFont.truetype('DejaVuSansMono.ttf', 10)
         except OSError:
             self.font = ImageFont.load_default()
 
     def draw(self, frame, now=None):
-        if (time.monotonic() if now is None else now) >= self.deadline:
+        current = time.monotonic() if now is None else now
+        if current >= self.deadline:
             return False
+        # Alternate ASCII and the unfiltered frame twice per second.
+        if self.flash and int((current - self.started) * 2) % 2:
+            return True
         width, height = frame.size
         columns, rows = max(1, width // 8), max(1, height // 14)
         pixels = frame.convert('L').resize((columns, rows), Image.Resampling.BILINEAR)

@@ -24,16 +24,16 @@ class AsciiArtTest(unittest.TestCase):
 
     def test_command_queues_dog_and_handler_installs_key(self):
         command = asciiart()
-        command.param_value = MagicMock(return_value=5.0)
+        command.param_value = MagicMock(side_effect=lambda name: 5.0 if name == 'duration' else False)
         command.reply = MagicMock(return_value='queued')
         db = MagicMock()
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), \
              patch('gdo.video.method.asciiart.IPC.send_to_dog') as send:
             self.assertEqual('queued', command.gdo_execute())
-        send.assert_called_once_with('video.ipc_asciiart', ['5.0s'])
+        send.assert_called_once_with('video.ipc_asciiart', ['5.0s', '0'])
         handler = ipc_asciiart()
-        handler.param_value = MagicMock(return_value=5.0)
+        handler.param_value = MagicMock(side_effect=lambda name: 5.0 if name == 'duration' else False)
         handler.empty = MagicMock()
         module = MagicMock()
         with patch.object(Application, 'IS_DOG', True), \
@@ -41,3 +41,12 @@ class AsciiArtTest(unittest.TestCase):
             handler.gdo_execute()
         self.assertEqual(module.connector.put_effect.call_args.args[0], 'asciiart')
         self.assertIsInstance(module.connector.put_effect.call_args.args[1], AsciiArt)
+
+    def test_flash_alternates_filtered_and_original_frame(self):
+        effect = AsciiArt(5, now=0, flash=True)
+        filtered = Image.new('RGB', (160, 90), 'white')
+        original = Image.new('RGB', (160, 90), 'white')
+        self.assertTrue(effect.draw(filtered, now=0.1))
+        self.assertTrue(effect.draw(original, now=0.6))
+        self.assertNotEqual(filtered.tobytes(), original.tobytes())
+        self.assertEqual(original.getpixel((0, 0)), (255, 255, 255))

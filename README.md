@@ -40,6 +40,8 @@ broadcasting.
   virtual-webcam composite (default 5 seconds, maximum 5 minutes). Configure
   the desktop source if the desktop itself should be transformed. The command
   queues the effect for Dog. Screensharing and rectangle selection are TODO.
+  `$video.asciiart 5s --flash` alternates the filtered and original image;
+  this flickers and may affect viewers sensitive to flashing.
 - `$starwars <text>` (also `$video.starwars`) queues a timed, upward-scrolling text effect in the
   active composite or desktop-overlay mode. A new invocation replaces the
   previous text. Nested GDO commands can supply the text, for example

@@ -1,6 +1,7 @@
 from gdo.base.Application import Application
 from gdo.base.IPC import IPC
 from gdo.base.Method import Method
+from gdo.core.GDT_Bool import GDT_Bool
 from gdo.date.GDT_Duration import GDT_Duration
 
 
@@ -10,11 +11,13 @@ class asciiart(Method):
 
     def gdo_parameters(self):
         return [GDT_Duration('duration').not_null().initial('5s').min(0.1).max(300)
-                .positional().tooltip('tt_video_asciiart_duration')]
+                .positional().tooltip('tt_video_asciiart_duration'),
+                GDT_Bool('flash').not_null().initial('0').tooltip('tt_video_asciiart_flash')]
 
     def gdo_execute(self):
         duration = self.param_value('duration')
-        args = ('video.ipc_asciiart', [f'{duration}s'])
+        flash = self.param_value('flash')
+        args = ('video.ipc_asciiart', [f'{duration}s', '1' if flash else '0'])
         try:
             if Application.db().is_in_transaction():
                 Application.defer_after_commit(IPC.send_to_dog, *args)
