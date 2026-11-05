@@ -99,7 +99,7 @@ class DesktopOverlayTest(unittest.TestCase):
         overlay.start(os.path.abspath(image))
         try:
             self.assertTrue(self.wait_for('IsViewable'), overlay.status())
-            overlay.put_effect('image', ImageLayer(Image.new('RGBA', (20, 20), 'red')))
+            overlay.put_effect('media', ImageLayer(Image.new('RGBA', (20, 20), 'red')))
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
                 result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
@@ -108,7 +108,7 @@ class DesktopOverlayTest(unittest.TestCase):
                     break
                 time.sleep(.05)
             self.assertIn('IsViewable', result.stdout)
-            overlay.remove_effect('image')
+            overlay.remove_effect('media')
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:
                 result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],

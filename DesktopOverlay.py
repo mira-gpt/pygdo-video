@@ -6,6 +6,7 @@ import io
 import json
 import subprocess
 import threading
+import time
 
 from gdo.video.VideoConnector import VideoConnector
 from gdo.video.StarWars import StarWars
@@ -17,6 +18,7 @@ class DesktopOverlay:
         self.process = None
         self.enabled = False
         self.screensharing = screensharing
+        self.media_layer = None
 
     def start(self, image):
         image = VideoConnector.local_file(image)
@@ -49,6 +51,7 @@ class DesktopOverlay:
         with self.lock:
             if not self.is_running():
                 return False
+            media, self.media_layer = self.media_layer, None
             process = self.process
             process.terminate()
             try:
@@ -57,7 +60,9 @@ class DesktopOverlay:
                 process.kill()
                 process.wait()
             process.stdin.close()
-            return True
+        if media and hasattr(media, 'close'):
+            media.close()
+        return True
 
     def starwars(self, text):
         StarWars(text)  # validate before sending untrusted text to the helper
@@ -83,34 +88,77 @@ class DesktopOverlay:
 
     def put_effect(self, key, layer, z=None):
         from gdo.video.ImageLayer import ImageLayer
-        if key != 'image' or not isinstance(layer, ImageLayer) or z is not None:
-            raise ValueError('Desktop overlay currently accepts only the image layer')
+        from gdo.video.MediaLayer import VideoLayer
+        if key != 'media' or not isinstance(layer, ImageLayer) or z is not None:
+            raise ValueError('Desktop overlay currently accepts only the media layer')
+        if isinstance(layer, VideoLayer):
+            layer.start()
+        payload = self._image_payload(layer, layer.image)
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            previous, self.media_layer = self.media_layer, layer
+            self._send_payload(payload)
+        if previous and hasattr(previous, 'close'):
+            previous.close()
+        if isinstance(layer, VideoLayer):
+            threading.Thread(target=self._pump_video, args=(layer,), daemon=True,
+                             name='video-desktop-media').start()
+
+    def _image_payload(self, layer, image):
+        from gdo.video.ImageLayer import ImageLayer
         buffer = io.BytesIO()
-        layer.image.save(buffer, format='PNG')
+        image.save(buffer, format='PNG')
         if buffer.tell() > ImageLayer.MAX_BYTES:
             raise ValueError('Decoded image is too large for desktop overlay')
-        payload = {'effect': 'image', 'png': base64.b64encode(buffer.getvalue()).decode('ascii'),
-                   'width': layer.width, 'height': layer.height, 'x': layer.x, 'y': layer.y}
-        with self.lock:
-            if not self.is_running():
-                raise RuntimeError('Desktop overlay is not running')
-            try:
-                self.process.stdin.write((json.dumps(payload) + '\n').encode())
-                self.process.stdin.flush()
-            except (BrokenPipeError, OSError) as exc:
-                raise RuntimeError('Desktop overlay stopped') from exc
+        return {'effect': 'image', 'png': base64.b64encode(buffer.getvalue()).decode('ascii'),
+                'width': layer.width, 'height': layer.height, 'x': layer.x, 'y': layer.y}
+
+    def _send_payload(self, payload):
+        try:
+            self.process.stdin.write((json.dumps(payload) + '\n').encode())
+            self.process.stdin.flush()
+        except (BrokenPipeError, OSError) as exc:
+            raise RuntimeError('Desktop overlay stopped') from exc
+
+    def _pump_video(self, layer):
+        last = -1
+        while True:
+            image, generation, finished = layer.snapshot()
+            with self.lock:
+                if self.media_layer is not layer or not self.is_running():
+                    return
+                if finished:
+                    self.media_layer = None
+                    try:
+                        self._send_payload({'effect': 'image', 'remove': True})
+                    except RuntimeError:
+                        pass
+                    return
+                if generation != last:
+                    try:
+                        self._send_payload(self._image_payload(layer, image))
+                    except (RuntimeError, ValueError):
+                        self.media_layer = None
+                        layer.close()
+                        return
+                    last = generation
+            time.sleep(.1)
 
     def remove_effect(self, key):
-        if key != 'image':
-            raise ValueError('Desktop overlay currently supports removing only the image layer')
+        if key != 'media':
+            raise ValueError('Desktop overlay currently supports removing only the media layer')
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
+            media, self.media_layer = self.media_layer, None
             try:
                 self.process.stdin.write(b'{"effect":"image","remove":true}\n')
                 self.process.stdin.flush()
             except (BrokenPipeError, OSError) as exc:
                 raise RuntimeError('Desktop overlay stopped') from exc
+        if media and hasattr(media, 'close'):
+            media.close()
 
     def status(self):
         if self.is_running():

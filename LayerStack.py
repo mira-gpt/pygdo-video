@@ -24,6 +24,10 @@ class LayerStack:
     def remove(self, key):
         return self._layers.pop(key, None) is not None
 
+    def get(self, key):
+        entry = self._layers.get(key)
+        return entry[2] if entry else None
+
     def clear(self):
         self._layers.clear()
 

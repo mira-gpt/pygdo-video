@@ -5,6 +5,9 @@ from gdo.video.module_video import module_video
 
 
 class VideoConfigTest(unittest.TestCase):
+    def test_audio_is_an_optional_friendency(self):
+        self.assertIn('audio', module_video().gdo_friendencies())
+
     def test_input_settings(self):
         with patch('gdo.ui.WithIcon.t', side_effect=lambda key: key):
             fields = {field._name: field for field in module_video().gdo_module_config()}

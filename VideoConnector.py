@@ -91,6 +91,9 @@ class VideoConnector:
             self.image_configured = bool(image)
             self.enabled = {'desktop': bool(desktop), 'bg_image': bool(image)}
             self.frame, self.error = None, None
+            for _, effect in self.effects.ordered():
+                if hasattr(effect, 'close'):
+                    effect.close()
             self.effects.clear()
             self.stop_event.clear()
             self.outputs = []
@@ -169,13 +172,22 @@ class VideoConnector:
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Video connector is not running')
-            if key == 'image':
+            if key == 'media':
                 effect.output_size(self.WIDTH, self.HEIGHT)
+                if hasattr(effect, 'start'):
+                    effect.start()
+            previous = self.effects.get(key)
             self.effects.put(key, effect, z)
+            if previous and hasattr(previous, 'close'):
+                previous.close()
 
     def remove_effect(self, key):
         with self.lock:
-            return self.effects.remove(key)
+            previous = self.effects.get(key)
+            removed = self.effects.remove(key)
+            if previous and hasattr(previous, 'close'):
+                previous.close()
+            return removed
 
     def vintage(self, enabled):
         if enabled:
@@ -220,6 +232,10 @@ class VideoConnector:
         finally:
             with self.lock:
                 self._stop_capture()
+                for _, effect in self.effects.ordered():
+                    if hasattr(effect, 'close'):
+                        effect.close()
+                self.effects.clear()
             self._terminate_outputs()
 
     def _terminate_outputs(self):

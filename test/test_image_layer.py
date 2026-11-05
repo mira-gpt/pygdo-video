@@ -7,7 +7,7 @@ from PIL import Image
 from gdo.base.Application import Application
 from gdo.base.Render import Mode
 from gdo.video.ImageLayer import ImageLayer
-from gdo.video.method.image import image
+from gdo.video.method.media import media
 
 
 class ImageLayerTest(unittest.TestCase):
@@ -34,12 +34,12 @@ class ImageLayerTest(unittest.TestCase):
             ImageLayer(Image.new('RGB', (2, 2)), width='500%').output_size(640, 360)
 
     def test_command_queues_image_and_geometry(self):
-        command = image()
+        command = media()
         values = {'url': 'file:///tmp/image.png', 'width': '25%', 'height': '25%', 'x': '2%', 'y': '2%'}
         command.param_val = MagicMock(side_effect=values.get)
         command.reply = MagicMock(return_value='queued')
         db = MagicMock()
         db.is_in_transaction.return_value = False
-        with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.image.IPC.send_to_dog') as send:
+        with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.media.IPC.send_to_dog') as send:
             self.assertEqual(command.gdo_execute(), 'queued')
-        send.assert_called_once_with('video.ipc_image', list(values.values()))
+        send.assert_called_once_with('video.ipc_media', list(values.values()))

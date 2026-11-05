@@ -21,23 +21,29 @@ class ImageLayer:
             raise ValueError('Image dimensions must be positive')
 
     @classmethod
-    def load(cls, url, **kwargs):
+    def read_url(cls, url, max_bytes=None):
+        max_bytes = cls.MAX_BYTES if max_bytes is None else max_bytes
         parsed = urlsplit(url)
         if parsed.scheme == 'file' and not parsed.netloc and not parsed.query and not parsed.fragment:
             path = unquote(parsed.path)
             if not os.path.isabs(path):
                 raise ValueError('Image file path must be absolute')
             with open(path, 'rb') as stream:
-                data = stream.read(cls.MAX_BYTES + 1)
+                data = stream.read(max_bytes + 1)
         elif parsed.scheme in ('http', 'https') and parsed.hostname and not parsed.username and not parsed.password:
             with urlopen(Request(url, headers={'User-Agent': 'PyGDO-Video/1'}), timeout=8) as response:
                 if urlsplit(response.geturl()).scheme not in ('http', 'https'):
                     raise ValueError('Invalid image redirect')
-                data = response.read(cls.MAX_BYTES + 1)
+                data = response.read(max_bytes + 1)
         else:
             raise ValueError('Image URL must use file, http or https')
-        if len(data) > cls.MAX_BYTES:
-            raise ValueError('Image exceeds 4 MiB')
+        if len(data) > max_bytes:
+            raise ValueError('Media file exceeds the size limit')
+        return data
+
+    @classmethod
+    def load(cls, url, **kwargs):
+        data = cls.read_url(url)
         with Image.open(io.BytesIO(data)) as image:
             if image.width * image.height > cls.MAX_PIXELS:
                 raise ValueError('Image dimensions are too large')

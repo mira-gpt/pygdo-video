@@ -22,6 +22,8 @@ Layers can be switched while running. YouTube and Twitch are planned outputs.
   errors. Whether outputs need independent encoders remains to be determined.
 - Audio input, mixing, device selection and synchronization need a separate
   design; the existing PyGDO audio work may provide useful building blocks.
+  `audio` is an optional Video module friendency; it is not enabled or
+  installed automatically.
 
 The Video connector starts the configured worker when Dog connects it;
 the default mode is off, so an untouched installation does not capture or
@@ -39,12 +41,13 @@ broadcasting.
 - `$video.vintage <1|0>` enables or disables the keyed vintage layer: randomly
   varying vertical scratches and gentle flicker in both video modes. It is
   queued for Dog; flicker can affect viewers sensitive to flashing.
-- `$video.image <url>` displays an image, with `--width`, `--height`, `--x`
+- `$video.media <url>` displays an image or a silent video, with `--width`, `--height`, `--x`
   and `--y` accepting CSS `px` or `%`. Defaults are `25%` × `25%`, at `2%`,
   `2%` from the top left. The image preserves its proportions within that box;
-  file, HTTP and HTTPS URLs are supported (maximum 4 MiB). A new image replaces
-  the `image` layer; `$video.image off` removes it. Loading is queued for Dog;
-  only show images and URLs appropriate for the audience.
+  file, HTTP and HTTPS URLs are supported (images up to 4 MiB, videos up to
+  32 MiB). Video plays once without sound, for at most 5 minutes. New media replaces
+  the `media` layer; `$video.media off` removes it. Loading is queued for Dog;
+  only show media and URLs appropriate for the audience.
 - `$video.magnify <1|0> [--zoom=2] [--radius=90]` toggles a mouse-following
   lens in virtual-webcam mode. It requires an enabled X11 desktop source;
   the radius is in composite pixels. Screensharing magnification is TODO.

@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 class module_video(GDO_Module):
     connector = VideoConnector()
 
+    def gdo_friendencies(self) -> list:
+        return ['audio']
+
     def gdo_classes(self) -> list[type[GDO]]:
         return []
 
