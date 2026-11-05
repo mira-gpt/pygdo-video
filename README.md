@@ -5,9 +5,9 @@ YouTube, Twitch, or both.
 
 # Video (For Humans)
 
-Use video in three modes: off, a layered composite sent to a virtual webcam,
-or overlays on the desktop for ordinary Discord/Slack screen sharing. Layers
-can be switched while running. YouTube and Twitch are planned outputs.
+Use video in two render modes: a layered composite sent to a virtual webcam,
+or full-desktop effects for Discord/Slack screen sharing. Video can also be off.
+Layers can be switched while running. YouTube and Twitch are planned outputs.
 
 # Video (For ALs)
 
@@ -36,13 +36,17 @@ broadcasting.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
-- `$video.starwars <text>` shows a timed, upward-scrolling text effect in the
+- `$starwars <text>` (also `$video.starwars`) queues a timed, upward-scrolling text effect in the
   active composite or desktop-overlay mode. A new invocation replaces the
   previous text. Nested GDO commands can supply the text, for example
   `$video.starwars $(wget file:///absolute/path/message.txt)`. Local `wget`
   reads are restricted to authenticated owners and UTF-8 regular files of at
-  most 16 KiB; the effect accepts up to 4096 characters. Treat displayed text
+  most 16 KiB; the effect accepts up to 4096 characters, subject to the IPC
+  payload size limit. Dog must be running with an active video worker; a queued
+  response does not confirm that the effect was displayed. Treat displayed text
   as public when a screen or virtual webcam is being shared.
+  A short AI-to-human demo inspired by The Mentor's Hacker Manifesto is in
+  `gdo/video/demo/mentor.txt`.
 - `$video.status` shows the compositor and layer state; `$video.stop` stops it.
 
 ## GDTs
@@ -69,16 +73,18 @@ requirements and availability before implementing multi-platform publishing.
 `video_mode` selects one of:
 
 - `off`: no capture or video output.
-- `composite`: optional layers → compositor → preview and/or virtual webcam.
-- `desktop_overlays`: show an image overlay on the desktop for screen sharing.
-  Whether overlays appear in a share depends on the display system and sharing
-  application; test the chosen combination.
+- `virtualwebcam`: optional layers → compositor → preview and/or virtual webcam.
+- `screensharing`: show the overlay image and render effects over the full X11
+  desktop in a transparent, click-through window for desktop sharing.
 
 Desktop overlays currently require X11, a compositing window manager, and
 system Python with GTK 3, PyGObject and Cairo. `video_overlay_image_url`
 selects a local image (the bundled ITMB logo by default). The initial overlay
 is an always-on-top, click-through window in the upper right; it does not
 capture the screen or open a virtual webcam. Mira and speech overlays are TODO.
+The screensharing effect covers the X11 screen, including a multi-monitor
+desktop where the X11 screen spans multiple monitors; application-window sharing
+may omit the overlay. Test the actual sharing application and chosen source.
 
 Composite sources:
 
@@ -91,8 +97,10 @@ Composite sources:
 
 You can leave any source empty. `video_output_preview` shows the composite in a
 small local corner window; `video_live` sends that same composite to
-`video_output_device`. Both default to off. Enable at least one before
-`video.start` or before starting the Video connector, and select `composite`;
+`video_output_device`. `video_preview_w` and `video_preview_h` set the preview
+window size in pixels (default 320 × 180), independently of output resolution.
+Both outputs default to off. Enable at least one before
+`video.start` or before starting the Video connector, and select `virtualwebcam`;
 mode and output settings are read
 at start. The bundled ITMB logo is the default background. A configured desktop covers
 the background until its layer is disabled. Previewing the captured desktop can

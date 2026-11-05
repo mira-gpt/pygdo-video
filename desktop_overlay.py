@@ -12,7 +12,7 @@ gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 
-def main(image_path):
+def main(image_path, screensharing=False):
     screen = Gdk.Screen.get_default()
     if not screen or not screen.is_composited() or not screen.get_rgba_visual():
         raise RuntimeError('An X11 display with a compositor and RGBA visual is required')
@@ -38,7 +38,9 @@ def main(image_path):
     effect.set_accept_focus(False)
     effect.set_skip_taskbar_hint(True)
     effect.set_skip_pager_hint(True)
-    effect.set_default_size(640, 360)
+    effect_width = screen.get_width() if screensharing else 640
+    effect_height = screen.get_height() if screensharing else 360
+    effect.set_default_size(effect_width, effect_height)
     effect.stick()
     state = {'lines': [], 'start': 0.0}
 
@@ -47,6 +49,8 @@ def main(image_path):
         context.set_source_rgba(0, 0, 0, 0)
         context.paint()
         context.set_operator(cairo.OPERATOR_OVER)
+        # Render in the same logical coordinate system at any desktop size.
+        context.scale(effect_width / 640, effect_height / 360)
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         scroll = (time.monotonic() - state['start']) * 36
@@ -97,8 +101,8 @@ def main(image_path):
                     state['start'] = time.monotonic()
                     already_visible = effect.get_visible()
                     effect.show_all()
-                    effect.move(max(0, (screen.get_width() - 640) // 2),
-                                max(0, (screen.get_height() - 360) // 2))
+                    effect.move(0 if screensharing else max(0, (screen.get_width() - 640) // 2),
+                                0 if screensharing else max(0, (screen.get_height() - 360) // 2))
                     effect.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
                     if not already_visible:
                         GLib.timeout_add(33, tick_effect)
@@ -116,4 +120,4 @@ def main(image_path):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], len(sys.argv) > 2 and sys.argv[2] == 'screensharing')

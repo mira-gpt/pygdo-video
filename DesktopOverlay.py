@@ -10,10 +10,11 @@ from gdo.video.StarWars import StarWars
 
 
 class DesktopOverlay:
-    def __init__(self):
+    def __init__(self, screensharing=False):
         self.lock = threading.RLock()
         self.process = None
         self.enabled = False
+        self.screensharing = screensharing
 
     def start(self, image):
         image = VideoConnector.local_file(image)
@@ -21,7 +22,8 @@ class DesktopOverlay:
             if self.is_running():
                 raise RuntimeError('Desktop overlay is already running')
             script = os.path.join(os.path.dirname(__file__), 'desktop_overlay.py')
-            self.process = subprocess.Popen(['/usr/bin/python3', script, image], stdin=subprocess.PIPE,
+            self.process = subprocess.Popen(['/usr/bin/python3', script, image,
+                                             'screensharing' if self.screensharing else 'overlay'], stdin=subprocess.PIPE,
                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.enabled = True
 

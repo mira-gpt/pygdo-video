@@ -9,6 +9,8 @@ from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_String import GDT_String
 from gdo.ui.GDT_Link import GDT_Link
+from gdo.ui.GDT_Width import GDT_Width
+from gdo.ui.GDT_Height import GDT_Height
 from gdo.video.VideoConnector import VideoConnector
 from gdo.video.DesktopOverlay import DesktopOverlay
 from gdo.core.Connector import Connector
@@ -35,8 +37,8 @@ class module_video(GDO_Module):
         return [
             GDT_Enum('video_mode').choices({
                 'off': 'off',
-                'composite': 'composite',
-                'desktop_overlays': 'desktop_overlays',
+                'virtualwebcam': 'virtualwebcam',
+                'screensharing': 'screensharing',
             }).not_null().initial('off').tooltip('tt_video_mode'),
             GDT_String('video_desktop_url').maxlen(2048).tooltip('tt_video_desktop_url'),
             GDT_String('video_bg_image_url').maxlen(2048).initial(
@@ -48,6 +50,8 @@ class module_video(GDO_Module):
             GDT_Bool('video_duck_overlay').not_null().initial('0').tooltip('tt_video_duck_overlay'),
             GDT_String('video_output_device').not_null().initial('/dev/video2').maxlen(255).tooltip('tt_video_output_device'),
             GDT_Bool('video_output_preview').not_null().initial('0').tooltip('tt_video_output_preview'),
+            GDT_Width('video_preview_w').not_null().initial('320').min(1).max(8192).tooltip('tt_video_preview_w'),
+            GDT_Height('video_preview_h').not_null().initial('180').min(1).max(8192).tooltip('tt_video_preview_h'),
             GDT_Bool('video_live').not_null().initial('0').tooltip('tt_video_live'),
         ]
 
@@ -66,12 +70,12 @@ class module_video(GDO_Module):
             raise RuntimeError('Video worker is already running; stop it before switching modes')
         if mode == 'off':
             raise ValueError('Video mode is off')
-        if mode == 'desktop_overlays':
-            worker = DesktopOverlay()
+        if mode == 'screensharing':
+            worker = DesktopOverlay(screensharing=True)
             worker.start(self.get_config_val('video_overlay_image_url'))
             self.connector = worker
             return
-        if mode != 'composite':
+        if mode != 'virtualwebcam':
             raise ValueError('Unknown video mode')
         if (self.get_config_val('video_file_url') or self.get_config_val('video_webcam_url')
                 or self.get_config_value('video_duck_overlay')):
@@ -80,7 +84,8 @@ class module_video(GDO_Module):
         worker.start(
             self.get_config_val('video_desktop_url'), self.get_config_val('video_bg_image_url'),
             self.get_config_value('video_output_preview'), self.get_config_value('video_live'),
-            self.get_config_val('video_output_device'))
+            self.get_config_val('video_output_device'), self.get_config_value('video_preview_w'),
+            self.get_config_value('video_preview_h'))
         self.connector = worker
 
     def gdo_load_scripts(self, page: 'GDT_Page'):

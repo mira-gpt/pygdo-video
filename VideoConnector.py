@@ -57,13 +57,13 @@ class VideoConnector:
                 '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']
 
     @classmethod
-    def output_commands(cls, preview, live, device):
+    def output_commands(cls, preview, live, device, preview_w=320, preview_h=180):
         source = ['-f', 'rawvideo', '-pixel_format', 'rgb24', '-video_size',
                   f'{cls.WIDTH}x{cls.HEIGHT}', '-framerate', str(cls.FPS), '-i', 'pipe:0']
         commands = []
         if preview:
             commands.append(['ffplay', '-loglevel', 'error', '-window_title', 'Mira Video Preview',
-                             '-left', '0', '-top', '0', '-x', '320', '-y', '180', *source])
+                             '-left', '0', '-top', '0', '-x', str(preview_w), '-y', str(preview_h), *source])
         if live:
             cls.validate_output(device)
             commands.append(['ffmpeg', '-nostdin', '-loglevel', 'error', *source,
@@ -72,7 +72,7 @@ class VideoConnector:
             raise ValueError('Enable video_output_preview or video_live before starting')
         return commands
 
-    def start(self, desktop, image, preview, live, device):
+    def start(self, desktop, image, preview, live, device, preview_w=320, preview_h=180):
         with self.lock:
             if self.worker and self.worker.is_alive():
                 raise RuntimeError('Video connector is already running')
@@ -82,7 +82,7 @@ class VideoConnector:
             if image:
                 with Image.open(self.local_file(image)) as original:
                     background = ImageOps.pad(original.convert('RGB'), (self.WIDTH, self.HEIGHT))
-            commands = self.output_commands(preview, live, device)
+            commands = self.output_commands(preview, live, device, preview_w, preview_h)
             self.desktop, self.background = desktop, background
             self.image_configured = bool(image)
             self.enabled = {'desktop': bool(desktop), 'bg_image': bool(image)}

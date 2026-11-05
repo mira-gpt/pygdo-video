@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import time
 import unittest
@@ -44,6 +45,33 @@ class DesktopOverlayTest(unittest.TestCase):
         finally:
             self.assertTrue(overlay.stop())
         self.assertFalse(overlay.is_running())
+
+    def test_screensharing_effect_covers_x11_screen(self):
+        root = subprocess.run(['xwininfo', '-root'], capture_output=True, text=True, check=True).stdout
+        width = int(re.search(r'Width:\s+(\d+)', root).group(1))
+        height = int(re.search(r'Height:\s+(\d+)', root).group(1))
+        overlay = DesktopOverlay(screensharing=True)
+        image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
+        overlay.start(os.path.abspath(image))
+        try:
+            self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            overlay.starwars('Screensharing test')
+            deadline = time.monotonic() + 5
+            result = None
+            while time.monotonic() < deadline:
+                result = subprocess.run(['xwininfo', '-name', 'Mira Starwars Effect'],
+                                        capture_output=True, text=True)
+                if result.returncode == 0 and 'IsViewable' in result.stdout:
+                    break
+                time.sleep(0.05)
+            self.assertIsNotNone(result)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn(f'Width: {width}', result.stdout)
+            self.assertIn(f'Height: {height}', result.stdout)
+            self.assertIn('Absolute upper-left X:  0', result.stdout)
+            self.assertIn('Absolute upper-left Y:  0', result.stdout)
+        finally:
+            overlay.stop()
 
 
 if __name__ == '__main__':

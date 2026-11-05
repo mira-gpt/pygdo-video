@@ -8,6 +8,7 @@ from gdo.base.Parser import Parser
 from gdo.base.Render import Mode
 from gdo.net.method.wget import GDT_WgetUrl, wget
 from gdo.video.method.starwars import starwars
+from gdo.video.StarWarsIPC import decode_text
 
 
 class StarWarsWgetTest(unittest.IsolatedAsyncioTestCase):
@@ -27,11 +28,13 @@ class StarWarsWgetTest(unittest.IsolatedAsyncioTestCase):
             parser = Parser(Mode.render_cli, None, None, None, None)
             with patch.object(parser, 'get_method', side_effect=lambda name: outer if name == 'video.starwars' else inner):
                 parsed = parser.parse_line(f'video.starwars $(wget {path.as_uri()})')
-            module = MagicMock()
-            outer.reply = MagicMock(return_value='started')
-            with patch('gdo.video.method.starwars.module_video.instance', return_value=module):
-                self.assertEqual('started', await parsed._nested_execute(parsed, True))
-            module.connector.starwars.assert_called_once_with('Hello Mr Moderator')
+            outer.reply = MagicMock(return_value='queued')
+            db = MagicMock()
+            db.is_in_transaction.return_value = False
+            with patch.object(Application, 'db', return_value=db), \
+                 patch('gdo.video.method.starwars.IPC.send_to_dog') as send:
+                self.assertEqual('queued', await parsed._nested_execute(parsed, True))
+            self.assertEqual(decode_text(send.call_args.args[1][0]), 'Hello Mr Moderator')
 
     def test_file_url_validation(self):
         field = GDT_WgetUrl('url').not_null()
