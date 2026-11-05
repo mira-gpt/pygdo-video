@@ -38,6 +38,11 @@ broadcasting.
 - `$video.preview` opens or restarts the virtual-webcam compositor preview
   without restarting Dog or the virtual-camera output. The compositor must be
   running; the command queues a request, not a guarantee of a visible window.
+- `$video.mic 1` shows the local Dog microphone listener's input level in the
+  virtual webcam and its preview; `$video.mic 0` hides it. It uses the existing
+  audio capture, does not start capture and says UNKNOWN when samples are stale.
+  OFF describes this listener, not other applications or hardware mute. The
+  screensharing overlay is not yet supported.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
