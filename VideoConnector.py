@@ -24,6 +24,8 @@ class VideoConnector:
         self.stop_event = threading.Event()
         self.capture = None
         self.outputs = []
+        self.preview_output = None
+        self.preview_restart = threading.Event()
         self.frame = None
         self.error = None
         self.effects = LayerStack()
@@ -88,6 +90,9 @@ class VideoConnector:
                     background = ImageOps.fit(original.convert('RGB'), (self.WIDTH, self.HEIGHT),
                                               method=Image.Resampling.LANCZOS)
             commands = self.output_commands(preview, live, device, preview_w, preview_h)
+            self.preview_command = self.output_commands(True, False, None, preview_w, preview_h)[0]
+            self.preview_output = None
+            self.preview_restart.clear()
             self.desktop, self.background = desktop, background
             self.image_configured = bool(image)
             self.enabled = {'desktop': bool(desktop), 'bg_image': bool(image)}
@@ -100,8 +105,11 @@ class VideoConnector:
             self.outputs = []
             try:
                 for command in commands:
-                    self.outputs.append(subprocess.Popen(command, stdin=subprocess.PIPE,
-                                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+                    process = subprocess.Popen(command, stdin=subprocess.PIPE,
+                                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.outputs.append(process)
+                    if command[0] == 'ffplay':
+                        self.preview_output = process
             except Exception:
                 self._terminate_outputs()
                 raise
@@ -229,9 +237,28 @@ class VideoConnector:
                 raise RuntimeError('Video connector is not running')
             return self.effects.remove('drawing')
 
+    def restart_preview(self):
+        if not self.is_running():
+            raise RuntimeError('Video compositor is not running')
+        self.preview_restart.set()
+
     def _run(self):
         try:
             while not self.stop_event.is_set():
+                if self.preview_restart.is_set():
+                    self.preview_restart.clear()
+                    old = self.preview_output
+                    if old:
+                        if old in self.outputs:
+                            self.outputs.remove(old)
+                        if old.poll() is None:
+                            old.terminate()
+                        old.wait(timeout=2)
+                        if old.stdin:
+                            old.stdin.close()
+                    self.preview_output = subprocess.Popen(self.preview_command, stdin=subprocess.PIPE,
+                                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.outputs.append(self.preview_output)
                 with self.lock:
                     if self.enabled['desktop'] and not self.capture:
                         self._start_capture()
@@ -247,9 +274,17 @@ class VideoConnector:
                             if not effect.draw(canvas):
                                 self.effects.remove(key)
                         frame = canvas.tobytes()
-                for output in self.outputs:
-                    output.stdin.write(frame)
-                    output.stdin.flush()
+                for output in list(self.outputs):
+                    try:
+                        output.stdin.write(frame)
+                        output.stdin.flush()
+                    except (BrokenPipeError, OSError, ValueError):
+                        if output is not self.preview_output:
+                            raise
+                        self.outputs.remove(output)
+                        self.preview_output = None
+                        output.wait()
+                        output.stdin.close()
                 self.stop_event.wait(1 / self.FPS)
         except Exception as exc:
             if not self.stop_event.is_set():
