@@ -21,6 +21,7 @@ class DesktopOverlay:
         self.screensharing = screensharing
         self.window_suffix = window_suffix
         self.media_layer = None
+        self._mic_stop = None
 
     def start(self, image):
         image = VideoConnector.local_file(image)
@@ -52,6 +53,9 @@ class DesktopOverlay:
 
     def stop(self):
         with self.lock:
+            if self._mic_stop:
+                self._mic_stop.set()
+                self._mic_stop = None
             if not self.is_running():
                 return False
             media, self.media_layer = self.media_layer, None
@@ -137,6 +141,37 @@ class DesktopOverlay:
         except (BrokenPipeError, OSError) as exc:
             raise RuntimeError('Desktop overlay stopped') from exc
 
+    def microphone_meter(self, enabled):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            if self._mic_stop:
+                self._mic_stop.set()
+                self._mic_stop = None
+            if not enabled:
+                self._send_payload({'effect': 'mic', 'remove': True})
+                return
+            stop = threading.Event()
+            self._mic_stop = stop
+            threading.Thread(target=self._pump_microphone, args=(stop,), daemon=True,
+                             name='video-desktop-mic').start()
+
+    def _pump_microphone(self, stop):
+        while not stop.is_set():
+            try:
+                from gdo.audio.meter import MicrophoneMeter
+                status, level = MicrophoneMeter.snapshot()
+            except ImportError:
+                status, level = 'unknown', 0.0
+            with self.lock:
+                if stop.is_set() or self._mic_stop is not stop or not self.is_running():
+                    return
+                try:
+                    self._send_payload({'effect': 'mic', 'status': status, 'level': level})
+                except RuntimeError:
+                    return
+            stop.wait(.2)
+
     def _pump_video(self, layer):
         last = -1
         while True:
@@ -180,6 +215,9 @@ class DesktopOverlay:
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
+            if key in ('all', 'mic') and self._mic_stop:
+                self._mic_stop.set()
+                self._mic_stop = None
             media = None
             if key in ('all', 'media'):
                 media, self.media_layer = self.media_layer, None

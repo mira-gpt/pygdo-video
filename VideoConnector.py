@@ -212,6 +212,13 @@ class VideoConnector:
         else:
             self.remove_effect('vintage')
 
+    def microphone_meter(self, enabled):
+        from gdo.video.MicrophoneLevel import MicrophoneLevel
+        if enabled:
+            self.put_effect('mic', MicrophoneLevel())
+        else:
+            self.remove_effect('mic')
+
     def magnify(self, enabled, zoom=2.0, radius=90):
         if not enabled:
             self.remove_effect('magnify')

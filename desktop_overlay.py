@@ -59,6 +59,19 @@ def main(image_path, screensharing=False, window_suffix=''):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'mic':
+                context.set_source_rgba(.06, .06, .06, .9)
+                context.rectangle(12, 316, 150, 32)
+                context.fill()
+                context.set_source_rgb(1, 1, 1)
+                context.set_font_size(12)
+                context.move_to(16, 329)
+                context.show_text({'on': 'MIC ON', 'off': 'MIC OFF'}.get(layer['status'], 'MIC UNKNOWN'))
+                if layer['status'] == 'on':
+                    context.set_source_rgb(.24, .88, .31)
+                    context.rectangle(16, 335, 142 * min(1.0, layer['level'] * 100), 8)
+                    context.fill()
+                continue
             if key == 'drawing':
                 for x1, y1, x2, y2, color, stroke_width in layer['lines']:
                     context.set_source_rgb(*(int(color[i:i + 2], 16) / 255 for i in (1, 3, 5)))
@@ -102,7 +115,7 @@ def main(image_path, screensharing=False, window_suffix=''):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
-            if key in ('image', 'drawing'):
+            if key in ('image', 'drawing', 'mic'):
                 continue
             if key == 'vintage':
                 now = time.monotonic()
@@ -162,6 +175,11 @@ def main(image_path, screensharing=False, window_suffix=''):
                         if len(drawing['lines']) < 2000:
                             drawing['lines'].append(line)
                             layers.put('drawing', drawing)
+                elif request.get('effect') == 'mic':
+                    if request.get('remove') is True:
+                        layers.remove('mic')
+                    elif request.get('status') in ('on', 'off', 'unknown') and isinstance(request.get('level'), (float, int)):
+                        layers.put('mic', {'status': request['status'], 'level': max(0.0, min(1.0, request['level']))})
                 elif request.get('effect') == 'close':
                     key = request.get('key')
                     if key == 'all':

@@ -6,6 +6,7 @@ from gdo.base.Application import Application
 from gdo.base.Render import Mode
 from gdo.video.MicrophoneLevel import MicrophoneLevel
 from gdo.video.VideoConnector import VideoConnector
+from gdo.video.DesktopOverlay import DesktopOverlay
 from gdo.video.method.ipc_mic import ipc_mic
 from gdo.video.method.mic import mic
 
@@ -44,3 +45,18 @@ class MicrophoneLevelTest(unittest.TestCase):
                 patch('gdo.video.method.ipc_mic.module_video.instance', return_value=module):
             handler.gdo_execute()
         self.assertIsInstance(worker.effects.get('mic'), MicrophoneLevel)
+
+    def test_desktop_meter_starts_and_stops_forwarding(self):
+        worker = DesktopOverlay(screensharing=True)
+        worker.process = MagicMock()
+        worker.process.poll.return_value = None
+        with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=('on', .1)), \
+                patch.object(worker, '_send_payload') as send:
+            worker.microphone_meter(True)
+            import time
+            deadline = time.monotonic() + 1
+            while not send.called and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertTrue(send.called)
+            worker.microphone_meter(False)
+            self.assertEqual({'effect': 'mic', 'remove': True}, send.call_args.args[0])
