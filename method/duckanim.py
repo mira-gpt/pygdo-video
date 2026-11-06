@@ -13,7 +13,7 @@ class duckanim(Method):
         return 'owner'
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'LOL': 'LOL'}).not_null().positional().tooltip('tt_video_duckanim_key')]
+        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'sad': 'Sad', 'lol': 'LOL', 'LOL': 'LOL'}).not_null().positional().tooltip('tt_video_duckanim_key')]
 
     def gdo_execute(self):
         args = ('video.ipc_duckanim', [self.param_val('key').lower()])

@@ -42,15 +42,16 @@ def main():
     base.render.setLight(light_node)
 
     lock = threading.Lock()
-    state = {'mode': 'idle', 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0}
+    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0}
 
     def receive():
         for line in sys.stdin:
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad'):
                         state['mode'] = request['mode']
+                        state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
                         state['speaking'] = request['speaking']
                         state['envelope'] = []
@@ -72,16 +73,23 @@ def main():
         while True:
             with lock:
                 mode, speaking, running = state['mode'], state['speaking'], state['running']
+                mode_start = state['mode_start']
                 envelope, step_ms, speech_start = state['envelope'], state['step_ms'], state['speech_start']
             if not running:
                 break
             t = time.monotonic() - start
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
+            root.setP(20 + 2 * math.sin(t * .8) if mode == 'sad' else 0)
+            root.setSz(.88 + .012 * math.sin(t * .8) if mode == 'sad' else 1)
+            if mode == 'shrug':
+                elapsed = time.monotonic() - mode_start
+                root.setR(4 * math.sin(elapsed * 18) * max(0, 1 - elapsed))
+                root.setZ(.40 * math.sin(math.pi * min(elapsed / .65, 1)))
             for sign, name in ((-1, 'Wing L'), (1, 'Wing R')):
                 wing = root.find('**/' + name)
                 if not wing.isEmpty():
-                    wing.setR(sign * (30 + 25 * math.sin(t * 11)) if mode == 'lol' else 0)
+                    wing.setR(sign * (30 + 25 * math.sin(t * 11)) if mode == 'lol' else sign * 55 if mode == 'shrug' else -sign * 25 if mode == 'sad' else 0)
             for index, name in enumerate(('Foot', 'Foot.001')):
                 foot = root.find('**/' + name)
                 if not foot.isEmpty():
@@ -89,7 +97,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(.12 if (t + 2) % 4.2 < .12 else 1)
+                    node.setSz(1.3 if mode == 'shrug' else .12 if (t + 2) % 4.2 < .12 else .42 if mode == 'sad' else 1)
             index = int((time.monotonic() - speech_start) * 1000 / step_ms)
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.

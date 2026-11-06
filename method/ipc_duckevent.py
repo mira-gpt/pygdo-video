@@ -1,6 +1,7 @@
 from gdo.base.Application import Application
 from gdo.base.Logger import Logger
 from gdo.base.Method import Method
+from gdo.base.ModuleLoader import ModuleLoader
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.video.module_video import module_video
 
@@ -11,12 +12,16 @@ class ipc_duckevent(Method):
         return ''
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL'}).not_null().positional()]
+        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'shrug': 'Shrug'}).not_null().positional()]
 
-    def gdo_execute(self):
+    async def gdo_execute(self):
         if Application.IS_DOG:
             try:
-                module_video.instance().duck_event(self.param_val('key'))
+                key = self.param_val('key')
+                mira = ModuleLoader.instance().get_module('mira')
+                if key == 'lol' and mira and mira.cfg_mira_mood() == 'sad':
+                    await mira.save_config_val('mira_mood', 'idle')
+                module_video.instance().duck_event(key)
             except (ValueError, RuntimeError, OSError, AttributeError) as error:
                 Logger.warning(f'Duck event failed: {error}')
         return self.empty()

@@ -9,6 +9,7 @@ from gdo.video.module_video import module_video
 
 
 class ipc_ducklol(Method):
+    animation = 'lol'
     @classmethod
     def gdo_trigger(cls):
         return ''
@@ -28,8 +29,11 @@ class ipc_ducklol(Method):
                 raise ValueError('Speech text is limited to 300 characters')
             language = self.param_val('lang')
             from gdo.audio.method.ipc_say import ipc_say
+            mira = ModuleLoader.instance().get_module('mira')
+            if self.animation == 'lol' and mira and mira.cfg_mira_mood() == 'sad':
+                await mira.save_config_val('mira_mood', 'idle')
             connector = module_video.instance().connector
-            connector.duck_animation('lol')
+            connector.duck_animation(self.animation)
             switched = True
             speech = ipc_say().input('text', text).input('lang', language)
             await speech.gdo_execute()

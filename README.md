@@ -85,15 +85,20 @@ broadcasting.
   If the optional Mira module is enabled, its persistent `mira_mood` selects
   the matching animation on mood change or when the 3D duck is enabled. A direct
   `$duck.anim` or `$duck.lol` is a temporary override of that saved preference.
-- `$duck.event <key>` plays `idle`, `quacking`, or `lol` for two seconds, then
+- `$duck.event <key>` plays `idle`, `quacking`, `lol`, or `shrug` for two seconds, then
   restores the current `mira_mood` (`idle` if Mira is unavailable). A new event
   immediately replaces the previous event and its timer. A mood change during an
   event updates the base to restore without cutting the event short. The event
   is queued; it requires an already active live 3D duck and does not start one.
+  A `lol` event changes a `sad` base mood to `idle`.
+- `$duck.shrug [--lang=de|en] [text]` plays the surprise animation; optional
+  text is spoken using the user's language by default, and the saved mood is
+  restored after speech. Without text it is a two-second silent event.
 - `$duck.lol <text>` selects `LOL`, speaks the text using the configured Audio
   voice, and returns to the current saved `mira_mood` when playback finishes or
-  fails (or `idle` if Mira is not installed). It uses
-  the user's language by default (then channel, server, or English when unset);
+  fails (or `idle` if Mira is not installed). If the previous base was `sad`,
+  it changes the saved base to `idle`. It uses the user's language by default
+  (then channel, server, or English when unset);
   pass `--lang=en` or `--lang=de` to override.
   Audio with the `speech_language` helper (currently on Audio's
   `feature/pcm-io` branch) and the live 3D duck must be enabled. The request is

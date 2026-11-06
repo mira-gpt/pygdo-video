@@ -32,7 +32,14 @@ def ellipsoid(name, center, scale, mat, bone=None):
         face.use_smooth = True
     if bone:
         group = obj.vertex_groups.new(name=bone)
-        group.add(list(range(len(obj.data.vertices))), 1.0, 'REPLACE')
+        tip_name = {'UpperBeak': 'UpperBeakTip', 'LowerBeak': 'LowerBeakTip'}.get(bone)
+        tip = obj.vertex_groups.new(name=tip_name) if tip_name else None
+        for vertex in obj.data.vertices:
+            weight = max(0.0, min(1.0, (-vertex.co.y - .03) / .25)) if tip else 0.0
+            if weight < 1:
+                group.add([vertex.index], 1 - weight, 'REPLACE')
+            if weight > 0:
+                tip.add([vertex.index], weight, 'REPLACE')
         modifier = obj.modifiers.new('Duck rig', 'ARMATURE')
         modifier.object = rig
         obj.parent = rig
@@ -57,11 +64,15 @@ rig.select_set(True)
 bpy.ops.object.mode_set(mode='EDIT')
 for name, head in [('UpperBeak', (0, -.67, 1.35)),
                    ('LowerBeak', (0, -.67, 1.30)),
+                   ('UpperBeakTip', (0, -1.02, 1.35)),
+                   ('LowerBeakTip', (0, -1.02, 1.27)),
                    ('Tongue', (0, -.75, 1.30))]:
     bone = armature.edit_bones.new(name)
     bone.head = head
     bone.tail = (head[0], head[1], head[2] + .15)
 armature.edit_bones['Tongue'].parent = armature.edit_bones['LowerBeak']
+armature.edit_bones['UpperBeakTip'].parent = armature.edit_bones['UpperBeak']
+armature.edit_bones['LowerBeakTip'].parent = armature.edit_bones['LowerBeak']
 bpy.ops.object.mode_set(mode='OBJECT')
 
 ellipsoid('Upper beak', (0, -.91, 1.35), (.30, .35, .09), orange, 'UpperBeak')
@@ -70,7 +81,8 @@ ellipsoid('Tongue mesh', (0, -.94, 1.32), (.13, .18, .025), pink, 'Tongue')
 
 for frame, upper, lower, tongue in [(1, 0, 0, 0), (7, -8, 20, -10),
                                     (13, -2, 5, 5), (19, -7, 18, -8), (25, 0, 0, 0)]:
-    for name, degrees in [('UpperBeak', upper), ('LowerBeak', lower), ('Tongue', tongue)]:
+    for name, degrees in [('UpperBeak', upper), ('LowerBeak', lower), ('Tongue', tongue),
+                          ('UpperBeakTip', upper * .35), ('LowerBeakTip', lower * .35)]:
         bone = rig.pose.bones[name]
         bone.rotation_mode = 'XYZ'
         bone.rotation_euler.x = math.radians(degrees)
