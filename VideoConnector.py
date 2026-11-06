@@ -30,6 +30,7 @@ class VideoConnector:
         self.error = None
         self.effects = LayerStack()
         self.enabled = {'desktop': False, 'bg_image': False}
+        self.duck3d_pythonpath = None
 
     @staticmethod
     def local_file(value):
@@ -225,6 +226,27 @@ class VideoConnector:
             self.put_effect('duck', DuckLayer())
         else:
             self.remove_effect('duck')
+
+    def duck3d(self, enabled):
+        if enabled:
+            from gdo.video.Duck3DLayer import Duck3DLayer
+            from gdo.video.Duck3DSource import Duck3DSource
+            layer = Duck3DLayer(Duck3DSource(pythonpath=self.duck3d_pythonpath))
+            try:
+                layer.source.wait_ready()
+                self.put_effect('duck', layer)
+            except Exception:
+                layer.close()
+                raise
+        else:
+            self.remove_effect('duck')
+
+    def duck_animation(self, mode):
+        with self.lock:
+            duck = self.effects.get('duck')
+            if not duck or not hasattr(duck, 'animation'):
+                raise RuntimeError('Enable the live 3D duck first')
+            duck.animation(mode)
 
     def speech_start(self, speech_id, text):
         with self.lock:

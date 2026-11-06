@@ -1,0 +1,101 @@
+"""Optional synthetic test: no desktop or microphone is captured."""
+import importlib.util
+import json
+import os
+import select
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+import time
+from unittest.mock import MagicMock, patch
+
+
+@unittest.skipUnless(importlib.util.find_spec('panda3d') and importlib.util.find_spec('gltf')
+                     and os.environ.get('DISPLAY'), 'optional 3D dependencies and X11 required')
+class Duck3DWorkerTest(unittest.TestCase):
+    def test_source_control_and_shutdown(self):
+        from gdo.video.Duck3DSource import Duck3DSource
+        source = Duck3DSource()
+        try:
+            deadline = time.monotonic() + 10
+            while source.snapshot() is None and time.monotonic() < deadline:
+                time.sleep(.05)
+            self.assertIsNotNone(source.snapshot())
+            source.update(mode='quacking', speaking=True)
+            with self.assertRaises(ValueError):
+                source.update(mode='invalid')
+        finally:
+            source.close()
+        self.assertIsNotNone(source.process.poll())
+
+    def test_both_output_adapters_receive_live_frames_and_stop(self):
+        from gdo.video.DesktopOverlay import DesktopOverlay
+        from gdo.video.VideoConnector import VideoConnector
+
+        compositor = VideoConnector()
+        compositor.worker = MagicMock()
+        compositor.worker.is_alive.return_value = True
+        compositor.duck3d(True)
+        live = compositor.effects.get('duck')
+        try:
+            compositor.duck_animation('quacking')
+            compositor.speech_start('id', 'Hello')
+            deadline = time.monotonic() + 10
+            while live.source.snapshot() is None and time.monotonic() < deadline:
+                time.sleep(.05)
+            self.assertIsNotNone(live.source.snapshot())
+            compositor.speech_end('id')
+        finally:
+            compositor.duck3d(False)
+        self.assertIsNotNone(live.source.process.poll())
+
+        overlay = DesktopOverlay(screensharing=True)
+        overlay.process = MagicMock()
+        overlay.process.poll.return_value = None
+        with patch.object(overlay, '_send_payload') as send:
+            overlay.duck3d(True)
+            source = overlay.duck_source
+            try:
+                overlay.duck_animation('quacking')
+                deadline = time.monotonic() + 10
+                while not any(call.args[0].get('effect') == 'duck_frame' for call in send.call_args_list) and time.monotonic() < deadline:
+                    time.sleep(.05)
+                self.assertTrue(any(call.args[0].get('effect') == 'duck_frame' for call in send.call_args_list))
+            finally:
+                overlay.duck(False)
+            self.assertIsNotNone(source.process.poll())
+
+    def test_transparent_frame_and_mode_switch(self):
+        worker = Path(__file__).resolve().parents[1] / 'Duck3DWorker.py'
+        process = subprocess.Popen([sys.executable, str(worker)], stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0)
+        frame_size = 256 * 256 * 4
+
+        def frame():
+            data = bytearray()
+            while len(data) < frame_size:
+                self.assertTrue(select.select([process.stdout], [], [], 10)[0], 'renderer timed out')
+                chunk = os.read(process.stdout.fileno(), frame_size - len(data))
+                self.assertTrue(chunk, 'renderer exited before a complete frame')
+                data.extend(chunk)
+            return bytes(data)
+
+        try:
+            first = frame()
+            self.assertEqual(0, min(first[3::4]))
+            self.assertEqual(255, max(first[3::4]))
+            self.assertGreater(sum(alpha > 0 for alpha in first[3::4]), 5000, 'whole duck, not only beak')
+            process.stdin.write((json.dumps({'mode': 'quacking', 'speaking': True}) + '\n').encode())
+            changed = frame()
+            self.assertNotEqual(first, changed)
+            process.stdin.write(b'{"stop":true}\n')
+            # Closing the reader also releases a producer blocked in write.
+            process.stdout.close()
+            self.assertEqual(0, process.wait(timeout=10))
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                process.wait(timeout=10)
+            process.stdin.close()
+            process.stderr.close()

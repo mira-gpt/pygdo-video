@@ -51,6 +51,7 @@ class module_video(GDO_Module):
             GDT_String('video_file_url').maxlen(2048).tooltip('tt_video_file_url'),
             GDT_String('video_webcam_url').maxlen(2048).tooltip('tt_video_webcam_url'),
             GDT_Bool('video_duck_overlay').not_null().initial('0').tooltip('tt_video_duck_overlay'),
+            GDT_String('video_duck3d_pythonpath').maxlen(512).tooltip('tt_video_duck3d_pythonpath'),
             GDT_String('video_output_device').not_null().initial('/dev/video2').maxlen(255).tooltip('tt_video_output_device'),
             GDT_Bool('video_output_preview').not_null().initial('0').tooltip('tt_video_output_preview'),
             GDT_Width('video_preview_w').not_null().initial('320').min(1).max(8192).tooltip('tt_video_preview_w'),
@@ -92,6 +93,7 @@ class module_video(GDO_Module):
             raise ValueError('Video mode is off')
         if mode == 'screensharing':
             worker = DesktopOverlay(screensharing=True)
+            worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
             self.connector = worker
             return
@@ -101,6 +103,7 @@ class module_video(GDO_Module):
                 or self.get_config_value('video_duck_overlay')):
             raise ValueError('Video file, webcam and duck layers are not implemented yet')
         worker = VideoConnector()
+        worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
         worker.start(
             self.get_config_val('video_desktop_url'), self.get_config_val('video_bg_image_url'),
             self.get_config_value('video_output_preview'), self.get_config_value('video_live'),

@@ -25,6 +25,8 @@ class DesktopOverlay:
         self._mic_wake = None
         self.duck_enabled = False
         self.duck_speech_id = None
+        self.duck_source = None
+        self.duck3d_pythonpath = None
 
     def start(self, image):
         image = VideoConnector.local_file(image)
@@ -55,6 +57,9 @@ class DesktopOverlay:
             self.enabled = enabled
 
     def stop(self):
+        source, self.duck_source = self.duck_source, None
+        if source:
+            source.close()
         with self.lock:
             if self._mic_stop:
                 self._mic_stop.set()
@@ -146,6 +151,9 @@ class DesktopOverlay:
             raise RuntimeError('Desktop overlay stopped') from exc
 
     def duck(self, enabled):
+        source, self.duck_source = self.duck_source, None
+        if source:
+            source.close()
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
@@ -161,11 +169,50 @@ class DesktopOverlay:
             self.duck_enabled = enabled
             self.duck_speech_id = None
 
+    def duck3d(self, enabled):
+        if not enabled:
+            self.duck(False)
+            return
+        from gdo.video.Duck3DSource import Duck3DSource
+        source = Duck3DSource(pythonpath=self.duck3d_pythonpath)
+        try:
+            source.wait_ready()
+            self.duck(True)
+            with self.lock:
+                self.duck_source = source
+            threading.Thread(target=self._pump_duck3d, args=(source,), daemon=True,
+                             name='video-desktop-duck3d').start()
+        except Exception:
+            source.close()
+            raise
+
+    def _pump_duck3d(self, source):
+        while self.duck_source is source and source.process.poll() is None:
+            frame = source.snapshot()
+            if frame:
+                buffer = io.BytesIO()
+                frame.save(buffer, format='PNG')
+                with self.lock:
+                    if self.duck_source is not source or not self.is_running():
+                        break
+                    try:
+                        self._send_payload({'effect': 'duck_frame', 'png': base64.b64encode(buffer.getvalue()).decode('ascii')})
+                    except RuntimeError:
+                        break
+            time.sleep(1 / 15)
+
+    def duck_animation(self, mode):
+        if not self.duck_source:
+            raise RuntimeError('Enable the live 3D duck first')
+        self.duck_source.update(mode=mode)
+
     def speech_start(self, speech_id, text):
         with self.lock:
             if self.duck_enabled and self.is_running():
                 self._send_payload({'effect': 'duck_speech', 'speaking': True, 'text': text[:300]})
                 self.duck_speech_id = speech_id
+                if self.duck_source:
+                    self.duck_source.update(speaking=True)
 
     def duck_caption(self, text):
         with self.lock:
@@ -178,6 +225,8 @@ class DesktopOverlay:
             if self.duck_enabled and self.duck_speech_id == speech_id and self.is_running():
                 self._send_payload({'effect': 'duck_speech', 'speaking': False, 'text': ''})
                 self.duck_speech_id = None
+                if self.duck_source:
+                    self.duck_source.update(speaking=False)
 
     def microphone_meter(self, enabled):
         with self.lock:
@@ -265,6 +314,7 @@ class DesktopOverlay:
             media.close()
 
     def close_effects(self, key):
+        source = None
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
@@ -275,6 +325,7 @@ class DesktopOverlay:
             if key in ('all', 'duck'):
                 self.duck_enabled = False
                 self.duck_speech_id = None
+                source, self.duck_source = self.duck_source, None
             media = None
             if key in ('all', 'media'):
                 media, self.media_layer = self.media_layer, None
@@ -286,6 +337,8 @@ class DesktopOverlay:
                 self._send_payload({'effect': 'close', 'key': key})
         if media and hasattr(media, 'close'):
             media.close()
+        if source:
+            source.close()
 
     def status(self):
         if self.is_running():

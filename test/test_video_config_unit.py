@@ -13,7 +13,7 @@ class VideoConfigTest(unittest.TestCase):
             fields = {field._name: field for field in module_video().gdo_module_config()}
         self.assertEqual(set(fields), {'video_mode', 'video_desktop_url', 'video_bg_image_url', 'video_overlay_image_url', 'video_file_url',
                                       'video_webcam_url', 'video_output_device',
-                                      'video_duck_overlay', 'video_output_preview', 'video_preview_w', 'video_preview_h', 'video_live'})
+                                      'video_duck_overlay', 'video_duck3d_pythonpath', 'video_output_preview', 'video_preview_w', 'video_preview_h', 'video_live'})
         self.assertEqual(fields['video_mode'].get_initial(), 'off')
         self.assertEqual(fields['video_preview_w'].get_initial(), '320')
         self.assertEqual(fields['video_preview_h'].get_initial(), '180')
@@ -35,7 +35,8 @@ class VideoConfigTest(unittest.TestCase):
              patch.object(module, 'get_config_val', return_value='/overlay.png') as config, \
              patch('gdo.video.module_video.DesktopOverlay') as overlay:
             module.start_compositor()
-        config.assert_called_once_with('video_overlay_image_url')
+        config.assert_any_call('video_overlay_image_url')
+        self.assertNotIn('video_bg_image_url', [call.args[0] for call in config.call_args_list])
         overlay.return_value.start.assert_called_once_with('/overlay.png')
         with self.assertRaises(ValueError):
             from gdo.video.DesktopOverlay import DesktopOverlay

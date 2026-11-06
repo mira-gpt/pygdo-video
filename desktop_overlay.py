@@ -61,7 +61,7 @@ def main(image_path, screensharing=False, window_suffix=''):
         for key, layer in layers.ordered():
             if key == 'duck':
                 context.save()
-                pixbuf = layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed']
+                pixbuf = layer.get('frame') or (layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed'])
                 Gdk.cairo_set_source_pixbuf(context, pixbuf, 480, 195)
                 context.paint()
                 caption = layer['text'] if layer['speaking'] else layer.get('caption', '') if time.monotonic() < layer.get('caption_until', 0) else ''
@@ -235,6 +235,13 @@ def main(image_path, screensharing=False, window_suffix=''):
                     caption = request.get('text')
                     if duck and isinstance(caption, str):
                         duck['caption'], duck['caption_until'] = caption, time.monotonic() + 8
+                elif request.get('effect') == 'duck_frame':
+                    duck = layers.get('duck')
+                    if duck and isinstance(request.get('png'), str):
+                        loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+                        loader.write(base64.b64decode(request['png'], validate=True))
+                        loader.close()
+                        duck['frame'] = loader.get_pixbuf().scale_simple(150, 150, GdkPixbuf.InterpType.BILINEAR)
                 elif request.get('effect') == 'close':
                     key = request.get('key')
                     if key == 'all':

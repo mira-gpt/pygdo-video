@@ -13,6 +13,25 @@ Layers can be switched while running. YouTube and Twitch are planned outputs.
 
 ## Architecture draft
 
+### Live 3D duck: target (not implemented yet)
+
+The duck is a live-rendered, transparent 3D overlay in both screensharing and
+virtual-webcam modes. It always has a looping animation: `idle` gently rocks
+and blinks; `quacking` waddles and hops. `$duck.anim <key>` switches the active
+animation quickly, without rebuilding or restarting the renderer. Animations
+are authored in the project, loaded ahead of time, and can be selected by Mira.
+Idle is the default; a selection remains active until changed. Speech controls
+the beak independently of the body animation. Both outputs use the same model,
+animation state and transparent rendered result; shutdown and failures must not
+break the video worker. Initial testing is isolated to Test Dog.
+
+Development status: the experimental offscreen renderer has been visually
+tried in Test Dog's screensharing mode. The virtual-webcam adapter has isolated
+tests, but still needs a live camera/stream test.
+Optional dependencies are listed in `requirements-duck3d.txt`; installing them
+does not activate the renderer. The current model has a beak rig; body and eye
+motion are procedural pending authored animation clips.
+
 - Input adapters provide desktop capture, webcam capture, or video-file input.
 - A background renderer/compositor produces the output stream. A future animated
   avatar or overlay can be a separate source, not a required input.
@@ -54,6 +73,11 @@ broadcasting.
 - `$video.ducktext <text>` explicitly shows a short caption for eight seconds
   with the enabled duck, without starting speech. It is visible to viewers;
   Codex responses are not published automatically. Maximum 250 characters.
+- `$video.duck3d 1` requests the experimental live 3D duck; `$video.duck3d 0`
+  removes it and stops its renderer. `$duck.anim idle|quacking` requests an
+  animation change; the mode persists until changed. Both use Dog IPC and require
+  the optional 3D dependencies and a working graphics display. A queued reply
+  does not confirm that the renderer started or appeared on stream.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.
