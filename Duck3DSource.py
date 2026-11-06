@@ -44,7 +44,7 @@ class Duck3DSource:
             return
 
     def update(self, **state):
-        if 'mode' in state and state['mode'] not in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye'):
+        if 'mode' in state and state['mode'] not in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high'):
             raise ValueError('Unknown duck animation')
         try:
             with self.lock:

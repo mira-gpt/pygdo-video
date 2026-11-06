@@ -84,7 +84,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -137,6 +137,8 @@ def main():
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
+            if mode == 'high':
+                root.setR(7 * math.sin(t * 1.1))
             root.setSz(.88 + .012 * math.sin(t * (7 if mode == 'cry' else .8)) if mode in ('sad', 'cry') else 1)
             for tear in tears:
                 if mode == 'cry':
@@ -182,7 +184,12 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(1.3 if mode == 'shrug' else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode == 'sad' else 1)
+                    node.setSz(1.3 if mode == 'shrug' else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high') else 1)
+                    if eye.startswith('Eye white'):
+                        if mode == 'high':
+                            node.setColorScale(1, .35, .35, 1)
+                        else:
+                            node.clearColorScale()
             for pupil, (x, z) in zip(pupils, pupil_origins):
                 phase = (time.monotonic() - mode_start) * 5
                 pupil.setX(x + .035 * math.sin(phase) if mode == 'rolleye' else x)
