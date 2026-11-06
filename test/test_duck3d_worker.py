@@ -24,11 +24,22 @@ class Duck3DWorkerTest(unittest.TestCase):
             self.assertIsNotNone(source.snapshot())
             source.update(mode='quacking', speaking=True)
             source.update(mode='lol')
+            source.update(mode='hello')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:
             source.close()
         self.assertIsNotNone(source.process.poll())
+
+    def test_model_has_independent_wing_joints(self):
+        import gltf
+        from panda3d.core import NodePath
+        from direct.actor.Actor import Actor
+
+        model = Path(__file__).resolve().parents[1] / 'assets/duck/mira-duck.glb'
+        root = NodePath(gltf.load_model(str(model)))
+        actor = Actor(root.find('**/Wing rig'), copy=False)
+        self.assertTrue({'WingBase', 'WingTip'} <= {joint.getName() for joint in actor.getJoints()})
 
     def test_both_output_adapters_receive_live_frames_and_stop(self):
         from gdo.video.DesktopOverlay import DesktopOverlay

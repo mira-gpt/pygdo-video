@@ -51,7 +51,67 @@ stopping straightforward. Desktop and webcam capture may expose private
 information; review the intended view and participants' consent before
 broadcasting.
 
+## Installing the virtual camera
+
+For a test instance, follow the module checkout/install steps in the Audio
+README and verify the provider and branch before installation. Video's
+`gdo_install` creates its Video connector server if one does not already exist;
+check the configured server and ensure the connector is enabled in the intended
+Dog. Do not create duplicates. The default `video_mode=off` captures nothing.
+
+Install FFmpeg/FFplay, Pillow in the Dog interpreter and the distribution's
+`v4l2loopback` package matching the running kernel. X11 access is required for
+desktop capture. The transparent desktop-sharing mode instead requires an X11
+compositor, GTK 3/PyGObject and Cairo; it does not need a virtual camera.
+
+Inspect existing cameras first (`ls -l /dev/video*` and, if installed,
+`v4l2-ctl --list-devices`). If no suitable loopback is already loaded, choose
+an unused number and have an administrator explicitly create it, for example:
+
+```sh
+sudo modprobe v4l2loopback video_nr=2 card_label="Mira Video" exclusive_caps=1
+```
+
+This affects the host, not just Test Dog. If the kernel module is already
+loaded, do not unload it while another app uses it; `modprobe` with new options
+does not necessarily add a device. With `exclusive_caps=1`, a receiving app may
+only see the camera after a producer has started. Check device permissions and
+that the path is the virtual device, not a physical camera. See the
+[v4l2loopback documentation](https://github.com/v4l2loopback/v4l2loopback/blob/main/README.md).
+
+For the isolated Test Dog, an owner/admin can configure an X11 desktop composite
+with a local preview and virtual output, replacing the display and device with
+the actual values:
+
+```sh
+pygdotest '$admin.conf video video_mode virtualwebcam'
+pygdotest '$admin.conf video video_desktop_url :0.0'
+pygdotest '$admin.conf video video_output_device /dev/video2'
+pygdotest '$admin.conf video video_output_preview 1'
+pygdotest '$admin.conf video video_live 1'
+```
+
+Review the desktop for private content before capture. Start/restart only the
+intended Test Dog or its Video connector after configuration. Then inspect the
+local preview and select `Mira Video` in a receiving app; verify the actual
+image there. A queued command or visible device is not proof of a working
+stream. `pygdotest '$video.stop'` stops the worker; the kernel device itself
+remains until reboot or an explicitly managed module removal. `video_live=0`
+with preview enabled is useful when no camera output is desired.
+
 ## Methods
+
+`$duck.welcome <nickname>` waves and speaks one of three greetings in the
+channel language (currently German or English). Actual channel-join events
+also trigger a welcome when `mira_quacking` is enabled, with an eight-second
+global cooldown; unsupported languages and bot/system accounts are skipped.
+Join snapshots are not welcomed. This can expose nicknames on the show; only
+enable live-show mode when that is intended. No stream or microphone is started.
+
+`$video.liveshow 1|0` sets Mira's persisted `mira_quacking` live-show mode.
+When the microphone meter is visible, a red border marks the enabled mode in
+both video outputs. It does not start or prove a stream or microphone capture;
+when the meter is hidden no border is visible.
 
 - `$video.start` starts the compositor with the configured sources and outputs.
 - `$video.preview` opens or restarts the virtual-webcam compositor preview
@@ -91,6 +151,12 @@ broadcasting.
   event updates the base to restore without cutting the event short. The event
   is queued; it requires an already active live 3D duck and does not start one.
   A `lol` event changes a `sad` base mood to `idle`.
+- `$duck.anim ouch` plays a short pain reaction with alternating feet and comic
+  marks, then restores the current base mood. A newer event replaces it.
+- `$duck.anim hello` waves one wing quickly using weighted base and tip joints,
+  then restores the current base mood using the same smooth transition.
+- `$duck.anim rolleye [--lang=de|en] [text]` briefly rolls the eyes, optionally
+  speaking the provided text, then returns to the current base mood.
 - `$duck.shrug [--lang=de|en] [text]` plays the surprise animation; optional
   text is spoken using the user's language by default, and the saved mood is
   restored after speech. Without text it is a two-second silent event.

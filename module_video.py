@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import os
 import asyncio
+import re
+import time
+import random
 
 from gdo.base.GDO_Module import GDO_Module
 from gdo.base.GDO import GDO
@@ -75,6 +78,58 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
         Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
+        Application.EVENTS.subscribe('module_mira_mira_quacking_changed', self.on_mira_quacking_changed)
+        Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
+
+    async def on_live_join_welcome(self, user, channel):
+        """Greet actual joins only during a live show, with a global cooldown."""
+        from gdo.base.ModuleLoader import ModuleLoader
+        from gdo.core.GDT_UserType import GDT_UserType
+        mira = ModuleLoader.instance().get_module('mira')
+        if not mira or not mira.get_config_value('mira_quacking'):
+            return
+        if any(user.is_type(kind) for kind in (GDT_UserType.BOT, GDT_UserType.CHAPPY,
+                                                GDT_UserType.SYSTEM, GDT_UserType.DEVICE)):
+            return
+        language = channel.get_lang_iso()
+        if language not in ('de', 'en'):
+            return  # Do not misrepresent the spoken language.
+        now = time.monotonic()
+        if now - getattr(self, '_last_auto_welcome', 0) < 8:
+            return
+        name = user.get_displayname() or user.get_name()
+        name = re.sub(r'[\x00-\x1f\x7f]', ' ', name or '').strip()[:60]
+        if not name:
+            return
+        self._last_auto_welcome = now
+        asyncio.create_task(self.play_welcome(name, language))
+
+    async def play_welcome(self, nickname, language):
+        from gdo.audio.method.ipc_say import ipc_say
+        from gdo.base.Logger import Logger
+        from gdo.base.Trans import tiso
+        try:
+            if language not in ('de', 'en'):
+                raise ValueError('No supported welcome voice for this channel language')
+            nickname = re.sub(r'[\x00-\x1f\x7f]', ' ', nickname or '').strip()[:60]
+            if not nickname:
+                raise ValueError('Nickname is empty')
+            text = tiso(language, f'video_welcome_{random.randint(1, 3)}', (nickname,))
+            self.duck_event('hello')
+            await ipc_say().input('text', text).input('lang', language).gdo_execute()
+        except (ImportError, ValueError, RuntimeError, OSError, AttributeError) as error:
+            Logger.warning(f'Duck welcome failed: {error}')
+
+    async def on_mira_quacking_changed(self, module, field):
+        self.connector.liveshow(field.get_value())
+
+    def sync_liveshow(self):
+        from gdo.base.ModuleLoader import ModuleLoader
+        try:
+            mira = ModuleLoader.instance().get_module('mira')
+        except AttributeError:
+            mira = None
+        self.connector.liveshow(bool(mira.get_config_value('mira_quacking')) if mira else False)
 
     async def on_mira_mood_changed(self, module, field):
         task = getattr(self, '_duck_event_task', None)
@@ -137,6 +192,7 @@ class module_video(GDO_Module):
             worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
             self.connector = worker
+            self.sync_liveshow()
             return
         if mode != 'virtualwebcam':
             raise ValueError('Unknown video mode')
@@ -151,6 +207,7 @@ class module_video(GDO_Module):
             self.get_config_val('video_output_device'), self.get_config_value('video_preview_w'),
             self.get_config_value('video_preview_h'))
         self.connector = worker
+        self.sync_liveshow()
 
     def gdo_load_scripts(self, page: 'GDT_Page'):
         self.add_js('js/pygdo-video.js')

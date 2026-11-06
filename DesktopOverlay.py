@@ -27,6 +27,13 @@ class DesktopOverlay:
         self.duck_speech_id = None
         self.duck_source = None
         self.duck3d_pythonpath = None
+        self.liveshow_enabled = False
+
+    def liveshow(self, enabled):
+        with self.lock:
+            self.liveshow_enabled = bool(enabled)
+            if self.is_running():
+                self._send_payload({'effect': 'liveshow', 'enabled': self.liveshow_enabled})
 
     def start(self, image):
         image = VideoConnector.local_file(image)

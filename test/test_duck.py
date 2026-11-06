@@ -70,7 +70,7 @@ class DuckTest(unittest.TestCase):
 
     def test_lol_command_normalizes_key_for_ipc(self):
         method = duckanim()
-        method.param_val = MagicMock(return_value='LOL')
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'LOL', 'text': None}[key])
         method.reply = MagicMock()
         db = MagicMock()
         db.is_in_transaction.return_value = False

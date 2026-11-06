@@ -48,6 +48,7 @@ def main(image_path, screensharing=False, window_suffix=''):
     effect.set_default_size(effect_width, effect_height)
     effect.stick()
     layers = LayerStack()
+    show_state = {'liveshow': False}
 
     def draw_effect(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)
@@ -85,6 +86,11 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.set_source_rgba(.06, .06, .06, .9)
                 context.rectangle(458, 326, 170, 24)
                 context.fill()
+                if show_state['liveshow']:
+                    context.set_source_rgb(1, .12, .12)
+                    context.set_line_width(2)
+                    context.rectangle(459, 327, 168, 22)
+                    context.stroke()
                 context.set_source_rgb(1, 1, 1)
                 context.set_font_size(10)
                 state = layer.get('transcription')
@@ -206,6 +212,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                         if len(drawing['lines']) < 2000:
                             drawing['lines'].append(line)
                             layers.put('drawing', drawing)
+                elif request.get('effect') == 'liveshow' and isinstance(request.get('enabled'), bool):
+                    show_state['liveshow'] = request['enabled']
                 elif request.get('effect') == 'mic':
                     if request.get('remove') is True:
                         layers.remove('mic')

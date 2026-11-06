@@ -31,6 +31,7 @@ class VideoConnector:
         self.effects = LayerStack()
         self.enabled = {'desktop': False, 'bg_image': False}
         self.duck3d_pythonpath = None
+        self.liveshow_enabled = False
 
     @staticmethod
     def local_file(value):
@@ -216,9 +217,16 @@ class VideoConnector:
     def microphone_meter(self, enabled):
         from gdo.video.MicrophoneLevel import MicrophoneLevel
         if enabled:
-            self.put_effect('mic', MicrophoneLevel())
+            self.put_effect('mic', MicrophoneLevel(self.liveshow_enabled))
         else:
             self.remove_effect('mic')
+
+    def liveshow(self, enabled):
+        with self.lock:
+            self.liveshow_enabled = bool(enabled)
+            mic = self.effects.get('mic')
+            if mic:
+                mic.liveshow = self.liveshow_enabled
 
     def duck(self, enabled):
         from gdo.video.DuckLayer import DuckLayer

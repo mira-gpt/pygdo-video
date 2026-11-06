@@ -10,10 +10,18 @@ import threading
 import time
 from pathlib import Path
 
+TRANSITION_SECONDS = .7
+
+
+def transition_weight(elapsed, duration=TRANSITION_SECONDS):
+    """Smoothly interpolate between poses, clamped at both ends."""
+    amount = max(0.0, min(1.0, elapsed / duration))
+    return amount * amount * (3.0 - 2.0 * amount)
+
 
 def main():
     import gltf
-    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, NodePath, OrthographicLens, Vec4, loadPrcFileData
+    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TransparencyAttrib, Vec4, loadPrcFileData
     from direct.showbase.ShowBase import ShowBase
     from direct.actor.Actor import Actor
 
@@ -26,6 +34,12 @@ def main():
     # discard its unskinned body, eyes and feet.
     beak = Actor(root.find('**/Duck rig'), copy=False)
     beak.reparentTo(root)
+    wing_actor = Actor(root.find('**/Wing rig'), copy=False)
+    wing_actor.reparentTo(root)
+    wing_base = wing_actor.controlJoint(None, 'modelRoot', 'WingBase')
+    wing_tip = wing_actor.controlJoint(None, 'modelRoot', 'WingTip')
+    if wing_base.isEmpty() or wing_tip.isEmpty():
+        raise RuntimeError('Duck wing joints are missing')
     root.reparentTo(base.render)
     tears = []
     for side in (-1, 1):
@@ -37,6 +51,17 @@ def main():
         tear.setLightOff()
         tear.hide()
         tears.append(tear)
+    marks = LineSegs('ouch marks')
+    marks.setThickness(3)
+    marks.setColor(1, .86, .12, 1)
+    for side in (-1, 1):
+        for z, dz in ((1.15, -.08), (1.42, .02), (1.68, .1)):
+            marks.moveTo(side * .73, -.35, z)
+            marks.drawTo(side * 1.03, -.35, z + dz)
+    pain_marks = root.attachNewNode(marks.create())
+    pain_marks.setLightOff()
+    pain_marks.setTransparency(TransparencyAttrib.MAlpha)
+    pain_marks.hide()
     lens = OrthographicLens()
     lens.setFilmSize(2.7, 2.7)
     base.cam.node().setLens(lens)
@@ -59,7 +84,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -79,6 +104,22 @@ def main():
 
     threading.Thread(target=receive, daemon=True).start()
     start = time.monotonic()
+    nodes = [(root, 'R'), (root, 'Z'), (root, 'P'), (root, 'Sz')]
+    nodes.extend([(wing_base, 'R'), (wing_tip, 'R')])
+    for name, prop in [('Wing L', 'R'), ('Foot', 'Z'), ('Foot.001', 'Z'),
+                       ('Eye white', 'Sz'), ('Eye white.001', 'Sz'), ('Pupil', 'Sz'), ('Pupil.001', 'Sz')]:
+        node = root.find('**/' + name)
+        if not node.isEmpty():
+            nodes.append((node, prop))
+    pupils = [root.find('**/' + name) for name in ('Pupil', 'Pupil.001')]
+    pupil_origins = [(node.getX(), node.getZ()) for node in pupils if not node.isEmpty()]
+    pupils = [node for node in pupils if not node.isEmpty()]
+    for node in pupils:
+        nodes.extend([(node, 'X'), (node, 'Z')])
+    previous_mode = 'idle'
+    outgoing_mode = 'idle'
+    transition_stamp = state['mode_start']
+    origin = [getattr(node, 'get' + prop)() for node, prop in nodes]
     try:
         while True:
             with lock:
@@ -87,6 +128,11 @@ def main():
                 envelope, step_ms, speech_start = state['envelope'], state['step_ms'], state['speech_start']
             if not running:
                 break
+            if mode_start != transition_stamp:
+                origin = [getattr(node, 'get' + prop)() for node, prop in nodes]
+                outgoing_mode, previous_mode = previous_mode, mode
+                transition_stamp = mode_start
+            blend = transition_weight(time.monotonic() - mode_start)
             t = time.monotonic() - start
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
@@ -102,18 +148,49 @@ def main():
                 elapsed = time.monotonic() - mode_start
                 root.setR(4 * math.sin(elapsed * 18) * max(0, 1 - elapsed))
                 root.setZ(.40 * math.sin(math.pi * min(elapsed / .65, 1)))
-            for sign, name in ((-1, 'Wing L'), (1, 'Wing R')):
-                wing = root.find('**/' + name)
-                if not wing.isEmpty():
-                    wing.setR(sign * (30 + 25 * math.sin(t * 11)) if mode == 'lol' else sign * 55 if mode == 'shrug' else -sign * 25 if mode in ('sad', 'cry') else 0)
+            if mode == 'ouch':
+                phase = (time.monotonic() - mode_start) * 7
+                root.setR(16 * math.sin(phase))
+                root.setZ(.16 * abs(math.sin(phase)))
+            if mode == 'hello':
+                phase = (time.monotonic() - mode_start) * 18
+                root.setR(5 * math.sin(phase / 2))
+                root.setZ(.05 * abs(math.sin(phase / 2)))
+            if mode == 'ouch' or (outgoing_mode == 'ouch' and blend < 1):
+                pain_marks.show()
+                pain_marks.setColorScale(1, 1, 1, blend if mode == 'ouch' else 1 - blend)
+            else:
+                pain_marks.hide()
+            left_wing = root.find('**/Wing L')
+            if not left_wing.isEmpty():
+                left_wing.setR(-(30 + 25 * math.sin(t * 11)) if mode == 'lol' else -55 if mode == 'shrug' else 25 if mode in ('sad', 'cry') else 0)
+            if mode == 'hello':
+                wave = math.sin((time.monotonic() - mode_start) * 18)
+                wing_base.setR(50 + 30 * wave)
+                wing_tip.setR(30 * wave)
+            else:
+                wing_base.setR(30 + 25 * math.sin(t * 11) if mode == 'lol' else 55 if mode == 'shrug' else -25 if mode in ('sad', 'cry') else 0)
+                wing_tip.setR(0)
             for index, name in enumerate(('Foot', 'Foot.001')):
                 foot = root.find('**/' + name)
                 if not foot.isEmpty():
-                    foot.setZ(.16 + (max(0, math.sin(t * 5 + index * math.pi)) * .08 if mode in ('quacking', 'lol') else 0))
+                    if mode == 'ouch':
+                        lift = max(0, math.sin((time.monotonic() - mode_start) * 7 + index * math.pi)) * .22
+                    else:
+                        lift = max(0, math.sin(t * 5 + index * math.pi)) * .08 if mode in ('quacking', 'lol') else 0
+                    foot.setZ(.16 + lift)
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
                     node.setSz(1.3 if mode == 'shrug' else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode == 'sad' else 1)
+            for pupil, (x, z) in zip(pupils, pupil_origins):
+                phase = (time.monotonic() - mode_start) * 5
+                pupil.setX(x + .035 * math.sin(phase) if mode == 'rolleye' else x)
+                pupil.setZ(z + .045 * math.cos(phase) if mode == 'rolleye' else z)
+            if blend < 1:
+                for (node, prop), start_value in zip(nodes, origin):
+                    target_value = getattr(node, 'get' + prop)()
+                    getattr(node, 'set' + prop)(start_value + (target_value - start_value) * blend)
             index = int((time.monotonic() - speech_start) * 1000 / step_ms)
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.
