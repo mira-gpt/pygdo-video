@@ -116,5 +116,7 @@ md_video_duckevent = "Play a brief duck animation, then return to the current ba
 tt_video_duckevent_key = "Brief animation: idle, quacking, LOL, or shrug; a new event replaces the current one."
 mt_video_shrug = "Surprise duck"
 md_video_shrug = "Make the duck jump in surprise, then return to its base mood."
+mt_video_cry = "Crying duck"
+md_video_cry = "Make the duck cry with optional speech and set its base mood to sad."
 tt_video_duckshrug_text = "Optional text to speak during the surprise animation, up to 300 characters."
 video_duckevent_queued = "Duck animation event queued for Dog."

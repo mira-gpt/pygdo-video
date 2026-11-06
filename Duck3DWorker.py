@@ -13,7 +13,7 @@ from pathlib import Path
 
 def main():
     import gltf
-    from panda3d.core import AmbientLight, DirectionalLight, NodePath, OrthographicLens, Vec4, loadPrcFileData
+    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, NodePath, OrthographicLens, Vec4, loadPrcFileData
     from direct.showbase.ShowBase import ShowBase
     from direct.actor.Actor import Actor
 
@@ -27,6 +27,16 @@ def main():
     beak = Actor(root.find('**/Duck rig'), copy=False)
     beak.reparentTo(root)
     root.reparentTo(base.render)
+    tears = []
+    for side in (-1, 1):
+        card = CardMaker('cry tear')
+        card.setFrame(-.045, .045, -.11, 0)
+        tear = root.attachNewNode(card.generate())
+        tear.setPos(side * .22, -.81, 1.51)
+        tear.setColor(.18, .65, 1, 1)
+        tear.setLightOff()
+        tear.hide()
+        tears.append(tear)
     lens = OrthographicLens()
     lens.setFilmSize(2.7, 2.7)
     base.cam.node().setLens(lens)
@@ -49,7 +59,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -80,8 +90,14 @@ def main():
             t = time.monotonic() - start
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
-            root.setP(20 + 2 * math.sin(t * .8) if mode == 'sad' else 0)
-            root.setSz(.88 + .012 * math.sin(t * .8) if mode == 'sad' else 1)
+            root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
+            root.setSz(.88 + .012 * math.sin(t * (7 if mode == 'cry' else .8)) if mode in ('sad', 'cry') else 1)
+            for tear in tears:
+                if mode == 'cry':
+                    tear.show()
+                    tear.setZ(1.51 - .15 * ((time.monotonic() - mode_start) % .8) / .8)
+                else:
+                    tear.hide()
             if mode == 'shrug':
                 elapsed = time.monotonic() - mode_start
                 root.setR(4 * math.sin(elapsed * 18) * max(0, 1 - elapsed))
@@ -89,7 +105,7 @@ def main():
             for sign, name in ((-1, 'Wing L'), (1, 'Wing R')):
                 wing = root.find('**/' + name)
                 if not wing.isEmpty():
-                    wing.setR(sign * (30 + 25 * math.sin(t * 11)) if mode == 'lol' else sign * 55 if mode == 'shrug' else -sign * 25 if mode == 'sad' else 0)
+                    wing.setR(sign * (30 + 25 * math.sin(t * 11)) if mode == 'lol' else sign * 55 if mode == 'shrug' else -sign * 25 if mode in ('sad', 'cry') else 0)
             for index, name in enumerate(('Foot', 'Foot.001')):
                 foot = root.find('**/' + name)
                 if not foot.isEmpty():
@@ -97,7 +113,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(1.3 if mode == 'shrug' else .12 if (t + 2) % 4.2 < .12 else .42 if mode == 'sad' else 1)
+                    node.setSz(1.3 if mode == 'shrug' else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode == 'sad' else 1)
             index = int((time.monotonic() - speech_start) * 1000 / step_ms)
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.

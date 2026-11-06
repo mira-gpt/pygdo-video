@@ -32,6 +32,8 @@ class ipc_ducklol(Method):
             mira = ModuleLoader.instance().get_module('mira')
             if self.animation == 'lol' and mira and mira.cfg_mira_mood() == 'sad':
                 await mira.save_config_val('mira_mood', 'idle')
+            elif self.animation == 'cry' and mira:
+                await mira.save_config_val('mira_mood', 'sad')
             connector = module_video.instance().connector
             connector.duck_animation(self.animation)
             switched = True

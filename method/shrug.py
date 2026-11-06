@@ -10,6 +10,8 @@ from gdo.video.StarWarsIPC import encode_text
 
 
 class shrug(Method):
+    animation = 'shrug'
+    speech_method = 'video.ipc_duckshrug'
     @classmethod
     def gdo_trig(cls):
         return 'duck.shrug'
@@ -31,9 +33,9 @@ class shrug(Method):
                 payload = [encode_text(text), language]
                 if len(msgspec.json.encode(payload)) > IPC.MAX_EVENT_ARG_SIZE:
                     raise ValueError('Speech request exceeds IPC size limit')
-                args = ('video.ipc_duckshrug', payload)
+                args = (self.speech_method, payload)
             else:
-                args = ('video.ipc_duckevent', ['shrug'])
+                args = ('video.ipc_duckevent', [self.animation])
             if Application.db().is_in_transaction():
                 Application.defer_after_commit(IPC.send_to_dog, *args)
             else:

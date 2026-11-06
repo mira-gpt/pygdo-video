@@ -94,6 +94,8 @@ broadcasting.
 - `$duck.shrug [--lang=de|en] [text]` plays the surprise animation; optional
   text is spoken using the user's language by default, and the saved mood is
   restored after speech. Without text it is a two-second silent event.
+- `$duck.cry [--lang=de|en] [text]` cries with optional speech and sets the
+  persistent base mood to `sad`. Without text, the crying event lasts two seconds.
 - `$duck.lol <text>` selects `LOL`, speaks the text using the configured Audio
   voice, and returns to the current saved `mira_mood` when playback finishes or
   fails (or `idle` if Mira is not installed). If the previous base was `sad`,
