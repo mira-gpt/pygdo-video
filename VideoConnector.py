@@ -232,6 +232,13 @@ class VideoConnector:
             if duck:
                 duck.speech_start(speech_id, text)
 
+    def duck_caption(self, text):
+        with self.lock:
+            duck = self.effects.get('duck')
+            if not duck:
+                raise RuntimeError('Enable the duck first')
+            duck.caption(text)
+
     def speech_end(self, speech_id):
         with self.lock:
             duck = self.effects.get('duck')

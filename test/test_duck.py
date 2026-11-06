@@ -15,6 +15,19 @@ class DuckTest(unittest.TestCase):
     def setUp(self):
         Application.mode(Mode.render_cli)
 
+    def test_caption_expires_and_poses_are_cached(self):
+        layer = DuckLayer()
+        with patch('gdo.video.DuckLayer.time.monotonic', return_value=100):
+            layer.caption('Hello stream')
+            shown = Image.new('RGB', (640, 360))
+            layer.draw(shown)
+            layer.draw(Image.new('RGB', (640, 360)))
+            self.assertEqual(1, len(layer._scaled))
+        with patch('gdo.video.DuckLayer.time.monotonic', return_value=109):
+            expired = Image.new('RGB', (640, 360))
+            layer.draw(expired)
+        self.assertNotEqual(shown.tobytes(), expired.tobytes())
+
     def test_draw_and_speech_id_prevents_old_end_hiding_new_caption(self):
         layer = DuckLayer()
         before = Image.new('RGB', (640, 360))
@@ -62,6 +75,8 @@ class DuckTest(unittest.TestCase):
             worker.speech_start('id', 'private')
             send.assert_not_called()
             worker.duck(True)
+            worker.duck_caption('Hi everyone')
+            self.assertEqual({'effect': 'duck_caption', 'text': 'Hi everyone'}, send.call_args.args[0])
             worker.speech_start('first', 'Hello')
             worker.speech_start('second', 'World')
             worker.speech_end('first')

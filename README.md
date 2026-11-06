@@ -51,6 +51,9 @@ broadcasting.
   output is shared; it does not expose unrelated terminal responses. The
   character uses pre-rendered poses of the included rigged 3D model, not a
   live 3D renderer or phoneme-accurate lip sync.
+- `$video.ducktext <text>` explicitly shows a short caption for eight seconds
+  with the enabled duck, without starting speech. It is visible to viewers;
+  Codex responses are not published automatically. Maximum 250 characters.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.

@@ -64,8 +64,9 @@ def main(image_path, screensharing=False, window_suffix=''):
                 pixbuf = layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed']
                 Gdk.cairo_set_source_pixbuf(context, pixbuf, 480, 195)
                 context.paint()
-                if layer['speaking'] and layer['text']:
-                    lines = textwrap.wrap(layer['text'], 65)[:4]
+                caption = layer['text'] if layer['speaking'] else layer.get('caption', '') if time.monotonic() < layer.get('caption_until', 0) else ''
+                if caption:
+                    lines = textwrap.wrap(caption, 65)[:4]
                     context.set_source_rgba(.05, .05, .08, .9)
                     context.rectangle(10, 10, 620, 18 + len(lines) * 19)
                     context.fill()
@@ -229,6 +230,11 @@ def main(image_path, screensharing=False, window_suffix=''):
                     duck = layers.get('duck')
                     if duck and isinstance(request.get('speaking'), bool) and isinstance(text, str):
                         duck['speaking'], duck['text'] = request['speaking'], text[:300]
+                elif request.get('effect') == 'duck_caption':
+                    duck = layers.get('duck')
+                    caption = request.get('text')
+                    if duck and isinstance(caption, str):
+                        duck['caption'], duck['caption_until'] = caption, time.monotonic() + 8
                 elif request.get('effect') == 'close':
                     key = request.get('key')
                     if key == 'all':
