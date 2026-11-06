@@ -23,6 +23,7 @@ class Duck3DWorkerTest(unittest.TestCase):
                 time.sleep(.05)
             self.assertIsNotNone(source.snapshot())
             source.update(mode='quacking', speaking=True)
+            source.update(mode='lol')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:
@@ -40,6 +41,7 @@ class Duck3DWorkerTest(unittest.TestCase):
         live = compositor.effects.get('duck')
         try:
             compositor.duck_animation('quacking')
+            compositor.duck_animation('lol')
             compositor.speech_start('id', 'Hello')
             deadline = time.monotonic() + 10
             while live.source.snapshot() is None and time.monotonic() < deadline:
@@ -58,6 +60,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source = overlay.duck_source
             try:
                 overlay.duck_animation('quacking')
+                overlay.duck_animation('lol')
                 deadline = time.monotonic() + 10
                 while not any(call.args[0].get('effect') == 'duck_frame' for call in send.call_args_list) and time.monotonic() < deadline:
                     time.sleep(.05)

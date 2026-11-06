@@ -8,6 +8,7 @@ from gdo.video.DesktopOverlay import DesktopOverlay
 from gdo.video.DuckLayer import DuckLayer
 from gdo.video.VideoConnector import VideoConnector
 from gdo.video.method.duck import duck
+from gdo.video.method.duckanim import duckanim
 from gdo.video.method.ipc_duck import ipc_duck
 
 
@@ -66,6 +67,17 @@ class DuckTest(unittest.TestCase):
         self.assertEqual('Hello', worker.effects.get('duck').text)
         worker.speech_end('id')
         self.assertEqual('', worker.effects.get('duck').text)
+
+    def test_lol_command_normalizes_key_for_ipc(self):
+        method = duckanim()
+        method.param_val = MagicMock(return_value='LOL')
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        send.assert_called_once_with('video.ipc_duckanim', ['lol'])
 
     def test_envelope_routes_only_to_matching_speech(self):
         worker = VideoConnector()

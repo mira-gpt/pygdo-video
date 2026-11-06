@@ -26,6 +26,15 @@ class MicrophoneLevelTest(unittest.TestCase):
             images.append(frame.tobytes())
         self.assertEqual(3, len(set(images)))
 
+    def test_meter_is_in_bottom_right(self):
+        frame = Image.new('RGB', (640, 360))
+        with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=('off', 0)), \
+                patch('gdo.audio.meter.MicrophoneMeter.transcription_snapshot', return_value='off'), \
+                patch('gdo.audio.meter.MicrophoneMeter.transcription_text_snapshot', return_value=''):
+            MicrophoneLevel().draw(frame)
+        self.assertNotEqual((0, 0, 0), frame.getpixel((458, 326)))
+        self.assertEqual((0, 0, 0), frame.getpixel((12, 326)))
+
     def test_command_and_ipc_adds_layer(self):
         command = mic()
         command.param_value = MagicMock(return_value=True)

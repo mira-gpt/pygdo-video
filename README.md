@@ -74,13 +74,21 @@ broadcasting.
   with the enabled duck, without starting speech. It is visible to viewers;
   Codex responses are not published automatically. Maximum 250 characters.
 - `$video.duck3d 1` requests the experimental live 3D duck; `$video.duck3d 0`
-  removes it and stops its renderer. `$duck.anim idle|quacking` requests an
+  removes it and stops its renderer. `$duck.anim idle|quacking|LOL` requests an
   animation change; the mode persists until changed. Both use Dog IPC and require
   the optional 3D dependencies and a working graphics display. A queued reply
   does not confirm that the renderer started or appeared on stream.
   With an audio module that emits speech envelopes, the beak approximately
   follows synthesized audio energy and pauses; this is not phoneme-level lip
   sync. Older audio modules retain the simple speaking animation.
+  `LOL` makes the duck hop excitedly and flap its wings.
+- `$duck.lol <text>` selects `LOL`, speaks the text using the configured Audio
+  voice, and switches back to `idle` when playback finishes or fails. It uses
+  the user's language by default (then channel, server, or English when unset);
+  pass `--lang=en` or `--lang=de` to override.
+  Audio with the `speech_language` helper (currently on Audio's
+  `feature/pcm-io` branch) and the live 3D duck must be enabled. The request is
+  queued, not proof of audible playback or visible animation.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.

@@ -41,7 +41,7 @@ class DuckLayer:
             self._scaled = {k: v for k, v in self._scaled.items() if k[0] == side}
             self._scaled[key] = ImageOps.contain(image, (side, side), Image.Resampling.LANCZOS)
         image = self._scaled[key]
-        frame.paste(image, (max(0, width - side - 10), max(0, height - side - 10)), image)
+        frame.paste(image, (max(0, width - side - 10), max(0, height - side - 40)), image)
         caption = self.text if speaking else self.caption_text if time.monotonic() < self.caption_until else ''
         if caption:
             draw = ImageDraw.Draw(frame)

@@ -15,7 +15,7 @@ class MicrophoneLevel:
             transcription = 'unknown'
             text = ''
         width, height = frame.size
-        left, top = 12, max(0, height - 34)
+        left, top = max(0, width - 182), max(0, height - 34)
         right = min(width - 1, left + 170)
         draw = ImageDraw.Draw(frame)
         draw.rectangle((left, top, right, min(height - 1, top + 24)), fill=(16, 16, 16), outline=(220, 220, 220))

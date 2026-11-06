@@ -11,7 +11,7 @@ class ipc_duckanim(Method):
         return ''
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking'}).not_null().positional()]
+        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL'}).not_null().positional()]
 
     def gdo_execute(self):
         if Application.IS_DOG:

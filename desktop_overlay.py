@@ -62,7 +62,7 @@ def main(image_path, screensharing=False, window_suffix=''):
             if key == 'duck':
                 context.save()
                 pixbuf = layer.get('frame') or (layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed'])
-                Gdk.cairo_set_source_pixbuf(context, pixbuf, 480, 195)
+                Gdk.cairo_set_source_pixbuf(context, pixbuf, 480, 165)
                 context.paint()
                 caption = layer['text'] if layer['speaking'] else layer.get('caption', '') if time.monotonic() < layer.get('caption_until', 0) else ''
                 if caption:
@@ -81,7 +81,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if layer['status'] == 'on' and time.monotonic() - layer['updated'] > 2:
                     layer['status'] = 'unknown'
                 context.set_source_rgba(.06, .06, .06, .9)
-                context.rectangle(12, 326, 170, 24)
+                context.rectangle(458, 326, 170, 24)
                 context.fill()
                 context.set_source_rgb(1, 1, 1)
                 context.set_font_size(10)
@@ -89,16 +89,16 @@ def main(image_path, screensharing=False, window_suffix=''):
                 label = (layer.get('text') or '...') if state == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(state, 'STT ?')
                 label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
                 context.save()
-                context.rectangle(16, 327, 162, 13)
+                context.rectangle(462, 327, 162, 13)
                 context.clip()
                 text_width = context.text_extents(label).width
                 offset = (time.monotonic() * 30) % (text_width + 40) if text_width > 162 else 0
-                context.move_to(16 - offset, 337)
+                context.move_to(462 - offset, 337)
                 context.show_text(label)
                 context.restore()
                 if layer['status'] == 'on':
                     context.set_source_rgb(.24, .88, .31)
-                    context.rectangle(16, 342, 162 * min(1.0, layer['level'] * 100), 5)
+                    context.rectangle(462, 342, 162 * min(1.0, layer['level'] * 100), 5)
                     context.fill()
                 continue
             if key == 'drawing':

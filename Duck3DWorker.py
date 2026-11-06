@@ -49,7 +49,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol'):
                         state['mode'] = request['mode']
                     if isinstance(request.get('speaking'), bool):
                         state['speaking'] = request['speaking']
@@ -76,12 +76,16 @@ def main():
             if not running:
                 break
             t = time.monotonic() - start
-            root.setR(math.sin(t * (5 if mode == 'quacking' else 1.4)) * (8 if mode == 'quacking' else 2))
-            root.setZ(abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
+            root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
+            root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
+            for sign, name in ((-1, 'Wing L'), (1, 'Wing R')):
+                wing = root.find('**/' + name)
+                if not wing.isEmpty():
+                    wing.setR(sign * (30 + 25 * math.sin(t * 11)) if mode == 'lol' else 0)
             for index, name in enumerate(('Foot', 'Foot.001')):
                 foot = root.find('**/' + name)
                 if not foot.isEmpty():
-                    foot.setZ(.16 + (max(0, math.sin(t * 5 + index * math.pi)) * .08 if mode == 'quacking' else 0))
+                    foot.setZ(.16 + (max(0, math.sin(t * 5 + index * math.pi)) * .08 if mode in ('quacking', 'lol') else 0))
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
