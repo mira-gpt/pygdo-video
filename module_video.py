@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import asyncio
 
 from gdo.base.GDO_Module import GDO_Module
 from gdo.base.GDO import GDO
@@ -73,6 +74,39 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
+        Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
+
+    async def on_mira_mood_changed(self, module, field):
+        task = getattr(self, '_duck_event_task', None)
+        if task and not task.done():
+            return  # The new base mood is used once the temporary event ends.
+        try:
+            self.connector.duck_animation(field.get_val())
+        except (AttributeError, RuntimeError, ValueError, OSError):
+            pass  # A mood change must not start a video source.
+
+    def duck_event(self, key, duration=2.0):
+        """Immediately replace an event; restore the latest base mood at its end."""
+        connector = self.connector
+        connector.duck_animation(key)
+        previous = getattr(self, '_duck_event_task', None)
+        if previous and not previous.done():
+            previous.cancel()
+        self._duck_event_task = asyncio.create_task(self._finish_duck_event(connector, duration))
+
+    async def _finish_duck_event(self, connector, duration):
+        from gdo.base.ModuleLoader import ModuleLoader
+        from gdo.base.Logger import Logger
+        try:
+            await asyncio.sleep(duration)
+            if self.connector is connector:
+                mira = ModuleLoader.instance().get_module('mira')
+                connector.duck_animation(mira.cfg_mira_mood() if mira else 'idle')
+        except (AttributeError, RuntimeError, ValueError, OSError) as error:
+            Logger.warning(f'Duck event restore failed: {error}')
+        finally:
+            if getattr(self, '_duck_event_task', None) is asyncio.current_task():
+                self._duck_event_task = None
 
     async def on_speech_envelope(self, speech_id, levels, step_ms):
         try:

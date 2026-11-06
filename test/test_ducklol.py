@@ -56,6 +56,7 @@ class DuckLolTest(unittest.IsolatedAsyncioTestCase):
         speech.gdo_execute = AsyncMock(side_effect=speak)
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_ducklol.module_video.instance', return_value=MagicMock(connector=connector)), \
+                patch('gdo.video.method.ipc_ducklol.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=None))), \
                 patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
             await method.gdo_execute()
         self.assertEqual(['lol', 'idle'], [call.args[0] for call in connector.duck_animation.call_args_list])
@@ -72,7 +73,27 @@ class DuckLolTest(unittest.IsolatedAsyncioTestCase):
         speech.gdo_execute = AsyncMock(side_effect=RuntimeError('failure'))
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_ducklol.module_video.instance', return_value=MagicMock(connector=connector)), \
+                patch('gdo.video.method.ipc_ducklol.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=None))), \
                 patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech), \
                 patch('gdo.video.method.ipc_ducklol.Logger.warning'):
             await method.gdo_execute()
         self.assertEqual(['lol', 'idle'], [call.args[0] for call in connector.duck_animation.call_args_list])
+
+    async def test_return_uses_mood_at_end_not_start(self):
+        method = ipc_ducklol()
+        method.param_val = MagicMock(side_effect=lambda key: {'payload': encode_text('Hello'), 'lang': 'en'}[key])
+        method.empty = MagicMock()
+        connector = MagicMock()
+        saved_mood = MagicMock()
+        saved_mood.cfg_mira_mood.return_value = 'quacking'
+        loader = MagicMock()
+        loader.get_module.return_value = saved_mood
+        speech = MagicMock()
+        speech.input.return_value = speech
+        speech.gdo_execute = AsyncMock()
+        with patch.object(Application, 'IS_DOG', True), \
+                patch('gdo.video.method.ipc_ducklol.module_video.instance', return_value=MagicMock(connector=connector)), \
+                patch('gdo.video.method.ipc_ducklol.ModuleLoader.instance', return_value=loader), \
+                patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
+            await method.gdo_execute()
+        self.assertEqual(['lol', 'quacking'], [call.args[0] for call in connector.duck_animation.call_args_list])

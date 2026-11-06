@@ -1,6 +1,7 @@
 from gdo.base.Application import Application
 from gdo.base.Logger import Logger
 from gdo.base.Method import Method
+from gdo.base.ModuleLoader import ModuleLoader
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_String import GDT_String
 from gdo.video.StarWarsIPC import decode_text
@@ -37,7 +38,8 @@ class ipc_ducklol(Method):
         finally:
             if switched:
                 try:
-                    connector.duck_animation('idle')
+                    mira = ModuleLoader.instance().get_module('mira')
+                    connector.duck_animation(mira.cfg_mira_mood() if mira else 'idle')
                 except (ValueError, RuntimeError, OSError, AttributeError) as error:
                     Logger.warning(f'Duck idle restore failed: {error}')
         return self.empty()

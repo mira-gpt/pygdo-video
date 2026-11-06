@@ -35,7 +35,7 @@ class Duck3DLayer(DuckLayer):
         width, height = frame.size
         side = max(1, round(min(width, height) * .42))
         image = ImageOps.contain(image, (side, side))
-        frame.paste(image, (max(0, width - side - 10), max(0, height - side - 40)), image)
+        frame.paste(image, (max(0, width - side - 10), max(0, height - side - 8)), image)
         caption = self.text if self.speech_id else self.caption_text if time.monotonic() < self.caption_until else ''
         if caption:
             draw = ImageDraw.Draw(frame)
