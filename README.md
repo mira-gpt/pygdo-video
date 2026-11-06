@@ -38,11 +38,19 @@ broadcasting.
 - `$video.preview` opens or restarts the virtual-webcam compositor preview
   without restarting Dog or the virtual-camera output. The compositor must be
   running; the command queues a request, not a guarantee of a visible window.
-- `$video.mic 1` shows the local Dog microphone listener's input level in both
+- `$video.mic 1` shows the local Dog microphone input level in both
   video modes; `$video.mic 0` hides it. It uses the existing
   audio capture, does not start capture and says UNKNOWN when samples are stale.
-  OFF describes this listener, not other applications or hardware mute. The
+  The compact meter shows the latest recognized text, or `----` when
+  transcription is disabled. Long text scrolls; viewers of the output can see it.
+  OFF describes Dog's input monitoring, not other applications or hardware mute. The
   screensharing overlay shares the same level data.
+- `$video.duck 1` shows Mira's duck in either video mode. While `$spk` speech
+  plays, it animates the beak and displays the spoken text as a caption;
+  `$video.duck 0` removes both. This exposes spoken text to viewers whenever the
+  output is shared; it does not expose unrelated terminal responses. The
+  character uses pre-rendered poses of the included rigged 3D model, not a
+  live 3D renderer or phoneme-accurate lip sync.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.

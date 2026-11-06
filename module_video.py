@@ -67,6 +67,23 @@ class module_video(GDO_Module):
     def gdo_init(self):
         Connector.register(Video, is_text=False)
 
+    def gdo_subscribe_events(self):
+        from gdo.base.Application import Application
+        Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
+        Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
+
+    async def on_speech_start(self, speech_id, text):
+        try:
+            self.connector.speech_start(speech_id, text)
+        except (AttributeError, RuntimeError, ValueError, OSError):
+            pass  # Video is optional; speech must continue.
+
+    async def on_speech_end(self, speech_id):
+        try:
+            self.connector.speech_end(speech_id)
+        except (AttributeError, RuntimeError, ValueError, OSError):
+            pass
+
     def start_compositor(self):
         mode = self.get_config_value('video_mode')
         if self.connector.is_running():

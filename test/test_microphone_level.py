@@ -17,12 +17,14 @@ class MicrophoneLevelTest(unittest.TestCase):
 
     def test_states_draw_and_loud_differs_from_silence(self):
         images = []
-        for status, level in [('off', 0), ('unknown', 0), ('on', 0), ('on', .2)]:
+        for status, level, transcription, text in [('off', 0, 'off', ''), ('on', .2, 'off', ''), ('on', .2, 'on', 'Hello there')]:
             frame = Image.new('RGB', (320, 180))
-            with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=(status, level)):
+            with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=(status, level)), \
+                 patch('gdo.audio.meter.MicrophoneMeter.transcription_snapshot', return_value=transcription), \
+                 patch('gdo.audio.meter.MicrophoneMeter.transcription_text_snapshot', return_value=text):
                 self.assertTrue(MicrophoneLevel().draw(frame))
             images.append(frame.tobytes())
-        self.assertEqual(4, len(set(images)))
+        self.assertEqual(3, len(set(images)))
 
     def test_command_and_ipc_adds_layer(self):
         command = mic()
@@ -51,6 +53,8 @@ class MicrophoneLevelTest(unittest.TestCase):
         worker.process = MagicMock()
         worker.process.poll.return_value = None
         with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=('on', .1)), \
+                patch('gdo.audio.meter.MicrophoneMeter.transcription_snapshot', return_value='off'), \
+                patch('gdo.audio.meter.MicrophoneMeter.transcription_text_snapshot', return_value=''), \
                 patch.object(worker, '_send_payload') as send:
             worker.microphone_meter(True)
             import time
@@ -58,5 +62,14 @@ class MicrophoneLevelTest(unittest.TestCase):
             while not send.called and time.monotonic() < deadline:
                 time.sleep(.01)
             self.assertTrue(send.called)
+            self.assertEqual('off', send.call_args.args[0]['transcription'])
+            self.assertEqual('', send.call_args.args[0]['text'])
+            from gdo.audio.meter import MicrophoneMeter
+            before = send.call_count
+            MicrophoneMeter.update(b'\x00\x40' * 100)
+            deadline = time.monotonic() + 1
+            while send.call_count == before and time.monotonic() < deadline:
+                time.sleep(.01)
+            self.assertGreater(send.call_count, before)
             worker.microphone_meter(False)
             self.assertEqual({'effect': 'mic', 'remove': True}, send.call_args.args[0])

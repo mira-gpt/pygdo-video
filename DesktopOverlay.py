@@ -22,6 +22,9 @@ class DesktopOverlay:
         self.window_suffix = window_suffix
         self.media_layer = None
         self._mic_stop = None
+        self._mic_wake = None
+        self.duck_enabled = False
+        self.duck_speech_id = None
 
     def start(self, image):
         image = VideoConnector.local_file(image)
@@ -55,6 +58,7 @@ class DesktopOverlay:
         with self.lock:
             if self._mic_stop:
                 self._mic_stop.set()
+                self._mic_wake.set()
                 self._mic_stop = None
             if not self.is_running():
                 return False
@@ -141,36 +145,79 @@ class DesktopOverlay:
         except (BrokenPipeError, OSError) as exc:
             raise RuntimeError('Desktop overlay stopped') from exc
 
+    def duck(self, enabled):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            if enabled:
+                root = os.path.join(os.path.dirname(__file__), 'assets', 'duck')
+                poses = []
+                for name in ('duck-closed.png', 'duck-open.png'):
+                    with open(os.path.join(root, name), 'rb') as stream:
+                        poses.append(base64.b64encode(stream.read()).decode('ascii'))
+                self._send_payload({'effect': 'duck', 'poses': poses})
+            else:
+                self._send_payload({'effect': 'duck', 'remove': True})
+            self.duck_enabled = enabled
+            self.duck_speech_id = None
+
+    def speech_start(self, speech_id, text):
+        with self.lock:
+            if self.duck_enabled and self.is_running():
+                self._send_payload({'effect': 'duck_speech', 'speaking': True, 'text': text[:300]})
+                self.duck_speech_id = speech_id
+
+    def speech_end(self, speech_id):
+        with self.lock:
+            if self.duck_enabled and self.duck_speech_id == speech_id and self.is_running():
+                self._send_payload({'effect': 'duck_speech', 'speaking': False, 'text': ''})
+                self.duck_speech_id = None
+
     def microphone_meter(self, enabled):
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
             if self._mic_stop:
                 self._mic_stop.set()
+                self._mic_wake.set()
                 self._mic_stop = None
             if not enabled:
                 self._send_payload({'effect': 'mic', 'remove': True})
                 return
             stop = threading.Event()
+            wake = threading.Event()
             self._mic_stop = stop
-            threading.Thread(target=self._pump_microphone, args=(stop,), daemon=True,
+            self._mic_wake = wake
+            threading.Thread(target=self._pump_microphone, args=(stop, wake), daemon=True,
                              name='video-desktop-mic').start()
 
-    def _pump_microphone(self, stop):
-        while not stop.is_set():
-            try:
-                from gdo.audio.meter import MicrophoneMeter
-                status, level = MicrophoneMeter.snapshot()
-            except ImportError:
-                status, level = 'unknown', 0.0
+    def _pump_microphone(self, stop, wake):
+        try:
+            from gdo.audio.meter import MicrophoneMeter
+        except ImportError:
             with self.lock:
-                if stop.is_set() or self._mic_stop is not stop or not self.is_running():
-                    return
-                try:
-                    self._send_payload({'effect': 'mic', 'status': status, 'level': level})
-                except RuntimeError:
-                    return
-            stop.wait(.2)
+                if self.is_running():
+                    self._send_payload({'effect': 'mic', 'status': 'unknown', 'level': 0})
+            return
+        MicrophoneMeter.subscribe(wake.set)
+        wake.set()
+        try:
+            while not stop.is_set():
+                wake.wait()
+                wake.clear()
+                status, level = MicrophoneMeter.snapshot()
+                transcription = MicrophoneMeter.transcription_snapshot()
+                text = MicrophoneMeter.transcription_text_snapshot()
+                with self.lock:
+                    if stop.is_set() or self._mic_stop is not stop or not self.is_running():
+                        return
+                    try:
+                        self._send_payload({'effect': 'mic', 'status': status, 'level': level,
+                                            'transcription': transcription, 'text': text})
+                    except RuntimeError:
+                        return
+        finally:
+            MicrophoneMeter.unsubscribe(wake.set)
 
     def _pump_video(self, layer):
         last = -1
@@ -217,7 +264,11 @@ class DesktopOverlay:
                 raise RuntimeError('Desktop overlay is not running')
             if key in ('all', 'mic') and self._mic_stop:
                 self._mic_stop.set()
+                self._mic_wake.set()
                 self._mic_stop = None
+            if key in ('all', 'duck'):
+                self.duck_enabled = False
+                self.duck_speech_id = None
             media = None
             if key in ('all', 'media'):
                 media, self.media_layer = self.media_layer, None

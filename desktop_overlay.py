@@ -59,17 +59,45 @@ def main(image_path, screensharing=False, window_suffix=''):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'duck':
+                context.save()
+                pixbuf = layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed']
+                Gdk.cairo_set_source_pixbuf(context, pixbuf, 480, 195)
+                context.paint()
+                if layer['speaking'] and layer['text']:
+                    lines = textwrap.wrap(layer['text'], 65)[:4]
+                    context.set_source_rgba(.05, .05, .08, .9)
+                    context.rectangle(10, 10, 620, 18 + len(lines) * 19)
+                    context.fill()
+                    context.set_source_rgb(1, 1, 1)
+                    context.set_font_size(15)
+                    for i, line in enumerate(lines):
+                        context.move_to(16, 28 + i * 19)
+                        context.show_text(line)
+                context.restore()
+                continue
             if key == 'mic':
+                if layer['status'] == 'on' and time.monotonic() - layer['updated'] > 2:
+                    layer['status'] = 'unknown'
                 context.set_source_rgba(.06, .06, .06, .9)
-                context.rectangle(12, 316, 150, 32)
+                context.rectangle(12, 326, 170, 24)
                 context.fill()
                 context.set_source_rgb(1, 1, 1)
-                context.set_font_size(12)
-                context.move_to(16, 329)
-                context.show_text({'on': 'MIC ON', 'off': 'MIC OFF'}.get(layer['status'], 'MIC UNKNOWN'))
+                context.set_font_size(10)
+                state = layer.get('transcription')
+                label = (layer.get('text') or '...') if state == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(state, 'STT ?')
+                label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
+                context.save()
+                context.rectangle(16, 327, 162, 13)
+                context.clip()
+                text_width = context.text_extents(label).width
+                offset = (time.monotonic() * 30) % (text_width + 40) if text_width > 162 else 0
+                context.move_to(16 - offset, 337)
+                context.show_text(label)
+                context.restore()
                 if layer['status'] == 'on':
                     context.set_source_rgb(.24, .88, .31)
-                    context.rectangle(16, 335, 142 * min(1.0, layer['level'] * 100), 8)
+                    context.rectangle(16, 342, 162 * min(1.0, layer['level'] * 100), 5)
                     context.fill()
                 continue
             if key == 'drawing':
@@ -115,7 +143,7 @@ def main(image_path, screensharing=False, window_suffix=''):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
-            if key in ('image', 'drawing', 'mic'):
+            if key in ('image', 'drawing', 'mic', 'duck'):
                 continue
             if key == 'vintage':
                 now = time.monotonic()
@@ -179,7 +207,28 @@ def main(image_path, screensharing=False, window_suffix=''):
                     if request.get('remove') is True:
                         layers.remove('mic')
                     elif request.get('status') in ('on', 'off', 'unknown') and isinstance(request.get('level'), (float, int)):
-                        layers.put('mic', {'status': request['status'], 'level': max(0.0, min(1.0, request['level']))})
+                        layers.put('mic', {'status': request['status'], 'level': max(0.0, min(1.0, request['level'])),
+                                           'transcription': request.get('transcription', 'unknown'),
+                                           'text': request.get('text', '') if isinstance(request.get('text', ''), str) else '',
+                                           'updated': time.monotonic()})
+                elif request.get('effect') == 'duck':
+                    if request.get('remove') is True:
+                        layers.remove('duck')
+                    else:
+                        poses = request['poses']
+                        if not isinstance(poses, list) or len(poses) != 2:
+                            return True
+                        images = []
+                        for pose in poses:
+                            loader = GdkPixbuf.PixbufLoader.new_with_type('png')
+                            loader.write(base64.b64decode(pose, validate=True))
+                            loader.close()
+                            images.append(loader.get_pixbuf().scale_simple(150, 150, GdkPixbuf.InterpType.BILINEAR))
+                        layers.put('duck', {'closed': images[0], 'open': images[1], 'speaking': False, 'text': ''})
+                elif request.get('effect') == 'duck_speech':
+                    duck = layers.get('duck')
+                    if duck and isinstance(request.get('speaking'), bool) and isinstance(text, str):
+                        duck['speaking'], duck['text'] = request['speaking'], text[:300]
                 elif request.get('effect') == 'close':
                     key = request.get('key')
                     if key == 'all':

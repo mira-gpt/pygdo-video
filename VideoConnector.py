@@ -219,6 +219,25 @@ class VideoConnector:
         else:
             self.remove_effect('mic')
 
+    def duck(self, enabled):
+        from gdo.video.DuckLayer import DuckLayer
+        if enabled:
+            self.put_effect('duck', DuckLayer())
+        else:
+            self.remove_effect('duck')
+
+    def speech_start(self, speech_id, text):
+        with self.lock:
+            duck = self.effects.get('duck')
+            if duck:
+                duck.speech_start(speech_id, text)
+
+    def speech_end(self, speech_id):
+        with self.lock:
+            duck = self.effects.get('duck')
+            if duck:
+                duck.speech_end(speech_id)
+
     def magnify(self, enabled, zoom=2.0, radius=90):
         if not enabled:
             self.remove_effect('magnify')
