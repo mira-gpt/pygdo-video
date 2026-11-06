@@ -78,6 +78,9 @@ broadcasting.
   animation change; the mode persists until changed. Both use Dog IPC and require
   the optional 3D dependencies and a working graphics display. A queued reply
   does not confirm that the renderer started or appeared on stream.
+  With an audio module that emits speech envelopes, the beak approximately
+  follows synthesized audio energy and pauses; this is not phoneme-level lip
+  sync. Older audio modules retain the simple speaking animation.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.

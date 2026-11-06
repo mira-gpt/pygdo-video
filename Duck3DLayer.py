@@ -20,6 +20,9 @@ class Duck3DLayer(DuckLayer):
         super().speech_start(speech_id, text)
         self.source.update(speaking=True)
 
+    def speech_envelope(self, levels, step_ms):
+        self.source.update(envelope=levels, step_ms=step_ms)
+
     def speech_end(self, speech_id):
         if self.speech_id == speech_id:
             super().speech_end(speech_id)

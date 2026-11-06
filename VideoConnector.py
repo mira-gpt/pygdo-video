@@ -254,6 +254,12 @@ class VideoConnector:
             if duck:
                 duck.speech_start(speech_id, text)
 
+    def speech_envelope(self, speech_id, levels, step_ms):
+        with self.lock:
+            duck = self.effects.get('duck')
+            if duck and getattr(duck, 'speech_id', None) == speech_id and hasattr(duck, 'speech_envelope'):
+                duck.speech_envelope(levels, step_ms)
+
     def duck_caption(self, text):
         with self.lock:
             duck = self.effects.get('duck')

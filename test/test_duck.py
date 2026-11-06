@@ -67,6 +67,16 @@ class DuckTest(unittest.TestCase):
         worker.speech_end('id')
         self.assertEqual('', worker.effects.get('duck').text)
 
+    def test_envelope_routes_only_to_matching_speech(self):
+        worker = VideoConnector()
+        duck = MagicMock()
+        duck.speech_id = 'current'
+        worker.effects.put('duck', duck)
+        worker.speech_envelope('old', [0.1], 50)
+        duck.speech_envelope.assert_not_called()
+        worker.speech_envelope('current', [0.1, 0.9], 50)
+        duck.speech_envelope.assert_called_once_with([0.1, 0.9], 50)
+
     def test_desktop_only_exposes_spoken_text_when_enabled(self):
         worker = DesktopOverlay(screensharing=True)
         worker.process = MagicMock()

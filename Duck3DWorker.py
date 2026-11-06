@@ -42,7 +42,7 @@ def main():
     base.render.setLight(light_node)
 
     lock = threading.Lock()
-    state = {'mode': 'idle', 'speaking': False, 'running': True}
+    state = {'mode': 'idle', 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0}
 
     def receive():
         for line in sys.stdin:
@@ -53,6 +53,11 @@ def main():
                         state['mode'] = request['mode']
                     if isinstance(request.get('speaking'), bool):
                         state['speaking'] = request['speaking']
+                        state['envelope'] = []
+                    levels = request.get('envelope')
+                    step = request.get('step_ms')
+                    if isinstance(levels, list) and len(levels) <= 2400 and all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in levels) and isinstance(step, int) and 10 <= step <= 500:
+                        state['envelope'], state['step_ms'], state['speech_start'] = levels, step, time.monotonic()
                     if request.get('stop') is True:
                         state['running'] = False
                         return
@@ -67,6 +72,7 @@ def main():
         while True:
             with lock:
                 mode, speaking, running = state['mode'], state['speaking'], state['running']
+                envelope, step_ms, speech_start = state['envelope'], state['step_ms'], state['speech_start']
             if not running:
                 break
             t = time.monotonic() - start
@@ -80,7 +86,10 @@ def main():
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
                     node.setSz(.12 if (t + 2) % 4.2 < .12 else 1)
-            beak.pose('Duck rigAction', int(t * 24) % 32 if speaking else 0)
+            index = int((time.monotonic() - speech_start) * 1000 / step_ms)
+            level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
+            # The existing animation opens its beak around frame 7.
+            beak.pose('Duck rigAction', int(t * 24) % 32 if speaking and not envelope else round(level * 7))
             base.graphicsEngine.renderFrame()
             texture = base.win.getScreenshot()
             data = bytes(texture.getRamImageAs('RGBA'))

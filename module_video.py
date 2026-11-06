@@ -72,6 +72,13 @@ class module_video(GDO_Module):
         from gdo.base.Application import Application
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
+        Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
+
+    async def on_speech_envelope(self, speech_id, levels, step_ms):
+        try:
+            self.connector.speech_envelope(speech_id, levels, step_ms)
+        except (AttributeError, RuntimeError, ValueError, OSError):
+            pass
 
     async def on_speech_start(self, speech_id, text):
         try:

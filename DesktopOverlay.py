@@ -220,6 +220,11 @@ class DesktopOverlay:
                 raise RuntimeError('Enable the duck first')
             self._send_payload({'effect': 'duck_caption', 'text': text})
 
+    def speech_envelope(self, speech_id, levels, step_ms):
+        with self.lock:
+            if self.duck_source and self.duck_speech_id == speech_id:
+                self.duck_source.update(envelope=levels, step_ms=step_ms)
+
     def speech_end(self, speech_id):
         with self.lock:
             if self.duck_enabled and self.duck_speech_id == speech_id and self.is_running():
