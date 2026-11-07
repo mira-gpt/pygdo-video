@@ -13,11 +13,13 @@ class MicrophoneLevel:
             from gdo.audio.meter import MicrophoneMeter
             status, level = MicrophoneMeter.snapshot()
             transcription = MicrophoneMeter.transcription_snapshot()
+            language = MicrophoneMeter.transcription_language()
             text = MicrophoneMeter.transcription_text_snapshot()
             updated = MicrophoneMeter.transcription_text_timestamp()
         except (ImportError, RuntimeError):
             status, level = 'unknown', 0.0
             transcription = 'unknown'
+            language = ''
             text = ''
             updated = 0
         width, height = frame.size
@@ -26,10 +28,11 @@ class MicrophoneLevel:
         draw = ImageDraw.Draw(frame)
         draw.rectangle((left, top, right, min(height - 1, top + 24)), fill=(16, 16, 16),
                        outline=(255, 35, 35) if self.liveshow else (220, 220, 220), width=2 if self.liveshow else 1)
-        label = (text or '...') if transcription == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(transcription, 'STT ?')
+        placeholder = f'STT {language}' if language else 'STT ?'
+        label = (text or placeholder) if transcription == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(transcription, 'STT ?')
         alpha = transcript_alpha(time.monotonic(), updated) if transcription == 'on' and text else 1.0
         if alpha == 0:
-            label, alpha = '...', 1.0
+            label, alpha = placeholder, 1.0
         label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
         text_width = max(1, right - left - 8)
         surface = Image.new('RGBA', (text_width, 13))

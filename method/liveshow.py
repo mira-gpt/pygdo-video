@@ -5,6 +5,10 @@ from gdo.core.GDT_Bool import GDT_Bool
 
 
 class liveshow(Method):
+    @classmethod
+    def gdo_trig(cls):
+        return 'live'
+
     def gdo_user_permission(self):
         return 'owner'
 

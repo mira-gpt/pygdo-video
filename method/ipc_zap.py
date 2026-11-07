@@ -1,6 +1,7 @@
 import asyncio
 
 from gdo.audio.module_audio import module_audio
+from gdo.audio.PlaybackTasks import PlaybackTasks
 from gdo.base.Application import Application
 from gdo.base.Logger import Logger
 from gdo.base.Method import Method
@@ -23,17 +24,28 @@ class ipc_zap(Method):
                 module_video.instance().connector.zap(duration)
             except (ValueError, RuntimeError, OSError, AttributeError) as error:
                 Logger.warning(f'Video zap failed: {error}')
-            try:
-                target = module_audio.instance().cfg_output_device()
-                if not target:
-                    raise ValueError('Audio output device is not configured')
-                process = await asyncio.create_subprocess_exec(
-                    'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error',
-                    '-re', '-f', 'lavfi', '-i', f'anoisesrc=color=white:amplitude=0.08:duration={duration}',
-                    '-f', 'pulse', '-device', target, 'tv-static',
-                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
-                if await process.wait():
-                    Logger.warning('TV static audio playback failed')
-            except (ValueError, RuntimeError, OSError, AttributeError) as error:
-                Logger.warning(f'TV static audio failed: {error}')
+            PlaybackTasks.start(self.play_noise(duration))
         return self.empty()
+
+    async def play_noise(self, duration):
+        process = None
+        try:
+            target = module_audio.instance().cfg_output_device()
+            if not target:
+                raise ValueError('Audio output device is not configured')
+            process = await asyncio.create_subprocess_exec(
+                'ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error',
+                '-re', '-f', 'lavfi', '-i', f'anoisesrc=color=white:amplitude=0.08:duration={duration}',
+                '-f', 'pulse', '-device', target, 'tv-static',
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+            if await process.wait():
+                Logger.warning('TV static audio playback failed')
+        except (ValueError, RuntimeError, OSError, AttributeError) as error:
+            Logger.warning(f'TV static audio failed: {error}')
+        finally:
+            if process is not None and process.returncode is None:
+                try:
+                    process.terminate()
+                    await process.wait()
+                except ProcessLookupError:
+                    pass

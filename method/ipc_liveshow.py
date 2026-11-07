@@ -23,6 +23,11 @@ class ipc_liveshow(Method):
                 enabled = bool(self.param_value('enabled'))
                 previous = bool(mira.get_config_value('mira_quacking'))
                 await mira.save_config_val('mira_quacking', '1' if enabled else '0', force=True)
+                for event in ('video.ipc_duck3d', 'video.ipc_mic'):
+                    try:
+                        await IPC.execute_dog_event(event, ['1' if enabled else '0'])
+                    except (ValueError, RuntimeError, OSError, AttributeError) as error:
+                        Logger.warning(f'Live show overlay {event} failed: {error}')
                 if enabled != previous:
                     notice = ('Live show mode is on: the desktop may be streamed, and messages in this channel may be visible to viewers.'
                               if enabled else 'Live show mode is off. This notice does not independently confirm that streaming has stopped.')

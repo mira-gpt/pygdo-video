@@ -1,4 +1,5 @@
 import unittest
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from PIL import Image
@@ -48,6 +49,8 @@ class ZapTest(unittest.IsolatedAsyncioTestCase):
                 patch('gdo.video.method.ipc_zap.module_audio.instance', return_value=module), \
                 patch('gdo.video.method.ipc_zap.asyncio.create_subprocess_exec', new=AsyncMock(return_value=process)) as spawn:
             await method.gdo_execute()
+            from gdo.audio.PlaybackTasks import PlaybackTasks
+            await asyncio.gather(*tuple(PlaybackTasks.tasks))
         connector.zap.assert_called_once_with(1.25)
         self.assertIn('test_sink', spawn.call_args.args)
         self.assertIn('anoisesrc=color=white:amplitude=0.08:duration=1.25', spawn.call_args.args)

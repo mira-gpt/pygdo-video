@@ -25,7 +25,7 @@ class duckhigh(Method):
         if text:
             language = speech_language(self, self.param_val('lang'))
             if language not in VOICES or len(text) > 300:
-                return self.err('video_error', ('Choose en, de, ko, vi, ja or sq and speech text of at most 300 characters',))
+                return self.err('video_error', ('Choose en, de, ko, vi, ja, sq or ru and speech text of at most 300 characters',))
             payload = [encode_text(text), language]
             if len(msgspec.json.encode(payload)) > IPC.MAX_EVENT_ARG_SIZE:
                 return self.err('video_error', ('Speech request exceeds IPC size limit',))

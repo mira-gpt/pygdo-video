@@ -3,6 +3,7 @@ from gdo.base.Logger import Logger
 from gdo.base.Method import Method
 from gdo.base.ModuleLoader import ModuleLoader
 from gdo.core.GDT_Enum import GDT_Enum
+from gdo.video.DuckAnimations import BASE_DEFAULTS
 from gdo.video.module_video import module_video
 
 
@@ -12,7 +13,7 @@ class ipc_duckevent(Method):
         return ''
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'shrug': 'Shrug', 'cry': 'Cry', 'ouch': 'Ouch', 'hello': 'Hello', 'rolleye': 'Roll eyes', 'barf': 'Barf', 'plz': 'Please', 'teacher': 'Teacher', 'xd': 'XD', 'sorry': 'Sorry', 'nerd': 'Nerd', 'cast': 'Cast', 'zombie': 'Zombie'}).not_null().positional()]
+        return [GDT_Enum('key').choices({key: key.title() for key in BASE_DEFAULTS}).not_null().positional()]
 
     async def gdo_execute(self):
         if Application.IS_DOG:

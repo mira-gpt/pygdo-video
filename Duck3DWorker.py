@@ -14,6 +14,29 @@ from pathlib import Path
 TRANSITION_SECONDS = .7
 
 
+def music_note_count(gain, capacity=6):
+    """Keep a few notes visible even when audio features are unavailable."""
+    return min(capacity, 2 + round(max(0.0, min(1.0, gain)) * 80))
+
+
+def music_bounce(previous, gain):
+    """Smooth a sensitive microphone level into a gentle dance pulse."""
+    target = min(1.0, max(0.0, gain) * 20)
+    return previous + (target - previous) * (.45 if target > previous else .18)
+
+
+def metal_head_pitch(pulse):
+    """Nod harder on audio-level peaks; this is not a tempo detector."""
+    return 3 + 30 * max(0.0, min(1.0, pulse))
+
+
+def spell_bat_position(elapsed, index, count):
+    """Spread rising bats within the duck overlay's visible area."""
+    phase = (elapsed * .22 + index / count) % 1
+    x = max(-.95, min(.95, -.72 + index * .35 + .09 * math.sin(elapsed * 1.3 + index)))
+    return x, 1.15 + 1.0 * phase
+
+
 def transition_weight(elapsed, duration=TRANSITION_SECONDS):
     """Smoothly interpolate between poses, clamped at both ends."""
     amount = max(0.0, min(1.0, elapsed / duration))
@@ -22,7 +45,7 @@ def transition_weight(elapsed, duration=TRANSITION_SECONDS):
 
 def main():
     import gltf
-    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
+    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, Geom, GeomNode, GeomTriangles, GeomVertexData, GeomVertexFormat, GeomVertexWriter, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
     from direct.showbase.ShowBase import ShowBase
     from direct.actor.Actor import Actor
 
@@ -145,7 +168,288 @@ def main():
         tooth_node.setColor(1, .98, .88, 1)
         tooth_node.setLightOff()
     nerd.hide()
+    rich = root.attachNewNode('rich costume')
+    for name, frame, color in (
+        ('top hat', (-.22, .22, 1.91, 2.28), (.07, .05, .09, 1)),
+        ('hat brim', (-.33, .33, 1.88, 1.94), (.07, .05, .09, 1)),
+        ('gold hat band', (-.22, .22, 1.95, 2.01), (.95, .7, .08, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        piece = rich.attachNewNode(card.generate())
+        piece.setY(-.35)
+        piece.setColor(*color)
+        piece.setLightOff()
+    monocle = LineSegs('gold monocle')
+    monocle.setThickness(4)
+    monocle.setColor(1, .78, .12, 1)
+    for point in range(33):
+        angle = math.tau * point / 32
+        (monocle.moveTo if point == 0 else monocle.drawTo)(.22 + .15 * math.cos(angle), -.91, 1.59 + .15 * math.sin(angle))
+    monocle.moveTo(.32, -.91, 1.48)
+    monocle.drawTo(.48, -.91, .96)
+    rich.attachNewNode(monocle.create()).setLightOff()
+    dollar = TextNode('rich dollar sign')
+    dollar.setText('$')
+    dollar.setTextColor(1, .78, .12, 1)
+    dollar_node = rich.attachNewNode(dollar)
+    dollar_node.setPos(-.09, -.84, .55)
+    dollar_node.setScale(.3)
+    dollar_node.setLightOff()
+    rich.hide()
+    anon = root.attachNewNode('anonymous mask')
+    for name, frame, color in (
+        ('anon red top hat', (-.22, .22, 1.91, 2.28), (.72, .04, .07, 1)),
+        ('anon red hat brim', (-.33, .33, 1.88, 1.94), (.55, .02, .04, 1)),
+        ('anon hat band', (-.22, .22, 1.95, 2.01), (.12, .03, .04, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        piece = anon.attachNewNode(card.generate())
+        piece.setY(-.35)
+        piece.setColor(*color)
+        piece.setLightOff()
+    # A rounded forehead, cheekbones and tapered chin, rather than a rectangle.
+    contour = [(-.29, 1.76), (-.35, 1.68), (-.36, 1.53), (-.33, 1.38),
+               (-.25, 1.27), (-.12, 1.19), (0, 1.16), (.12, 1.19),
+               (.25, 1.27), (.33, 1.38), (.36, 1.53), (.35, 1.68),
+               (.29, 1.76), (.17, 1.81), (0, 1.83), (-.17, 1.81)]
+    mask_vertices = GeomVertexData('mask face', GeomVertexFormat.getV3(), Geom.UHStatic)
+    writer = GeomVertexWriter(mask_vertices, 'vertex')
+    writer.addData3(0, 0, 1.5)
+    for x, z in contour:
+        writer.addData3(x, 0, z)
+    triangles = GeomTriangles(Geom.UHStatic)
+    for index in range(len(contour)):
+        triangles.addVertices(0, index + 1, (index + 1) % len(contour) + 1)
+    geometry = Geom(mask_vertices)
+    geometry.addPrimitive(triangles)
+    mask_node = GeomNode('mask face')
+    mask_node.addGeom(geometry)
+    mask_face = anon.attachNewNode(mask_node)
+    mask_face.setY(-1.05)
+    mask_face.setColor(.95, .94, .85, 1)
+    mask_face.setLightOff()
+    mask_face.setTwoSided(True)
+    features = LineSegs('mask grin and moustache')
+    features.setThickness(4)
+    features.setColor(.1, .07, .06, 1)
+    for side in (-1, 1):
+        features.moveTo(side * .06, -1.07, 1.63)
+        features.drawTo(side * .29, -1.07, 1.70)
+        features.moveTo(side * .07, -1.07, 1.54)
+        features.drawTo(side * .25, -1.07, 1.56)
+        features.moveTo(0, -1.07, 1.37)
+        features.drawTo(side * .17, -1.07, 1.34)
+        features.drawTo(side * .28, -1.07, 1.42)
+        features.moveTo(side * .23, -1.07, 1.29)
+        features.drawTo(0, -1.07, 1.24)
+    features.moveTo(0, -1.07, 1.24)
+    features.drawTo(0, -1.07, 1.19)
+    anon.attachNewNode(features.create()).setLightOff()
+    anon.hide()
+    king = root.attachNewNode('king crown and brows')
+    crown_shape = [(-.32, 1.88), (.32, 1.88), (.34, 2.17), (.19, 2.05),
+                   (0, 2.25), (-.19, 2.05), (-.34, 2.17)]
+    crown_data = GeomVertexData('crown', GeomVertexFormat.getV3(), Geom.UHStatic)
+    crown_writer = GeomVertexWriter(crown_data, 'vertex')
+    crown_writer.addData3(0, 0, 1.96)
+    for x, z in crown_shape:
+        crown_writer.addData3(x, 0, z)
+    crown_triangles = GeomTriangles(Geom.UHStatic)
+    for index in range(len(crown_shape)):
+        crown_triangles.addVertices(0, index + 1, (index + 1) % len(crown_shape) + 1)
+    crown_geom = Geom(crown_data)
+    crown_geom.addPrimitive(crown_triangles)
+    crown_node = GeomNode('crown')
+    crown_node.addGeom(crown_geom)
+    crown = king.attachNewNode(crown_node)
+    crown.setY(-.35)
+    crown.setColor(1, .72, .05, 1)
+    crown.setLightOff()
+    crown.setTwoSided(True)
+    royal_brows = LineSegs('regal brows')
+    royal_brows.setColor(.20, .12, .03, 1)
+    royal_brows.setThickness(4)
+    for side in (-1, 1):
+        royal_brows.moveTo(side * .07, -.91, 1.74)
+        royal_brows.drawTo(side * .35, -.91, 1.70)
+    king.attachNewNode(royal_brows.create()).setLightOff()
+    sceptre = LineSegs('royal sceptre')
+    sceptre.setColor(1, .72, .08, 1)
+    sceptre.setThickness(6)
+    sceptre.moveTo(.66, -.82, .48)
+    sceptre.drawTo(.85, -.82, 1.48)
+    for point in range(25):
+        angle = math.tau * point / 24
+        (sceptre.moveTo if point == 0 else sceptre.drawTo)(
+            .85 + .10 * math.cos(angle), -.82, 1.55 + .10 * math.sin(angle))
+    king.attachNewNode(sceptre.create()).setLightOff()
+    king.hide()
+    rambo = root.attachNewNode('cartoon action costume')
+    for name, frame, y, color in (
+        ('cigar', (.10, .42, 1.23, 1.28), -1.08, (.34, .15, .05, 1)),
+        ('cigar ember', (.40, .44, 1.23, 1.28), -1.09, (1, .25, .03, 1)),
+        ('machine gun body', (.30, .85, .85, 1.04), -.86, (.13, .14, .15, 1)),
+        ('machine gun barrel', (.83, 1.25, .92, .98), -.86, (.16, .17, .18, 1)),
+        ('machine gun grip', (.42, .51, .70, .87), -.86, (.15, .12, .09, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = rambo.attachNewNode(card.generate())
+        part.setY(y)
+        part.setColor(*color)
+        part.setLightOff()
+    belt = LineSegs('ammo belt')
+    belt.setThickness(6)
+    belt.setColor(.8, .58, .15, 1)
+    for index in range(10):
+        x = -.3 + index * .065
+        z = 1.0 - index * .035
+        belt.moveTo(x, -.90, z)
+        belt.drawTo(x + .035, -.90, z - .065)
+    rambo.attachNewNode(belt.create()).setLightOff()
+    flash_lines = LineSegs('cartoon muzzle flash')
+    flash_lines.setThickness(4)
+    flash_lines.setColor(1, .72, .1, 1)
+    for angle in range(0, 360, 45):
+        a = math.radians(angle)
+        flash_lines.moveTo(1.25, -.88, .95)
+        flash_lines.drawTo(1.25 + .16 * math.cos(a), -.88, .95 + .16 * math.sin(a))
+    muzzle_flash = rambo.attachNewNode(flash_lines.create())
+    muzzle_flash.setLightOff()
+    rambo.hide()
+    hippi = root.attachNewNode('hippi peace and joint')
+    scarf_card = CardMaker('hippi scarf')
+    scarf_card.setFrame(-.34, .34, .97, 1.06)
+    scarf = hippi.attachNewNode(scarf_card.generate())
+    scarf.setY(-.83)
+    scarf.setColor(.78, .23, .53, 1)
+    scarf.setLightOff()
+    scarf_tail_card = CardMaker('hippi scarf tail')
+    scarf_tail_card.setFrame(-.13, .03, .72, .99)
+    scarf_tail = hippi.attachNewNode(scarf_tail_card.generate())
+    scarf_tail.setY(-.84)
+    scarf_tail.setColor(.78, .23, .53, 1)
+    scarf_tail.setLightOff()
+    sign = hippi.attachNewNode('peace sign')
+    peace = LineSegs('peace symbol')
+    peace.setThickness(4)
+    peace.setColor(.95, .84, .28, 1)
+    for point in range(33):
+        angle = point * math.tau / 32
+        (peace.moveTo if point == 0 else peace.drawTo)(.14 * math.cos(angle), 0, .14 * math.sin(angle))
+    peace.moveTo(0, 0, .14)
+    peace.drawTo(0, 0, -.14)
+    for side in (-1, 1):
+        peace.moveTo(0, 0, 0)
+        peace.drawTo(side * .10, 0, -.10)
+    sign.attachNewNode(peace.create()).setLightOff()
+    sign.setPos(-.83, -.85, 1.35)
+    joint_card = CardMaker('joint')
+    joint_card.setFrame(.10, .40, 1.23, 1.27)
+    joint = hippi.attachNewNode(joint_card.generate())
+    joint.setY(-1.08)
+    joint.setColor(.92, .89, .75, 1)
+    joint.setLightOff()
+    smoke_puffs = []
+    for index in range(3):
+        smoke = LineSegs('joint smoke')
+        smoke.setThickness(2)
+        smoke.setColor(.72, .76, .79, .8)
+        for point in range(20):
+            z = point * .012
+            x = .025 * math.sin(point * .55 + index)
+            (smoke.moveTo if point == 0 else smoke.drawTo)(x, 0, z)
+        puff = hippi.attachNewNode(smoke.create())
+        puff.setLightOff()
+        smoke_puffs.append(puff)
+    hippi.hide()
+    metal = root.attachNewNode('metal horns')
+    horns = LineSegs('raised metal hand')
+    horns.setThickness(7)
+    horns.setColor(1, .75, .10, 1)
+    # Palm and the extended index and little finger form the horns gesture.
+    horns.moveTo(-.76, -.87, 1.05)
+    horns.drawTo(-.76, -.87, 1.30)
+    horns.drawTo(-.86, -.87, 1.54)
+    horns.drawTo(-.85, -.87, 1.28)
+    horns.drawTo(-.97, -.87, 1.27)
+    horns.drawTo(-1.02, -.87, 1.53)
+    horns.drawTo(-1.08, -.87, 1.26)
+    horns.drawTo(-1.03, -.87, 1.08)
+    horns.drawTo(-.76, -.87, 1.05)
+    metal.attachNewNode(horns.create()).setLightOff()
+    metal.hide()
+    ninja = root.attachNewNode('ninja accessories')
+    for name, frame, y, color in (
+        ('ninja mask', (-.37, .37, 1.18, 1.42), -1.06, (.035, .035, .045, 1)),
+        ('ninja headband', (-.32, .32, 1.77, 1.83), -.85, (.12, .12, .14, 1)),
+        ('ninja sash', (-.43, .43, .61, .68), -.70, (.14, .14, .16, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = ninja.attachNewNode(card.generate())
+        part.setY(y)
+        part.setColor(*color)
+        part.setLightOff()
+    tools = LineSegs('ninja sword and star')
+    tools.setThickness(4)
+    tools.setColor(.65, .69, .74, 1)
+    tools.moveTo(.52, -.35, .55)
+    tools.drawTo(.96, -.35, 1.65)
+    tools.moveTo(.50, -.35, .72)
+    tools.drawTo(.66, -.35, .67)
+    for point in range(9):
+        angle = point * math.pi / 4
+        radius = .13 if point % 2 == 0 else .05
+        (tools.moveTo if point == 0 else tools.drawTo)(-.85 + radius * math.cos(angle), -.83, 1.30 + radius * math.sin(angle))
+    ninja.attachNewNode(tools.create()).setLightOff()
+    ninja.hide()
+    news = root.attachNewNode('news presenter')
+    paper_card = CardMaker('news paper')
+    paper_card.setFrame(-.29, .29, .56, .96)
+    paper = news.attachNewNode(paper_card.generate())
+    paper.setY(-1.0)
+    paper.setColor(.96, .96, .90, 1)
+    paper.setLightOff()
+    paper_lines = LineSegs('news paper lines')
+    paper_lines.setThickness(2)
+    paper_lines.setColor(.2, .23, .28, 1)
+    for z in (.89, .84, .79, .74, .69, .64):
+        paper_lines.moveTo(-.23, -1.02, z)
+        paper_lines.drawTo(.20, -1.02, z)
+    news.attachNewNode(paper_lines.create()).setLightOff()
+    news_brows = LineSegs('focused news brows')
+    news_brows.setThickness(3)
+    news_brows.setColor(.24, .15, .04, 1)
+    for side in (-1, 1):
+        news_brows.moveTo(side * .08, -.9, 1.73)
+        news_brows.drawTo(side * .32, -.9, 1.75)
+    news.attachNewNode(news_brows.create()).setLightOff()
+    news.hide()
     magic = root.attachNewNode('wizard costume and frog')
+    wizard_hat = GeomVertexData('wizard hat', GeomVertexFormat.getV3(), Geom.UHStatic)
+    hat_writer = GeomVertexWriter(wizard_hat, 'vertex')
+    for x, z in ((-.28, 1.86), (.28, 1.86), (.04, 2.23)):
+        hat_writer.addData3(x, 0, z)
+    hat_triangle = GeomTriangles(Geom.UHStatic)
+    hat_triangle.addVertices(0, 1, 2)
+    hat_geom = Geom(wizard_hat)
+    hat_geom.addPrimitive(hat_triangle)
+    hat_node = GeomNode('wizard hat')
+    hat_node.addGeom(hat_geom)
+    hat = magic.attachNewNode(hat_node)
+    hat.setY(-.35)
+    hat.setColor(.26, .13, .52, 1)
+    hat.setLightOff()
+    hat.setTwoSided(True)
+    hat_brim = CardMaker('wizard hat brim')
+    hat_brim.setFrame(-.34, .34, 1.84, 1.91)
+    brim = magic.attachNewNode(hat_brim.generate())
+    brim.setY(-.36)
+    brim.setColor(.18, .08, .35, 1)
+    brim.setLightOff()
     robe = CardMaker('wizard robe')
     robe.setFrame(-.55, .55, -.38, .38)
     robe_node = magic.attachNewNode(robe.generate())
@@ -172,6 +476,17 @@ def main():
         frog_eye.setColor(.45, .95, .25, 1)
         frog_eye.setLightOff()
     stars = []
+    bats = []
+    for index in range(5):
+        bat_lines = LineSegs('spell bat')
+        bat_lines.setThickness(4)
+        bat_lines.setColor(.08, .05, .12, 1)
+        for x, z in ((-.16, .03), (-.10, .10), (-.04, .03), (0, .07), (.04, .03), (.10, .10), (.16, .03)):
+            (bat_lines.moveTo if x == -.16 else bat_lines.drawTo)(x, 0, z)
+        bat = magic.attachNewNode(bat_lines.create())
+        bat.setBillboardPointEye()
+        bat.setLightOff()
+        bats.append(bat)
     for index in range(5):
         star_lines = LineSegs('spell sparkle')
         star_lines.setThickness(3)
@@ -196,6 +511,24 @@ def main():
     zombie_marks.hide()
     zombie_skin = [root.find('**/' + name) for name in ('Body', 'Head', 'Wing L')]
     zombie_skin.append(wing_actor)
+    skin_colors = [(skin, skin.hasColor(), skin.getColor()) for skin in zombie_skin if not skin.isEmpty()]
+    sand_card = CardMaker('giveup sand')
+    sand_card.setFrame(-.65, .65, -.4, .4)
+    sand = base.render.attachNewNode(sand_card.generate())
+    sand.setP(-90)
+    sand.setPos(0, -.42, -.12)
+    sand.setColor(.78, .64, .36, 1)
+    sand.setLightOff()
+    sand.hide()
+    tail_lines = LineSegs('giveup limp tail')
+    tail_lines.setThickness(5)
+    tail_lines.setColor(1, .8, .08, 1)
+    tail_lines.moveTo(0, .42, .86)
+    tail_lines.drawTo(0, .70, .73)
+    tail_lines.drawTo(0, .76, .50)
+    tail = root.attachNewNode(tail_lines.create())
+    tail.setLightOff()
+    tail.hide()
     smile_lines = LineSegs('happy smile')
     smile_lines.setThickness(3)
     smile_lines.setColor(.35, .09, .02, 1)
@@ -281,11 +614,13 @@ def main():
         copy = mug.copyTo(root)
         mugs.append((copy, copy.find('**/beer fill'), copy.find('**/beer foam')))
     barf_drops = []
-    for index in range(4):
+    for index in range(20):
+        chunk = index % 3 == 0
         card = CardMaker('barf drop')
-        card.setFrame(-.04, .04, -.04, .04)
+        width = (.055 + .012 * (index % 3)) if chunk else (.025 + .008 * (index % 3))
+        card.setFrame(-width, width, -width * .7, width * .7)
         drop = base.render.attachNewNode(card.generate())
-        drop.setColor(.35, .8, .12, 1)
+        drop.setColor(*((.38, .23, .07, 1) if chunk else (.32, .75, .10, 1)))
         drop.setBillboardPointEye()
         drop.setLightOff()
         drop.hide()
@@ -329,7 +664,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -406,6 +741,8 @@ def main():
     next_yawn, yawn_until = start + random.uniform(6, 12), 0
     heart_speeds = [random.uniform(.20, .35) for _ in hearts]
     dizzy_kind, dizzy_until, dizzy_count, dizzy_offset, mug_count = 'none', 0, 0, 0.0, 0
+    music_pulse = 0.0
+    skin_override = None
     try:
         while True:
             with lock:
@@ -492,6 +829,18 @@ def main():
                     head.setColorScale(1, .17, .17, 1)
                 elif mode != 'zombie':
                     head.clearColorScale()
+            new_skin_override = mode if mode in ('shiver', 'ninja') else None
+            if new_skin_override != skin_override:
+                skin_override = new_skin_override
+                for skin, had_color, original_color in skin_colors:
+                    if skin_override == 'shiver':
+                        skin.setColor(.58, .68, .76, 1, 1)
+                    elif skin_override == 'ninja':
+                        skin.setColor(.07, .07, .09, 1, 1)
+                    elif had_color:
+                        skin.setColor(original_color)
+                    else:
+                        skin.clearColor()
             for skin in zombie_skin:
                 if skin.isEmpty():
                     continue
@@ -500,9 +849,16 @@ def main():
                 elif skin != head or mode != 'embarrassed':
                     skin.clearColorScale()
             zombie_marks.show() if mode == 'zombie' else zombie_marks.hide()
+            sand.show() if mode == 'giveup' else sand.hide()
+            tail.show() if mode == 'giveup' else tail.hide()
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
+            root.setH(360 * transition_weight(t, 3.0) if mode == 'turnaround' else 0)
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
+            if mode == 'shiver':
+                root.setR(3.5 * math.sin(t * 19) + 1.5 * math.sin(t * 29))
+                root.setP(5 + 2 * math.sin(t * 23))
+                root.setZ(.015 * math.sin(t * 25))
             if not head.isEmpty():
                 head.setH(28 * trip_look if mode == 'trip' else 0)
             if mode == 'trip':
@@ -519,8 +875,48 @@ def main():
                 sorry_brows.hide()
             teacher.show() if mode == 'teacher' else teacher.hide()
             nerd.show() if mode == 'nerd' else nerd.hide()
+            rich.show() if mode == 'rich' else rich.hide()
+            anon.show() if mode == 'anon' else anon.hide()
+            king.show() if mode == 'king' else king.hide()
+            rambo.show() if mode == 'rambo' else rambo.hide()
+            hippi.show() if mode == 'hippi' else hippi.hide()
+            metal.show() if mode == 'metal' else metal.hide()
+            ninja.show() if mode == 'ninja' else ninja.hide()
+            news.show() if mode == 'news' else news.hide()
+            if mode == 'news':
+                root.setP(4 + 3 * math.sin(t * 3))
+                root.setR(2 * math.sin(t * 2))
+            if mode == 'ninja':
+                root.setP(8 + 2 * math.sin(t * 1.5))
+            music_pulse = music_bounce(music_pulse, gain) if mode in ('music', 'metal') else 0.0
+            if mode == 'metal':
+                root.setP(metal_head_pitch(music_pulse))
+                root.setR(2 * music_pulse * math.sin(t * 6))
+            if mode == 'hippi':
+                sign.setR(18 * math.sin(t * 3))
+                for index, puff in enumerate(smoke_puffs):
+                    phase = (t * .35 + index / len(smoke_puffs)) % 1
+                    puff.setPos(.40 + .04 * math.sin(t * 2 + index), -1.09, 1.27 + phase * .35)
+                    puff.setScale(.6 + phase * .7)
+            if mode == 'rambo':
+                muzzle_flash.show() if int(t * 12) % 3 else muzzle_flash.hide()
+                rambo.setR(1.5 * math.sin(t * 15))
+            if mode == 'king':
+                root.setP(-7 + math.sin(t * .5))
+                root.setR(1.5 * math.sin(t * .6))
+            if mode == 'anon':
+                root.setR(8 * math.sin(t * 2.4) + 3 * math.sin(t * 4.8))
+                root.setP(4 + 4 * math.sin(t * 2.4))
+                root.setZ(.07 * max(0, math.sin(t * 2.4)))
+            if mode == 'rich':
+                root.setP(-8 + 2 * math.sin(t * .7))
+                root.setR(3 * math.sin(t * .8))
             if mode == 'cast':
                 magic.show()
+                for index, bat in enumerate(bats):
+                    x, z = spell_bat_position(t, index, len(bats))
+                    bat.setPos(x, -.8, z)
+                    bat.setSz(.55 + .45 * abs(math.sin(t * 8 + index)))
                 for index, star in enumerate(stars):
                     phase = (t * .6 + index / len(stars)) % 1
                     star.setPos(.9 + .3 * phase, -.8, 1.6 + .45 * phase)
@@ -539,22 +935,27 @@ def main():
             if mode == 'zombie':
                 root.setR(10 * math.sin(t * 1.3))
                 root.setP(12 + 5 * math.sin(t * .8))
+            if mode == 'giveup':
+                root.setR(0)
+                root.setP(75 + 1.5 * math.sin(t * 1.5))
+                root.setZ(-.14)
             if mode == 'plz':
                 halo.show()
                 root.setZ(.12 * abs(math.sin(t * 7)))
             else:
                 halo.hide()
             if mode == 'music':
-                root.setP(8 * math.sin(t * 3.2))
+                root.setP(3 * math.sin(t * 3.2) + 7 * music_pulse)
+                root.setZ(.055 * music_pulse)
             for index, note in enumerate(notes):
-                if mode == 'music' and index < min(len(notes), round(gain * 30)):
+                if mode == 'music' and index < music_note_count(gain, len(notes)):
                     phase = (t * .35 + index / len(notes)) % 1
                     note.setPos(.65 + .12 * math.sin(t + index), -.4, 1.25 + phase * 1.0)
                     note.setColorScale(1, .5 + min(frequency or 0, 2000) / 4000, .5, 1)
                     note.show()
                 else:
                     note.hide()
-            if mode == 'high':
+            if mode in ('high', 'hippi'):
                 root.setR(7 * math.sin(t * 1.1))
             for vein in bloodshot_veins:
                 vein.show() if mode == 'drunk' else vein.hide()
@@ -598,7 +999,10 @@ def main():
             for index, drop in enumerate(barf_drops):
                 if mode == 'barf':
                     phase = (t * 1.5 + index / len(barf_drops)) % 1
-                    drop.setPos(.1 + phase * .55, -.9, 1.3 - phase * .85)
+                    spread = ((index * 7) % 11 - 5) / 5
+                    drop.setPos(.1 + phase * (.65 + .15 * spread), -.9,
+                                1.3 + phase * .12 * spread - phase * phase * .95)
+                    drop.setR((index * 37 + t * 90) % 360)
                     drop.show()
                 else:
                     drop.hide()
@@ -628,7 +1032,7 @@ def main():
                 pain_marks.hide()
             left_wing = root.find('**/Wing L')
             if not left_wing.isEmpty():
-                left_wing.setR(-(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
+                left_wing.setR(-(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
             if mode == 'hello':
                 wave = math.sin((time.monotonic() - mode_start) * 18)
                 wing_base.setR(50 + 30 * wave)
@@ -647,10 +1051,10 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1)
+                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1)
                     if eye.startswith('Eye white'):
-                        if mode in ('high', 'drunk'):
-                            node.setColorScale(1, .35 if mode == 'high' else .55, .35 if mode == 'high' else .55, 1)
+                        if mode in ('high', 'hippi', 'drunk'):
+                            node.setColorScale(1, .35 if mode in ('high', 'hippi') else .55, .35 if mode in ('high', 'hippi') else .55, 1)
                         else:
                             node.clearColorScale()
             for pupil, (x, z) in zip(pupils, pupil_origins):

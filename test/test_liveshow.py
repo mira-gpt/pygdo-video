@@ -16,6 +16,11 @@ from gdo.video.module_video import module_video
 
 
 class LiveShowTest(unittest.IsolatedAsyncioTestCase):
+    def test_live_short_trigger(self):
+        self.assertEqual('live', liveshow.gdo_trig())
+        with patch.object(liveshow, 'gdo_module', return_value=type('Module', (), {'get_name': 'video'})()):
+            self.assertEqual('video.liveshow', liveshow.gdo_trigger())
+
     def setUp(self):
         Application.mode(Mode.render_cli)
 
@@ -31,6 +36,7 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
 
     def test_duck_high_sets_persistent_mood(self):
         method = duckhigh()
+        method.param_val = MagicMock(return_value=None)
         method.reply = MagicMock()
         db = MagicMock()
         db.is_in_transaction.return_value = False
@@ -60,15 +66,24 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         mira.save_config_val = AsyncMock()
         speech = MagicMock()
         speech.input.return_value = speech
-        speech.gdo_execute = AsyncMock()
+        speech.play = AsyncMock()
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_duckhigh.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))), \
                 patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
-            await handler.gdo_execute()
+            await handler.play()
         mira.save_config_val.assert_awaited_once_with('mira_mood', 'high', force=True)
         speech.input.assert_any_call('text', 'Hello world')
         speech.input.assert_any_call('lang', 'en')
-        speech.gdo_execute.assert_awaited_once()
+        speech.play.assert_awaited_once()
+
+    async def test_duck_high_ipc_schedules_playback(self):
+        handler = ipc_duckhigh()
+        handler.empty = MagicMock()
+        with patch.object(Application, 'IS_DOG', True), \
+                patch('gdo.video.method.ipc_duckhigh.PlaybackTasks.start') as start:
+            await handler.gdo_execute()
+        self.assertEqual(1, start.call_count)
+        start.call_args.args[0].close()
 
     async def test_dog_persists_mode(self):
         handler = ipc_liveshow()
@@ -77,9 +92,12 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         mira = MagicMock()
         mira.save_config_val = AsyncMock()
         with patch.object(Application, 'IS_DOG', True), \
-                patch('gdo.video.method.ipc_liveshow.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))):
+                patch('gdo.video.method.ipc_liveshow.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))), \
+                patch('gdo.video.method.ipc_liveshow.IPC.execute_dog_event', new_callable=AsyncMock) as send:
             await handler.gdo_execute()
         mira.save_config_val.assert_awaited_once_with('mira_quacking', '1', force=True)
+        self.assertEqual([('video.ipc_duck3d', ['1']), ('video.ipc_mic', ['1'])],
+                         [call.args for call in send.await_args_list if call.args[0] != 'chat.shout'])
 
     async def test_announces_only_transitions(self):
         handler = ipc_liveshow()
@@ -93,10 +111,13 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
                 mira.get_config_value.return_value = previous
                 handler.param_value = MagicMock(return_value=enabled)
                 await handler.gdo_execute()
-            self.assertEqual(2, send.await_count)
-            self.assertEqual('chat.shout', send.await_args_list[0].args[0])
-            self.assertIn('may be visible', send.await_args_list[0].args[1][0])
-            self.assertIn('does not independently confirm', send.await_args_list[1].args[1][0])
+            notices = [call for call in send.await_args_list if call.args[0] == 'chat.shout']
+            self.assertEqual(2, len(notices))
+            self.assertIn('may be visible', notices[0].args[1][0])
+            self.assertIn('does not independently confirm', notices[1].args[1][0])
+            overlays = [call.args for call in send.await_args_list if call.args[0] != 'chat.shout']
+            self.assertEqual(['1', '1', '1', '1', '0', '0', '0', '0'],
+                             [args[1][0] for args in overlays])
 
     async def test_event_updates_video_without_starting_capture(self):
         module = module_video()

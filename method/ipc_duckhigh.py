@@ -1,4 +1,5 @@
 from gdo.base.Application import Application
+from gdo.audio.PlaybackTasks import PlaybackTasks
 from gdo.base.Logger import Logger
 from gdo.base.Method import Method
 from gdo.base.ModuleLoader import ModuleLoader
@@ -19,6 +20,11 @@ class ipc_duckhigh(Method):
 
     async def gdo_execute(self):
         if Application.IS_DOG:
+            PlaybackTasks.start(self.play())
+        return self.empty()
+
+    async def play(self):
+        if Application.IS_DOG:
             try:
                 text = decode_text(self.param_val('payload'))
                 if len(text) > 300:
@@ -28,7 +34,7 @@ class ipc_duckhigh(Method):
                     raise ValueError('Mira module is required')
                 await mira.save_config_val('mira_mood', 'high', force=True)
                 from gdo.audio.method.ipc_say import ipc_say
-                await ipc_say().input('text', text).input('lang', self.param_val('lang')).gdo_execute()
+                await ipc_say().input('text', text).input('lang', self.param_val('lang')).play()
             except (ImportError, ValueError, RuntimeError, OSError, AttributeError) as error:
                 Logger.warning(f'Duck high speech failed: {error}')
         return self.empty()

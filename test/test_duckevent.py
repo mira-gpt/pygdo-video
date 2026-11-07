@@ -14,8 +14,14 @@ from gdo.video.module_video import module_video
 
 
 class DuckEventTest(unittest.IsolatedAsyncioTestCase):
+    def test_duckanim_requires_admin(self):
+        self.assertEqual('admin', duckanim().gdo_user_permission())
+
     def setUp(self):
         Application.mode(Mode.render_cli)
+        self.base_override = patch.object(duckanim, 'param_value', return_value=False)
+        self.base_override.start()
+        self.addCleanup(self.base_override.stop)
         self.mira_notice = patch('gdo.mira.util.send_to_mira')
         self.send_to_mira = self.mira_notice.start()
         self.addCleanup(self.mira_notice.stop)
@@ -45,6 +51,23 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
             method.gdo_execute()
         send.assert_called_once_with('video.ipc_duckevent', ['ouch'])
         self.send_to_mira.assert_called_once_with('$duck.anim ouch (requested by "gizmore{bash}"; animation request queued for Dog)', interrupt=False)
+
+    def test_duckanim_suppresses_acknowledgement_only_in_dog(self):
+        method = duckanim()
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'music', 'text': None}[key])
+        method.reply = MagicMock(return_value='queued')
+        method.empty = MagicMock(return_value='')
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            with patch.object(Application, 'IS_DOG', True):
+                self.assertEqual('', method.gdo_execute())
+            with patch.object(Application, 'IS_DOG', False):
+                self.assertEqual('queued', method.gdo_execute())
+        self.assertEqual(2, send.call_count)
+        method.empty.assert_called_once_with()
+        method.reply.assert_called_once_with('video_duckanim_queued')
 
     def test_hello_animation_is_temporary_event(self):
         method = duckanim()
@@ -110,7 +133,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), \
                 patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
-            for key in ('plz', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'quacking'):
+            for key in ('plz', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'quacking'):
                 method.param_val = MagicMock(side_effect=lambda name: {'key': key, 'text': 'Please!', 'lang': 'en'}[name])
                 method.gdo_execute()
                 name, args = send.call_args.args
@@ -118,6 +141,69 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(key, args[0])
                 self.assertEqual('Please!', decode_text(args[1]))
                 self.send_to_mira.assert_called_with(f'$duck.anim {key} (requested by "gizmore{{bash}}"; animation request queued for Dog)\nSpeech text: "Please!"', interrupt=False)
+
+    def test_giveup_is_temporary_event_without_speech(self):
+        method = duckanim()
+        method.reply = MagicMock()
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'giveup', 'text': None}[key])
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        send.assert_called_once_with('video.ipc_duckevent', ['giveup'])
+
+    def test_default_and_explicit_base_routing(self):
+        from gdo.video.DuckAnimations import BASE_DEFAULTS
+        self.assertFalse(BASE_DEFAULTS['barf'])
+        self.assertTrue(BASE_DEFAULTS['cast'])
+        self.assertGreater(sum(BASE_DEFAULTS.values()), len(BASE_DEFAULTS) / 2)
+        method = duckanim()
+        method.reply = MagicMock()
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'barf', 'text': None}[key])
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            with patch.object(method, 'param_value', return_value=None):
+                method.gdo_execute()
+            send.assert_called_with('video.ipc_duckevent', ['barf'])
+            with patch.object(method, 'param_value', return_value=True):
+                method.gdo_execute()
+            send.assert_called_with('video.ipc_duckbase', ['barf', '-', '-'])
+            method.param_val = MagicMock(side_effect=lambda key: {'key': 'music', 'text': None}[key])
+            with patch.object(method, 'param_value', return_value=False):
+                method.gdo_execute()
+            send.assert_called_with('video.ipc_duckevent', ['music'])
+            method.param_val = MagicMock(side_effect=lambda key: {'key': 'cast', 'text': None}[key])
+            with patch.object(method, 'param_value', return_value=None):
+                method.gdo_execute()
+            send.assert_called_with('video.ipc_duckbase', ['cast', '-', '-'])
+            with patch.object(method, 'param_value', return_value=False):
+                method.gdo_execute()
+            send.assert_called_with('video.ipc_duckevent', ['cast'])
+
+    async def test_base_ipc_stores_key_and_keeps_it_after_speech(self):
+        from gdo.video.method.ipc_duckbase import ipc_duckbase
+        from gdo.video.StarWarsIPC import encode_text
+        method = ipc_duckbase()
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'barf', 'payload': encode_text('Hi'), 'lang': 'en'}[key])
+        method.empty = MagicMock()
+        video = MagicMock()
+        video._duck_event_task = None
+        mira = MagicMock()
+        mira.save_config_val = AsyncMock()
+        speech = MagicMock()
+        speech.input.return_value = speech
+        speech.play = AsyncMock()
+        with patch.object(Application, 'IS_DOG', True), \
+                patch('gdo.video.method.ipc_duckbase.module_video.instance', return_value=video), \
+                patch('gdo.video.method.ipc_duckbase.module_mira.instance', return_value=mira), \
+                patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
+            await method.play()
+        mira.save_config_val.assert_awaited_once_with('mira_mood', 'barf', force=True)
+        video.connector.duck_animation.assert_called_once_with('barf')
+        speech.play.assert_awaited_once()
 
     async def test_plz_speech_starts_event_and_speaks(self):
         from gdo.video.method.ipc_duckanim_speech import ipc_duckanim_speech
@@ -127,15 +213,15 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         video = MagicMock()
         speech = MagicMock()
         speech.input.return_value = speech
-        speech.gdo_execute = AsyncMock()
+        speech.play = AsyncMock()
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_duckanim_speech.module_video.instance', return_value=video), \
                 patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
-            await method.gdo_execute()
+            await method.play()
         video.duck_event.assert_called_once_with('plz', duration=None)
         video.finish_duck_event.assert_called_once_with(video.duck_event.return_value)
         speech.input.assert_any_call('text', 'Please!')
-        speech.gdo_execute.assert_awaited_once()
+        speech.play.assert_awaited_once()
 
     def test_shrug_queues_temporary_event(self):
         method = shrug()

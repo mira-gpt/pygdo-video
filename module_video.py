@@ -91,6 +91,9 @@ class module_video(GDO_Module):
         if any(user.is_type(kind) for kind in (GDT_UserType.BOT, GDT_UserType.CHAPPY,
                                                 GDT_UserType.SYSTEM, GDT_UserType.DEVICE)):
             return
+        from gdo.video.method.welcome import welcome
+        if not welcome().env_channel(channel).get_config_channel_value('video_welcome_enabled'):
+            return
         language = channel.get_lang_iso()
         if language not in ('de', 'en'):
             return  # Do not misrepresent the spoken language.
@@ -102,7 +105,8 @@ class module_video(GDO_Module):
         if not name:
             return
         self._last_auto_welcome = now
-        asyncio.create_task(self.play_welcome(name, language))
+        from gdo.audio.PlaybackTasks import PlaybackTasks
+        PlaybackTasks.start(self.play_welcome(name, language))
 
     async def play_welcome(self, nickname, language):
         from gdo.audio.method.ipc_say import ipc_say
@@ -116,7 +120,7 @@ class module_video(GDO_Module):
                 raise ValueError('Nickname is empty')
             text = tiso(language, f'video_welcome_{random.randint(1, 3)}', (nickname,))
             self.duck_event('hello')
-            await ipc_say().input('text', text).input('lang', language).gdo_execute()
+            await ipc_say().input('text', text).input('lang', language).play()
         except (ImportError, ValueError, RuntimeError, OSError, AttributeError) as error:
             Logger.warning(f'Duck welcome failed: {error}')
 

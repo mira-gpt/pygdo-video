@@ -1,4 +1,5 @@
 from gdo.base.Application import Application
+from gdo.audio.PlaybackTasks import PlaybackTasks
 from gdo.base.Logger import Logger
 from gdo.base.Method import Method
 from gdo.base.ModuleLoader import ModuleLoader
@@ -20,6 +21,11 @@ class ipc_ducklol(Method):
                 GDT_Language('lang').audiolangs().not_null().positional()]
 
     async def gdo_execute(self):
+        if Application.IS_DOG:
+            PlaybackTasks.start(self.play())
+        return self.empty()
+
+    async def play(self):
         if not Application.IS_DOG:
             return self.empty()
         event_task = None
@@ -36,7 +42,7 @@ class ipc_ducklol(Method):
                 await mira.save_config_val('mira_mood', 'sad')
             event_task = module_video.instance().duck_event(self.animation, duration=None)
             speech = ipc_say().input('text', text).input('lang', language)
-            await speech.gdo_execute()
+            await speech.play()
         except (ImportError, ValueError, RuntimeError, OSError, AttributeError) as error:
             Logger.warning(f'Duck LOL speech failed: {error}')
         finally:

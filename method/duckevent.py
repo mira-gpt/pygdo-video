@@ -13,7 +13,7 @@ class duckevent(Method):
         return 'owner'
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'LOL': 'LOL', 'shrug': 'Shrug', 'barf': 'Barf'}).not_null().positional().tooltip('tt_video_duckevent_key')]
+        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'shrug': 'Shrug', 'barf': 'Barf'}).not_null().positional().tooltip('tt_video_duckevent_key')]
 
     def gdo_execute(self):
         args = ('video.ipc_duckevent', [self.param_val('key').lower()])

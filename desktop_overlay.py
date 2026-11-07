@@ -118,10 +118,12 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.set_source_rgb(1, 1, 1)
                 context.set_font_size(10)
                 state = layer.get('transcription')
-                label = (layer.get('text') or '...') if state == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(state, 'STT ?')
+                language = layer.get('language', '')
+                placeholder = f'STT {language}' if language else 'STT ?'
+                label = (layer.get('text') or placeholder) if state == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(state, 'STT ?')
                 alpha = transcript_alpha(time.monotonic(), layer.get('text_updated', 0)) if state == 'on' and layer.get('text') else 1.0
                 if alpha == 0:
-                    label, alpha = '...', 1.0
+                    label, alpha = placeholder, 1.0
                 label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
                 context.save()
                 context.rectangle(462, 327, 162, 13)
@@ -264,6 +266,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                     elif request.get('status') in ('on', 'off', 'unknown') and isinstance(request.get('level'), (float, int)):
                         layers.put('mic', {'status': request['status'], 'level': max(0.0, min(1.0, request['level'])),
                                            'transcription': request.get('transcription', 'unknown'),
+                                           'language': request.get('language', '') if isinstance(request.get('language', ''), str) else '',
                                            'text': request.get('text', '') if isinstance(request.get('text', ''), str) else '',
                                            'text_updated': request.get('text_updated', 0) if isinstance(request.get('text_updated', 0), (int, float)) else 0,
                                            'updated': time.monotonic()})

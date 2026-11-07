@@ -102,13 +102,20 @@ with preview enabled is useful when no camera output is desired.
 ## Methods
 
 `$duck.welcome <nickname>` waves and speaks one of three greetings in the
-channel language (currently German or English). Actual channel-join events
-also trigger a welcome when `mira_quacking` is enabled, with an eight-second
+channel language (currently German or English). Automatic join greetings are
+off by default and require a per-channel opt-in. In the desired channel, staff
+can enable them with `$confc video.welcome video_welcome_enabled 1` and disable
+them with `$confc video.welcome video_welcome_enabled 0`. Manual welcomes do
+not require this opt-in. Actual channel-join events trigger a welcome only
+when opted in and `mira_quacking` is enabled, with an eight-second
 global cooldown; unsupported languages and bot/system accounts are skipped.
 Join snapshots are not welcomed. This can expose nicknames on the show; only
 enable live-show mode when that is intended. No stream or microphone is started.
 
-`$video.liveshow 1|0` sets Mira's persisted `mira_quacking` live-show mode.
+`$live 1|0` (also `$video.liveshow 1|0`) sets Mira's persisted
+`mira_quacking` live-show mode and requests the 3D duck and microphone meter
+overlays on or off. The video connector must already be running; the requests
+do not start capture or guarantee the overlays are visible.
 When the microphone meter is visible, a red border marks the enabled mode in
 both video outputs. It does not start or prove a stream or microphone capture;
 when the meter is hidden no border is visible.
@@ -134,17 +141,26 @@ when the meter is hidden no border is visible.
   with the enabled duck, without starting speech. It is visible to viewers;
   Codex responses are not published automatically. Maximum 250 characters.
 - `$video.duck3d 1` requests the experimental live 3D duck; `$video.duck3d 0`
-  removes it and stops its renderer. `$duck.anim idle|quacking|LOL` requests an
-  animation change; the mode persists until changed. Both use Dog IPC and require
+  removes it and stops its renderer. `$duck.anim <key>` requests an
+  animation change. Both use Dog IPC and require
   the optional 3D dependencies and a working graphics display. A queued reply
   does not confirm that the renderer started or appeared on stream.
   With an audio module that emits speech envelopes, the beak approximately
   follows synthesized audio energy and pauses; this is not phoneme-level lip
   sync. Older audio modules retain the simple speaking animation.
-  `LOL` makes the duck hop excitedly and flap its wings.
-  If the optional Mira module is enabled, its persistent `mira_mood` selects
-  the matching animation on mood change or when the 3D duck is enabled. A direct
-  `$duck.anim` or `$duck.lol` is a temporary override of that saved preference.
+  `lol` makes the duck hop excitedly and flap its wings.
+  `$duck.anim --base=1 <key> [text]` saves any animation as the persistent
+  `mira_mood`; `--base=0` plays any animation temporarily and then restores the
+  current base. Optional speech is supported in either case. Without `--base`,
+  the per-key defaults in `DuckAnimations.BASE_DEFAULTS` apply:
+
+  - Persistent by default: `idle`, `quacking`, `sad`, `high`, `music`, `tipsy`,
+    `drunk`, `embarrassed`, `angry`, `inlove`, `trip`, `tired`, `shrug`, `plz`,
+    `teacher`, `xd`, `sorry`, `nerd`, `zombie`, `giveup`.
+  - Temporary by default: `lol`, `cry`, `ouch`, `hello`, `rolleye`, `barf`, `cast`.
+
+  Persistent animations require the Mira module. `$duck.lol` remains a
+  temporary event.
 - `$duck.event <key>` plays `idle`, `quacking`, `lol`, or `shrug` for two seconds, then
   restores the current `mira_mood` (`idle` if Mira is unavailable). A new event
   immediately replaces the previous event and its timer. A mood change during an
@@ -280,6 +296,20 @@ requirements and availability before implementing multi-platform publishing.
   desktop in a transparent, click-through window for desktop sharing. The
   composite background image (`video_bg_image_url`) is not used in this mode;
   the separately configured `video_overlay_image_url` is an overlay.
+
+To prepare the current Dog for a desktop-share overlay, select the mode and
+start its connector:
+
+```text
+$conf video video_mode screensharing
+$video.start
+$video.status
+```
+
+This does not start screen sharing in Discord or another application: select
+the intended desktop there and confirm the overlay is visible to viewers.
+`$video.stop` stops the video connector. Use the isolated Test Dog for tests
+and verify the destination before sending commands to a live instance.
 
 Desktop overlays currently require X11, a compositing window manager, and
 system Python with GTK 3, PyGObject and Cairo. `video_overlay_image_url`

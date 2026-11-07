@@ -288,6 +288,7 @@ class DesktopOverlay:
                 wake.clear()
                 status, level = MicrophoneMeter.snapshot()
                 transcription = MicrophoneMeter.transcription_snapshot()
+                language = MicrophoneMeter.transcription_language()
                 text = MicrophoneMeter.transcription_text_snapshot()
                 text_updated = MicrophoneMeter.transcription_text_timestamp()
                 with self.lock:
@@ -295,7 +296,7 @@ class DesktopOverlay:
                         return
                     try:
                         self._send_payload({'effect': 'mic', 'status': status, 'level': level,
-                                            'transcription': transcription, 'text': text, 'text_updated': text_updated})
+                                            'transcription': transcription, 'language': language, 'text': text, 'text_updated': text_updated})
                     except RuntimeError:
                         return
         finally:

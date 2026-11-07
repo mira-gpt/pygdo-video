@@ -1,10 +1,15 @@
 from gdo.base.Application import Application
 from gdo.base.IPC import IPC
 from gdo.base.Method import Method
+from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_String import GDT_String
 
 
 class welcome(Method):
+    @classmethod
+    def gdo_method_config_channel(cls):
+        return [GDT_Bool('video_welcome_enabled').not_null().initial('0')]
+
     @classmethod
     def gdo_trig(cls):
         return 'duck.welcome'

@@ -3,6 +3,7 @@ from gdo.base.Method import Method
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_String import GDT_String
 from gdo.video.module_video import module_video
+from gdo.audio.PlaybackTasks import PlaybackTasks
 
 
 class ipc_duckwelcome(Method):
@@ -16,5 +17,5 @@ class ipc_duckwelcome(Method):
 
     async def gdo_execute(self):
         if Application.IS_DOG:
-            await module_video.instance().play_welcome(self.param_val('nickname'), self.param_val('lang'))
+            PlaybackTasks.start(module_video.instance().play_welcome(self.param_val('nickname'), self.param_val('lang')))
         return self.empty()
