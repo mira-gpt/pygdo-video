@@ -15,7 +15,7 @@ class duckmoods(Method):
     def gdo_execute(self):
         current = module_mira.instance().cfg_mira_mood()
         base = tuple(GDT_MiraMood().init_choices())
-        events = ('lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast')
+        events = ('lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie')
         output = GDT_Span().add_field(GDT_Glyph('Duck moods: '))
         for index, key in enumerate((*base, *events)):
             if index:

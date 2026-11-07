@@ -110,7 +110,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), \
                 patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
-            for key in ('plz', 'xd', 'sorry', 'nerd', 'cast', 'quacking'):
+            for key in ('plz', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'quacking'):
                 method.param_val = MagicMock(side_effect=lambda name: {'key': key, 'text': 'Please!', 'lang': 'en'}[name])
                 method.gdo_execute()
                 name, args = send.call_args.args

@@ -12,7 +12,7 @@ class ipc_duckevent(Method):
         return ''
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'shrug': 'Shrug', 'cry': 'Cry', 'ouch': 'Ouch', 'hello': 'Hello', 'rolleye': 'Roll eyes', 'barf': 'Barf', 'plz': 'Please', 'teacher': 'Teacher', 'xd': 'XD', 'sorry': 'Sorry', 'nerd': 'Nerd', 'cast': 'Cast'}).not_null().positional()]
+        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'lol': 'LOL', 'shrug': 'Shrug', 'cry': 'Cry', 'ouch': 'Ouch', 'hello': 'Hello', 'rolleye': 'Roll eyes', 'barf': 'Barf', 'plz': 'Please', 'teacher': 'Teacher', 'xd': 'XD', 'sorry': 'Sorry', 'nerd': 'Nerd', 'cast': 'Cast', 'zombie': 'Zombie'}).not_null().positional()]
 
     async def gdo_execute(self):
         if Application.IS_DOG:

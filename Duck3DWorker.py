@@ -185,6 +185,17 @@ def main():
         star.setLightOff()
         stars.append(star)
     magic.hide()
+    zombie_marks = root.attachNewNode('zombie patches')
+    patches = LineSegs('zombie marks')
+    patches.setThickness(6)
+    patches.setColor(.18, .35, .08, 1)
+    for x, y, z, mark_size in ((-.30, -.60, .8, .13), (.27, -.60, .65, .10), (-.25, -.75, 1.39, .08), (.35, -.5, .94, .08)):
+        patches.moveTo(x - mark_size / 2, y, z)
+        patches.drawTo(x + mark_size / 2, y, z + mark_size / 3)
+    zombie_marks.attachNewNode(patches.create()).setLightOff()
+    zombie_marks.hide()
+    zombie_skin = [root.find('**/' + name) for name in ('Body', 'Head', 'Wing L')]
+    zombie_skin.append(wing_actor)
     smile_lines = LineSegs('happy smile')
     smile_lines.setThickness(3)
     smile_lines.setColor(.35, .09, .02, 1)
@@ -318,7 +329,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -479,8 +490,16 @@ def main():
             if not head.isEmpty():
                 if mode == 'embarrassed':
                     head.setColorScale(1, .17, .17, 1)
-                else:
+                elif mode != 'zombie':
                     head.clearColorScale()
+            for skin in zombie_skin:
+                if skin.isEmpty():
+                    continue
+                if mode == 'zombie':
+                    skin.setColorScale(.45, .95, .32, 1)
+                elif skin != head or mode != 'embarrassed':
+                    skin.clearColorScale()
+            zombie_marks.show() if mode == 'zombie' else zombie_marks.hide()
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
@@ -517,6 +536,9 @@ def main():
                     root.setZ(.12 * abs(math.sin(t * 9)))
             else:
                 angry_brows.hide()
+            if mode == 'zombie':
+                root.setR(10 * math.sin(t * 1.3))
+                root.setP(12 + 5 * math.sin(t * .8))
             if mode == 'plz':
                 halo.show()
                 root.setZ(.12 * abs(math.sin(t * 7)))
@@ -606,13 +628,13 @@ def main():
                 pain_marks.hide()
             left_wing = root.find('**/Wing L')
             if not left_wing.isEmpty():
-                left_wing.setR(-(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -55 if mode == 'shrug' else 25 if mode in ('sad', 'cry') else 0)
+                left_wing.setR(-(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
             if mode == 'hello':
                 wave = math.sin((time.monotonic() - mode_start) * 18)
                 wing_base.setR(50 + 30 * wave)
                 wing_tip.setR(30 * wave)
             else:
-                wing_base.setR(30 + 25 * math.sin(t * 11) if mode in ('lol', 'plz') or angry_flapping else 55 if mode == 'shrug' else -25 if mode in ('sad', 'cry') else 0)
+                wing_base.setR(30 + 25 * math.sin(t * 11) if mode in ('lol', 'plz') or angry_flapping else 55 if mode == 'shrug' else 70 if mode == 'zombie' else -25 if mode in ('sad', 'cry') else 0)
                 wing_tip.setR(0)
             for index, name in enumerate(('Foot', 'Foot.001')):
                 foot = root.find('**/' + name)
@@ -651,7 +673,7 @@ def main():
             texture = base.win.getScreenshot()
             data = bytes(texture.getRamImageAs('RGBA'))
             if len(data) != size * size * 4:
-                raise RuntimeError('Unexpected duck framebuffer size')
+                raise RuntimeError(f'Unexpected duck framebuffer size: {len(data)} (expected {size * size * 4})')
             sys.stdout.buffer.write(data)
             sys.stdout.buffer.flush()
             time.sleep(1 / fps)

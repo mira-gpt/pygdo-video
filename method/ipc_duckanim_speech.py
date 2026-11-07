@@ -14,7 +14,7 @@ class ipc_duckanim_speech(Method):
         return ''
 
     def gdo_parameters(self):
-        keys = ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast')
+        keys = ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie')
         return [GDT_Enum('key').choices({key: key.title() for key in keys}).not_null().positional(),
                 GDT_String('payload').ascii().maxlen(1024).not_null().positional(),
                 GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).not_null().positional()]
@@ -27,7 +27,7 @@ class ipc_duckanim_speech(Method):
                 text = decode_text(self.param_val('payload'))
                 if len(text) > 300:
                     raise ValueError('Speech text is limited to 300 characters')
-                if key in ('lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast'):
+                if key in ('lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie'):
                     if key in ('cry', 'lol'):
                         mira = ModuleLoader.instance().get_module('mira')
                         if mira and key == 'cry':
