@@ -11,6 +11,11 @@ from gdo.video.method.lol import lol
 class DuckLolTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         Application.mode(Mode.render_cli)
+        table = MagicMock()
+        table.get_by_id.side_effect = lambda code: MagicMock(get_id=MagicMock(return_value=code))
+        self.language_table = patch('gdo.language.GDT_Language.GDO_Language.table', return_value=table)
+        self.language_table.start()
+        self.addCleanup(self.language_table.stop)
 
     def test_full_text_and_language_queued(self):
         method = lol()

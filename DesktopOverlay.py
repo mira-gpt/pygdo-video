@@ -115,6 +115,12 @@ class DesktopOverlay:
                 raise RuntimeError('Desktop overlay is not running')
             self._send_payload({'effect': 'zap', 'duration': duration})
 
+    def crt_off(self, duration=2.0):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            self._send_payload({'effect': 'crt_off', 'duration': duration})
+
     def draw_line(self, *line):
         line = validate_line(*line)
         with self.lock:
@@ -133,9 +139,10 @@ class DesktopOverlay:
         from gdo.video.MediaLayer import VideoLayer
         if key != 'media' or not isinstance(layer, ImageLayer) or z is not None:
             raise ValueError('Desktop overlay currently accepts only the media layer')
+        layer.begin_transition()
         if isinstance(layer, VideoLayer):
             layer.start()
-        payload = self._image_payload(layer, layer.image)
+        payload = self._image_payload(layer, layer.image, transition_start=True)
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
@@ -147,14 +154,15 @@ class DesktopOverlay:
             threading.Thread(target=self._pump_video, args=(layer,), daemon=True,
                              name='video-desktop-media').start()
 
-    def _image_payload(self, layer, image):
+    def _image_payload(self, layer, image, transition_start=False):
         from gdo.video.ImageLayer import ImageLayer
         buffer = io.BytesIO()
         image.save(buffer, format='PNG')
         if buffer.tell() > ImageLayer.MAX_BYTES:
             raise ValueError('Decoded image is too large for desktop overlay')
         return {'effect': 'image', 'png': base64.b64encode(buffer.getvalue()).decode('ascii'),
-                'width': layer.width, 'height': layer.height, 'x': layer.x, 'y': layer.y}
+                'width': layer.width, 'height': layer.height, 'x': layer.x, 'y': layer.y,
+                'transition': layer.transition, 'transition_start': transition_start}
 
     def _send_payload(self, payload):
         try:
@@ -281,12 +289,13 @@ class DesktopOverlay:
                 status, level = MicrophoneMeter.snapshot()
                 transcription = MicrophoneMeter.transcription_snapshot()
                 text = MicrophoneMeter.transcription_text_snapshot()
+                text_updated = MicrophoneMeter.transcription_text_timestamp()
                 with self.lock:
                     if stop.is_set() or self._mic_stop is not stop or not self.is_running():
                         return
                     try:
                         self._send_payload({'effect': 'mic', 'status': status, 'level': level,
-                                            'transcription': transcription, 'text': text})
+                                            'transcription': transcription, 'text': text, 'text_updated': text_updated})
                     except RuntimeError:
                         return
         finally:

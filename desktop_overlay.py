@@ -3,6 +3,7 @@
 import sys
 import base64
 import json
+import math
 import os
 import random
 import textwrap
@@ -15,6 +16,9 @@ gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 from LayerStack import LayerStack
 from DrawingProtocol import validate_line
+from MediaTransition import media_transition
+from CRTOff import crt_state
+from TranscriptFade import transcript_alpha
 
 
 def main(image_path, screensharing=False, window_suffix=''):
@@ -60,6 +64,18 @@ def main(image_path, screensharing=False, window_suffix=''):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'crt_off':
+                state = crt_state(time.monotonic() - layer['start'], layer['duration'])
+                if state:
+                    sx, sy, brightness = state
+                    context.set_source_rgb(0, 0, 0)
+                    context.rectangle(0, 0, 640, 360)
+                    context.fill()
+                    context.set_source_rgb(brightness, brightness, brightness)
+                    w, h = max(2, 640 * sx), max(2, 360 * sy)
+                    context.rectangle((640 - w) / 2, (360 - h) / 2, w, h)
+                    context.fill()
+                continue
             if key == 'zap':
                 for y in range(0, 360, 6):
                     for x in range(0, 640, 6):
@@ -103,6 +119,9 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.set_font_size(10)
                 state = layer.get('transcription')
                 label = (layer.get('text') or '...') if state == 'on' else {'off': '----', 'starting': 'starting...', 'error': 'STT error'}.get(state, 'STT ?')
+                alpha = transcript_alpha(time.monotonic(), layer.get('text_updated', 0)) if state == 'on' and layer.get('text') else 1.0
+                if alpha == 0:
+                    label, alpha = '...', 1.0
                 label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
                 context.save()
                 context.rectangle(462, 327, 162, 13)
@@ -110,6 +129,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                 text_width = context.text_extents(label).width
                 offset = (time.monotonic() * 30) % (text_width + 40) if text_width > 162 else 0
                 context.move_to(462 - offset, 337)
+                context.set_source_rgba(1, 1, 1, alpha)
                 context.show_text(label)
                 context.restore()
                 if layer['status'] == 'on':
@@ -128,8 +148,12 @@ def main(image_path, screensharing=False, window_suffix=''):
             if key == 'image':
                 context.save()
                 context.scale(640 / effect_width, 360 / effect_height)
-                Gdk.cairo_set_source_pixbuf(context, layer['pixbuf'], layer['x'], layer['y'])
-                context.paint()
+                pixbuf = layer['pixbuf']
+                x, y, angle, alpha = media_transition(layer.get('transition'), time.monotonic() - layer['start'], effect_width, layer['x'], layer['y'])
+                context.translate(x + pixbuf.get_width() / 2, y + pixbuf.get_height() / 2)
+                context.rotate(-math.radians(angle))
+                Gdk.cairo_set_source_pixbuf(context, pixbuf, -pixbuf.get_width() / 2, -pixbuf.get_height() / 2)
+                context.paint_with_alpha(alpha)
                 context.restore()
                 continue
             if key == 'vintage':
@@ -160,6 +184,10 @@ def main(image_path, screensharing=False, window_suffix=''):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
+            if key == 'crt_off':
+                if crt_state(time.monotonic() - layer['start'], layer['duration']) is None:
+                    layers.remove(key)
+                continue
             if key == 'zap':
                 if time.monotonic() >= layer['end']:
                     layers.remove(key)
@@ -207,6 +235,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                     layers.put('starwars', {'lines': lines, 'start': time.monotonic()})
                 elif request.get('effect') == 'zap' and isinstance(request.get('duration'), (int, float)) and .05 <= request['duration'] <= 30:
                     layers.put('zap', {'end': time.monotonic() + request['duration']}, z=10000)
+                elif request.get('effect') == 'crt_off' and isinstance(request.get('duration'), (int, float)) and 0 <= request['duration'] <= 60:
+                    layers.put('crt_off', {'start': time.monotonic(), 'duration': request['duration']}, z=10001)
                 elif request.get('effect') == 'vintage' and isinstance(request.get('enabled'), bool):
                     if request['enabled']:
                         layers.put('vintage', {'scratches': []})
@@ -235,6 +265,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                         layers.put('mic', {'status': request['status'], 'level': max(0.0, min(1.0, request['level'])),
                                            'transcription': request.get('transcription', 'unknown'),
                                            'text': request.get('text', '') if isinstance(request.get('text', ''), str) else '',
+                                           'text_updated': request.get('text_updated', 0) if isinstance(request.get('text_updated', 0), (int, float)) else 0,
                                            'updated': time.monotonic()})
                 elif request.get('effect') == 'duck':
                     if request.get('remove') is True:
@@ -331,7 +362,14 @@ def main(image_path, screensharing=False, window_suffix=''):
         pixbuf = pixbuf.scale_simple(max(1, round(pixbuf.get_width() * scale)),
                                      max(1, round(pixbuf.get_height() * scale)),
                                      GdkPixbuf.InterpType.BILINEAR)
-        layers.put('image', {'pixbuf': pixbuf, 'x': x, 'y': y})
+        previous = layers.get('image')
+        reset = request.get('transition_start') is True or not previous
+        transition = request.get('transition')
+        if transition not in (None, 'fade', 'throw'):
+            raise ValueError('Invalid media transition')
+        layers.put('image', {'pixbuf': pixbuf, 'x': x, 'y': y,
+                             'transition': transition if reset else previous['transition'],
+                             'start': time.monotonic() if reset else previous['start']})
 
     window.connect('draw', draw)
     effect.connect('draw', draw_effect)

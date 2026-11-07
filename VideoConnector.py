@@ -185,6 +185,7 @@ class VideoConnector:
                 raise RuntimeError('Video connector is not running')
             if key == 'media':
                 effect.output_size(self.WIDTH, self.HEIGHT)
+                effect.begin_transition()
                 if hasattr(effect, 'start'):
                     effect.start()
             previous = self.effects.get(key)
@@ -217,6 +218,10 @@ class VideoConnector:
     def zap(self, duration=.666):
         from gdo.video.TVStatic import TVStatic
         self.put_effect('zap', TVStatic(duration))
+
+    def crt_off(self, duration=2.0):
+        from gdo.video.CRTOff import CRTOff
+        self.put_effect('crt_off', CRTOff(duration), z=10000)
 
     def microphone_meter(self, enabled):
         from gdo.video.MicrophoneLevel import MicrophoneLevel

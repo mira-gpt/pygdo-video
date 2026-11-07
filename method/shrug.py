@@ -5,6 +5,7 @@ from gdo.base.Application import Application
 from gdo.base.IPC import IPC
 from gdo.base.Method import Method
 from gdo.core.GDT_Enum import GDT_Enum
+from gdo.language.GDT_Language import GDT_Language
 from gdo.core.GDT_RestOfText import GDT_RestOfText
 from gdo.video.StarWarsIPC import encode_text
 
@@ -21,7 +22,7 @@ class shrug(Method):
 
     def gdo_parameters(self):
         return [GDT_RestOfText('text').tooltip('tt_video_duckshrug_text'),
-                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).tooltip('tt_audio_say_language')]
+                GDT_Language('lang').audiolangs().tooltip('tt_audio_say_language')]
 
     def gdo_execute(self):
         try:

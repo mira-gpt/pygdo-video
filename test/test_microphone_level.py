@@ -15,6 +15,13 @@ class MicrophoneLevelTest(unittest.TestCase):
     def setUp(self):
         Application.mode(Mode.render_cli)
 
+    def test_transcript_fades_after_ten_seconds(self):
+        from gdo.video.TranscriptFade import transcript_alpha
+        self.assertEqual(1, transcript_alpha(110, 100))
+        self.assertAlmostEqual(.5, transcript_alpha(110.5, 100))
+        self.assertEqual(0, transcript_alpha(111, 100))
+        self.assertEqual(1, transcript_alpha(110.5, 105))
+
     def test_states_draw_and_loud_differs_from_silence(self):
         images = []
         for status, level, transcription, text in [('off', 0, 'off', ''), ('on', .2, 'off', ''), ('on', .2, 'on', 'Hello there')]:

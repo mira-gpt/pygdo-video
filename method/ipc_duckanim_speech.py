@@ -3,6 +3,7 @@ from gdo.base.Logger import Logger
 from gdo.base.Method import Method
 from gdo.base.ModuleLoader import ModuleLoader
 from gdo.core.GDT_Enum import GDT_Enum
+from gdo.language.GDT_Language import GDT_Language
 from gdo.core.GDT_String import GDT_String
 from gdo.video.StarWarsIPC import decode_text
 from gdo.video.module_video import module_video
@@ -17,7 +18,7 @@ class ipc_duckanim_speech(Method):
         keys = ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie')
         return [GDT_Enum('key').choices({key: key.title() for key in keys}).not_null().positional(),
                 GDT_String('payload').ascii().maxlen(1024).not_null().positional(),
-                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).not_null().positional()]
+                GDT_Language('lang').audiolangs().not_null().positional()]
 
     async def gdo_execute(self):
         if Application.IS_DOG:

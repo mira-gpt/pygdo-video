@@ -35,7 +35,7 @@ class ImageLayerTest(unittest.TestCase):
 
     def test_command_queues_image_and_geometry(self):
         command = media()
-        values = {'url': 'file:///tmp/image.png', 'width': '25%', 'height': '25%', 'x': '2%', 'y': '2%'}
+        values = {'url': 'file:///tmp/image.png', 'width': '25%', 'height': '25%', 'x': '2%', 'y': '2%', 'transition': 'throw'}
         command.param_val = MagicMock(side_effect=values.get)
         command.reply = MagicMock(return_value='queued')
         db = MagicMock()
@@ -43,3 +43,32 @@ class ImageLayerTest(unittest.TestCase):
         with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.media.IPC.send_to_dog') as send:
             self.assertEqual(command.gdo_execute(), 'queued')
         send.assert_called_once_with('video.ipc_media', list(values.values()))
+
+    def test_fade_and_throw_positions(self):
+        from gdo.video.MediaTransition import media_transition
+        self.assertEqual((10, 20, 0.0, 0.0), media_transition('fade', 0, 400, 10, 20))
+        self.assertEqual((10, 20, 0.0, 1.0), media_transition('fade', 1, 400, 10, 20))
+        x, y, angle, alpha = media_transition('throw', 0, 400, 10, 20)
+        self.assertEqual((-400, 20, 900, 1.0), (x, y, angle, alpha))
+        self.assertEqual((10, 20, 0.0, 1.0), media_transition('throw', 1.2, 400, 10, 20))
+
+    def test_fade_draw_preserves_target_before_and_after(self):
+        layer = ImageLayer(Image.new('RGBA', (20, 20), 'red'), width='20px', height='20px', x='0px', y='0px', transition='fade')
+        with patch('gdo.video.ImageLayer.time.monotonic', return_value=10):
+            layer.begin_transition()
+            frame = Image.new('RGB', (100, 100), 'blue')
+            layer.draw(frame)
+        self.assertEqual((0, 0, 255), frame.getpixel((5, 5)))
+        with patch('gdo.video.ImageLayer.time.monotonic', return_value=11):
+            layer.draw(frame)
+        self.assertEqual((255, 0, 0), frame.getpixel((5, 5)))
+
+    def test_desktop_video_frames_do_not_restart_transition(self):
+        from gdo.video.DesktopOverlay import DesktopOverlay
+        layer = ImageLayer(Image.new('RGBA', (4, 4), 'red'), transition='throw')
+        overlay = DesktopOverlay(screensharing=True)
+        first = overlay._image_payload(layer, layer.image, transition_start=True)
+        later = overlay._image_payload(layer, layer.image)
+        self.assertTrue(first['transition_start'])
+        self.assertFalse(later['transition_start'])
+        self.assertEqual('throw', later['transition'])
