@@ -84,6 +84,15 @@ def main():
     angry_brows = root.attachNewNode(brows.create())
     angry_brows.setLightOff()
     angry_brows.hide()
+    sorry_lines = LineSegs('sorry eyebrows')
+    sorry_lines.setThickness(3)
+    sorry_lines.setColor(.3, .16, .05, 1)
+    for side in (-1, 1):
+        sorry_lines.moveTo(side * .1, -.79, 1.81)
+        sorry_lines.drawTo(side * .34, -.75, 1.72)
+    sorry_brows = root.attachNewNode(sorry_lines.create())
+    sorry_brows.setLightOff()
+    sorry_brows.hide()
     teacher = root.attachNewNode('teacher accessories')
     accessories = LineSegs('glasses beard and pointer')
     accessories.setThickness(3)
@@ -117,6 +126,65 @@ def main():
     chalk_node.setScale(.13)
     chalk_node.setLightOff()
     teacher.hide()
+    nerd = root.attachNewNode('nerd glasses and teeth')
+    glasses = LineSegs('large glasses')
+    glasses.setThickness(5)
+    glasses.setColor(.06, .045, .03, 1)
+    for side in (-1, 1):
+        for point in range(33):
+            angle = math.tau * point / 32
+            (glasses.moveTo if point == 0 else glasses.drawTo)(side * .22 + .21 * math.cos(angle), -.88, 1.59 + .19 * math.sin(angle))
+    glasses.moveTo(-.04, -.88, 1.59)
+    glasses.drawTo(.04, -.88, 1.59)
+    nerd.attachNewNode(glasses.create()).setLightOff()
+    for side in (-1, 1):
+        tooth = CardMaker('front tooth')
+        tooth.setFrame(-.043, .043, -.14, 0)
+        tooth_node = nerd.attachNewNode(tooth.generate())
+        tooth_node.setPos(side * .045, -.99, 1.29)
+        tooth_node.setColor(1, .98, .88, 1)
+        tooth_node.setLightOff()
+    nerd.hide()
+    magic = root.attachNewNode('wizard costume and frog')
+    robe = CardMaker('wizard robe')
+    robe.setFrame(-.55, .55, -.38, .38)
+    robe_node = magic.attachNewNode(robe.generate())
+    robe_node.setPos(0, -.57, .69)
+    robe_node.setColor(.22, .12, .55, 1)
+    robe_node.setLightOff()
+    wand_lines = LineSegs('magic wand')
+    wand_lines.setThickness(4)
+    wand_lines.setColor(.45, .24, .09, 1)
+    wand_lines.moveTo(.47, -.85, .93)
+    wand_lines.drawTo(.94, -.85, 1.65)
+    magic.attachNewNode(wand_lines.create()).setLightOff()
+    frog_card = CardMaker('frog')
+    frog_card.setFrame(-.15, .15, -.08, .08)
+    frog = magic.attachNewNode(frog_card.generate())
+    frog.setPos(-.78, -.45, .12)
+    frog.setColor(.2, .75, .2, 1)
+    frog.setLightOff()
+    for side in (-1, 1):
+        eye_card = CardMaker('frog eye')
+        eye_card.setFrame(-.035, .035, -.035, .035)
+        frog_eye = magic.attachNewNode(eye_card.generate())
+        frog_eye.setPos(-.78 + side * .085, -.46, .20)
+        frog_eye.setColor(.45, .95, .25, 1)
+        frog_eye.setLightOff()
+    stars = []
+    for index in range(5):
+        star_lines = LineSegs('spell sparkle')
+        star_lines.setThickness(3)
+        star_lines.setColor(.9, .75, 1, 1)
+        star_lines.moveTo(-.06, 0, 0)
+        star_lines.drawTo(.06, 0, 0)
+        star_lines.moveTo(0, 0, -.06)
+        star_lines.drawTo(0, 0, .06)
+        star = magic.attachNewNode(star_lines.create())
+        star.setBillboardPointEye()
+        star.setLightOff()
+        stars.append(star)
+    magic.hide()
     smile_lines = LineSegs('happy smile')
     smile_lines.setThickness(3)
     smile_lines.setColor(.35, .09, .02, 1)
@@ -250,7 +318,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'angry', 'inlove'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -276,6 +344,9 @@ def main():
     threading.Thread(target=receive, daemon=True).start()
     start = time.monotonic()
     nodes = [(root, 'R'), (root, 'Z'), (root, 'P'), (root, 'Sz')]
+    head_node = root.find('**/Head')
+    if not head_node.isEmpty():
+        nodes.append((head_node, 'H'))
     nodes.extend([(wing_base, 'R'), (wing_tip, 'R')])
     for name, prop in [('Wing L', 'R'), ('Foot', 'Z'), ('Foot.001', 'Z'),
                        ('Eye white', 'Sz'), ('Eye white.001', 'Sz'), ('Pupil', 'Sz'), ('Pupil.001', 'Sz')]:
@@ -319,6 +390,9 @@ def main():
     next_angry_flap, angry_flap_until = start + random.uniform(2, 5), 0
     next_scowl, scowl_start, scowl_duration = start + random.uniform(2, 5), 0, 1
     next_happy_eyes, happy_eyes_until = start + random.uniform(2, 5), 0
+    next_trip_look, trip_look_start, trip_look_duration, trip_direction = start + random.uniform(4, 9), 0, 3, 1
+    next_trip_hiccup, trip_hiccup_at = start + random.uniform(12, 25), 0
+    next_yawn, yawn_until = start + random.uniform(6, 12), 0
     heart_speeds = [random.uniform(.20, .35) for _ in hearts]
     dizzy_kind, dizzy_until, dizzy_count, dizzy_offset, mug_count = 'none', 0, 0, 0.0, 0
     try:
@@ -338,6 +412,26 @@ def main():
             blend = transition_weight(time.monotonic() - mode_start)
             t = time.monotonic() - start
             now = time.monotonic()
+            if mode == 'tired' and now >= next_yawn:
+                yawn_until = now + random.uniform(1.1, 2.0)
+                next_yawn = yawn_until + random.uniform(8, 16)
+            elif mode != 'tired':
+                yawn_until = 0
+                next_yawn = now + random.uniform(6, 12)
+            if mode == 'trip':
+                if now >= next_trip_look:
+                    trip_look_start = now
+                    trip_look_duration = random.uniform(3, 5)
+                    trip_direction = random.choice((-1, 1))
+                    next_trip_look = now + trip_look_duration + random.uniform(5, 12)
+                if now >= next_trip_hiccup:
+                    trip_hiccup_at = now
+                    next_trip_hiccup = now + random.uniform(15, 30)
+            else:
+                trip_look_start = trip_hiccup_at = 0
+                next_trip_look = now + random.uniform(4, 9)
+                next_trip_hiccup = now + random.uniform(12, 25)
+            trip_look = math.sin(math.pi * (now - trip_look_start) / trip_look_duration) * trip_direction if trip_look_start and now - trip_look_start < trip_look_duration else 0
             if mode == 'inlove' and now >= next_happy_eyes:
                 happy_eyes_until = now + random.uniform(.6, 1.3)
                 next_happy_eyes = happy_eyes_until + random.uniform(2, 6)
@@ -345,7 +439,7 @@ def main():
                 happy_eyes_until = 0
                 next_happy_eyes = now + random.uniform(2, 5)
             happy_closed = mode == 'xd' or (mode == 'inlove' and now < happy_eyes_until)
-            smile.show() if mode in ('inlove', 'xd') else smile.hide()
+            smile.show() if mode in ('inlove', 'xd', 'trip') else smile.hide()
             happy_eyes.show() if happy_closed else happy_eyes.hide()
             for index, heart in enumerate(hearts):
                 if mode == 'inlove':
@@ -390,7 +484,30 @@ def main():
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
+            if not head.isEmpty():
+                head.setH(28 * trip_look if mode == 'trip' else 0)
+            if mode == 'trip':
+                root.setR(0)
+                root.setZ(.05 * math.sin(math.pi * min((now - trip_hiccup_at) / .3, 1)) if trip_hiccup_at and now - trip_hiccup_at < .3 else 0)
+            elif mode == 'tired':
+                root.setR(2 * math.sin(t * .45))
+                root.setP(10 + 4 * math.sin(t * .4))
+            if mode == 'sorry':
+                sorry_brows.show()
+                root.setP(10 + 1.5 * math.sin(t * 1.2))
+                root.setR(4 * math.sin(t * .7))
+            else:
+                sorry_brows.hide()
             teacher.show() if mode == 'teacher' else teacher.hide()
+            nerd.show() if mode == 'nerd' else nerd.hide()
+            if mode == 'cast':
+                magic.show()
+                for index, star in enumerate(stars):
+                    phase = (t * .6 + index / len(stars)) % 1
+                    star.setPos(.9 + .3 * phase, -.8, 1.6 + .45 * phase)
+                    star.setScale(.5 + .5 * abs(math.sin(t * 5 + index)))
+            else:
+                magic.hide()
             if mode == 'angry':
                 angry_brows.show()
                 angry_brows.setSx(1 - .18 * scowl)
@@ -508,7 +625,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(.05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high') else .7 - .28 * scowl if mode == 'angry' else 1)
+                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1)
                     if eye.startswith('Eye white'):
                         if mode in ('high', 'drunk'):
                             node.setColorScale(1, .35 if mode == 'high' else .55, .35 if mode == 'high' else .55, 1)
@@ -516,9 +633,9 @@ def main():
                             node.clearColorScale()
             for pupil, (x, z) in zip(pupils, pupil_origins):
                 phase = (time.monotonic() - mode_start) * 5
-                pupil.setX(x + .035 * math.sin(phase) if mode == 'rolleye' else x)
-                pupil.setZ(z + .045 * math.cos(phase) if mode == 'rolleye' else z)
-                pupil.setSx(1 - .7 * scowl if mode == 'angry' else 1)
+                pupil.setX(x + .035 * math.sin(phase) if mode == 'rolleye' else x + .055 * trip_look if mode == 'trip' else x)
+                pupil.setZ(z + .045 * math.cos(phase) if mode == 'rolleye' else z + .025 if mode == 'sorry' else z)
+                pupil.setSx(1 - .7 * scowl if mode == 'angry' else 1.65 if mode == 'trip' else 1)
             if blend < 1:
                 for (node, prop), start_value in zip(nodes, origin):
                     target_value = getattr(node, 'get' + prop)()
@@ -527,7 +644,7 @@ def main():
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.
             tongue_out = mode == 'xd' or (mode == 'drunk' and now < tongue_until and not speaking)
-            beak.pose('Duck rigAction', 7 if tongue_out and not speaking else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
+            beak.pose('Duck rigAction', 7 if not speaking and (tongue_out or (mode == 'tired' and now < yawn_until)) else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
             if not tongue_joint.isEmpty():
                 tongue_joint.setY(tongue_y - .24 if tongue_out else tongue_y)
             base.graphicsEngine.renderFrame()
