@@ -1,4 +1,6 @@
 module_video = "Video"
+mt_video_duckmoods = "Duck moods"
+md_video_duckmoods = "List duck animations, highlighting base moods and the current mood."
 mt_video_welcome = "Duck welcome"
 md_video_welcome = "Wave and greet a nickname aloud in the channel language."
 tt_video_welcome_nickname = "Nickname to welcome on the live output."

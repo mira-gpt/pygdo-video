@@ -5,6 +5,7 @@ frames. No desktop, microphone or network access is required.
 """
 import json
 import math
+import random
 import sys
 import threading
 import time
@@ -21,7 +22,7 @@ def transition_weight(elapsed, duration=TRANSITION_SECONDS):
 
 def main():
     import gltf
-    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
+    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TransparencyAttrib, Vec4, loadPrcFileData
     from direct.showbase.ShowBase import ShowBase
     from direct.actor.Actor import Actor
 
@@ -62,13 +63,29 @@ def main():
     pain_marks.setLightOff()
     pain_marks.setTransparency(TransparencyAttrib.MAlpha)
     pain_marks.hide()
+    barf_drops = []
+    for index in range(4):
+        card = CardMaker('barf drop')
+        card.setFrame(-.04, .04, -.04, .04)
+        drop = base.render.attachNewNode(card.generate())
+        drop.setColor(.35, .8, .12, 1)
+        drop.setBillboardPointEye()
+        drop.setLightOff()
+        drop.hide()
+        barf_drops.append(drop)
     notes = []
-    for index in range(3):
-        text = TextNode('music note')
-        text.setText('♪' if index != 1 else '♫')
-        note = base.render.attachNewNode(text)
-        note.setColor(1, .85, .15, 1)
-        note.setScale(.22)
+    for index in range(6):
+        lines = LineSegs('music note')
+        lines.setThickness(3)
+        lines.setColor(1, .85, .15, 1)
+        for point in range(17):
+            angle = point * math.tau / 16
+            x, z = .055 * math.cos(angle), .035 * math.sin(angle)
+            (lines.moveTo if point == 0 else lines.drawTo)(x, 0, z)
+        lines.moveTo(.052, 0, 0)
+        lines.drawTo(.052, 0, .20)
+        lines.drawTo(.13, 0, .16)
+        note = base.render.attachNewNode(lines.create())
         note.setBillboardPointEye()
         note.setLightOff()
         note.hide()
@@ -88,19 +105,24 @@ def main():
     base.render.setLight(light_node)
 
     lock = threading.Lock()
-    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0}
+    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0, 'gain': 0.0, 'frequency_hz': None}
 
     def receive():
         for line in sys.stdin:
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
                         state['speaking'] = request['speaking']
                         state['envelope'] = []
+                    gain = request.get('gain')
+                    if isinstance(gain, (int, float)) and math.isfinite(gain):
+                        state['gain'] = max(0.0, min(1.0, gain))
+                        frequency = request.get('frequency_hz')
+                        state['frequency_hz'] = frequency if isinstance(frequency, (int, float)) and math.isfinite(frequency) and frequency >= 0 else None
                     levels = request.get('envelope')
                     step = request.get('step_ms')
                     if isinstance(levels, list) and len(levels) <= 2400 and all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in levels) and isinstance(step, int) and 10 <= step <= 500:
@@ -131,34 +153,67 @@ def main():
     outgoing_mode = 'idle'
     transition_stamp = state['mode_start']
     origin = [getattr(node, 'get' + prop)() for node, prop in nodes]
+    head = root.find('**/Head')
+    next_hiccup = start + random.uniform(4, 10)
+    hiccup_at = 0
+    sway_rates = (1.7, 1.1, .37)
     try:
         while True:
             with lock:
                 mode, speaking, running = state['mode'], state['speaking'], state['running']
                 mode_start = state['mode_start']
                 envelope, step_ms, speech_start = state['envelope'], state['step_ms'], state['speech_start']
+                gain, frequency = state['gain'], state['frequency_hz']
             if not running:
                 break
             if mode_start != transition_stamp:
                 origin = [getattr(node, 'get' + prop)() for node, prop in nodes]
                 outgoing_mode, previous_mode = previous_mode, mode
                 transition_stamp = mode_start
+                sway_rates = (random.uniform(1.3, 1.9), random.uniform(.8, 1.3), random.uniform(.25, .5))
             blend = transition_weight(time.monotonic() - mode_start)
             t = time.monotonic() - start
+            now = time.monotonic()
+            if mode == 'tipsy' and now >= next_hiccup:
+                hiccup_at = now
+                next_hiccup = now + random.uniform(5, 12)
+            elif mode != 'tipsy':
+                hiccup_at = 0
+                next_hiccup = now + random.uniform(4, 10)
+            if not head.isEmpty():
+                if mode == 'embarrassed':
+                    head.setColorScale(1, .17, .17, 1)
+                else:
+                    head.clearColorScale()
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
             if mode == 'music':
                 root.setP(8 * math.sin(t * 3.2))
             for index, note in enumerate(notes):
-                if mode == 'music':
-                    phase = (t * .35 + index / 3) % 1
+                if mode == 'music' and index < min(len(notes), round(gain * 30)):
+                    phase = (t * .35 + index / len(notes)) % 1
                     note.setPos(.65 + .12 * math.sin(t + index), -.4, 1.25 + phase * 1.0)
+                    note.setColorScale(1, .5 + min(frequency or 0, 2000) / 4000, .5, 1)
                     note.show()
                 else:
                     note.hide()
             if mode == 'high':
                 root.setR(7 * math.sin(t * 1.1))
+            if mode in ('tipsy', 'drunk'):
+                root.setR((8 if mode == 'tipsy' else 20) * (.8 * math.sin(t * sway_rates[0]) + .2 * math.sin(t * sway_rates[2])))
+                root.setP((3 if mode == 'tipsy' else 10) * math.sin(t * sway_rates[1]))
+                if mode == 'tipsy' and hiccup_at and now - hiccup_at < .35:
+                    root.setZ(root.getZ() + .12 * math.sin(math.pi * (now - hiccup_at) / .35))
+            if mode == 'barf':
+                root.setP(28 + 8 * math.sin(t * 9))
+            for index, drop in enumerate(barf_drops):
+                if mode == 'barf':
+                    phase = (t * 1.5 + index / len(barf_drops)) % 1
+                    drop.setPos(.1 + phase * .55, -.9, 1.3 - phase * .85)
+                    drop.show()
+                else:
+                    drop.hide()
             root.setSz(.88 + .012 * math.sin(t * (7 if mode == 'cry' else .8)) if mode in ('sad', 'cry') else 1)
             for tear in tears:
                 if mode == 'cry':

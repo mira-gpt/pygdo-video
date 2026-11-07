@@ -17,6 +17,8 @@ class Duck3DSource:
     def __init__(self, env=None, pythonpath=None):
         self.lock = threading.Lock()
         self.frame = None
+        self.mode = 'idle'
+        self.feature_sent = 0.0
         if pythonpath:
             env = dict(os.environ if env is None else env)
             env['PYTHONPATH'] = pythonpath + os.pathsep + env.get('PYTHONPATH', '')
@@ -44,15 +46,23 @@ class Duck3DSource:
             return
 
     def update(self, **state):
-        if 'mode' in state and state['mode'] not in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music'):
+        if 'mode' in state and state['mode'] not in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed'):
             raise ValueError('Unknown duck animation')
         try:
             with self.lock:
                 self.process.stdin.write((json.dumps(state) + '\n').encode())
+                if 'mode' in state:
+                    self.mode = state['mode']
         except (OSError, ValueError) as error:
             raise RuntimeError('Duck renderer is not running') from error
 
     def snapshot(self):
+        now = time.monotonic()
+        if self.mode == 'music' and now - self.feature_sent >= .1:
+            from gdo.audio.meter import MicrophoneMeter
+            features = MicrophoneMeter.features(now)
+            self.update(gain=features.gain, frequency_hz=features.frequency_hz)
+            self.feature_sent = now
         with self.lock:
             return self.frame.copy() if self.frame is not None else None
 
