@@ -26,6 +26,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='lol')
             source.update(mode='hello')
             source.update(mode='music')
+            source.update(mode='drunk')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:
