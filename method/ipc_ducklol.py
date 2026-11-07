@@ -21,8 +21,7 @@ class ipc_ducklol(Method):
     async def gdo_execute(self):
         if not Application.IS_DOG:
             return self.empty()
-        switched = False
-        connector = None
+        event_task = None
         try:
             text = decode_text(self.param_val('payload'))
             if len(text) > 300:
@@ -34,18 +33,15 @@ class ipc_ducklol(Method):
                 await mira.save_config_val('mira_mood', 'idle')
             elif self.animation == 'cry' and mira:
                 await mira.save_config_val('mira_mood', 'sad')
-            connector = module_video.instance().connector
-            connector.duck_animation(self.animation)
-            switched = True
+            event_task = module_video.instance().duck_event(self.animation, duration=None)
             speech = ipc_say().input('text', text).input('lang', language)
             await speech.gdo_execute()
         except (ImportError, ValueError, RuntimeError, OSError, AttributeError) as error:
             Logger.warning(f'Duck LOL speech failed: {error}')
         finally:
-            if switched:
+            if event_task is not None:
                 try:
-                    mira = ModuleLoader.instance().get_module('mira')
-                    connector.duck_animation(mira.cfg_mira_mood() if mira else 'idle')
+                    module_video.instance().finish_duck_event(event_task)
                 except (ValueError, RuntimeError, OSError, AttributeError) as error:
                     Logger.warning(f'Duck idle restore failed: {error}')
         return self.empty()

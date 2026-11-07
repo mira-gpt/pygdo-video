@@ -84,6 +84,40 @@ def main():
     angry_brows = root.attachNewNode(brows.create())
     angry_brows.setLightOff()
     angry_brows.hide()
+    smile_lines = LineSegs('happy smile')
+    smile_lines.setThickness(3)
+    smile_lines.setColor(.35, .09, .02, 1)
+    for point in range(21):
+        x = -.18 + .36 * point / 20
+        (smile_lines.moveTo if point == 0 else smile_lines.drawTo)(x, -.94, 1.30 + 1.5 * x * x)
+    smile = root.attachNewNode(smile_lines.create())
+    smile.setLightOff()
+    smile.hide()
+    happy_lines = LineSegs('happy closed eyes')
+    happy_lines.setThickness(4)
+    happy_lines.setColor(.08, .04, .02, 1)
+    for side in (-1, 1):
+        happy_lines.moveTo(side * .34, -.83, 1.57)
+        happy_lines.drawTo(side * .22, -.85, 1.66)
+        happy_lines.drawTo(side * .10, -.83, 1.57)
+    happy_eyes = root.attachNewNode(happy_lines.create())
+    happy_eyes.setLightOff()
+    happy_eyes.hide()
+    hearts = []
+    for index in range(5):
+        lines = LineSegs('heart')
+        lines.setThickness(3)
+        lines.setColor(1, .22, .4, 1)
+        for point in range(49):
+            angle = math.tau * point / 48
+            x = .0045 * 16 * math.sin(angle) ** 3
+            z = .0045 * (13 * math.cos(angle) - 5 * math.cos(2 * angle) - 2 * math.cos(3 * angle) - math.cos(4 * angle))
+            (lines.moveTo if point == 0 else lines.drawTo)(x, 0, z)
+        heart = root.attachNewNode(lines.create())
+        heart.setBillboardPointEye()
+        heart.setLightOff()
+        heart.hide()
+        hearts.append(heart)
     dizzy_spirals = []
     for index in range(5):
         spiral = LineSegs('dizzy spiral')
@@ -183,7 +217,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'angry'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'angry', 'inlove'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -251,6 +285,8 @@ def main():
     next_tongue, tongue_until = start + random.uniform(3, 8), 0
     next_angry_flap, angry_flap_until = start + random.uniform(2, 5), 0
     next_scowl, scowl_start, scowl_duration = start + random.uniform(2, 5), 0, 1
+    next_happy_eyes, happy_eyes_until = start + random.uniform(2, 5), 0
+    heart_speeds = [random.uniform(.20, .35) for _ in hearts]
     dizzy_kind, dizzy_until, dizzy_count, dizzy_offset, mug_count = 'none', 0, 0, 0.0, 0
     try:
         while True:
@@ -269,6 +305,23 @@ def main():
             blend = transition_weight(time.monotonic() - mode_start)
             t = time.monotonic() - start
             now = time.monotonic()
+            if mode == 'inlove' and now >= next_happy_eyes:
+                happy_eyes_until = now + random.uniform(.6, 1.3)
+                next_happy_eyes = happy_eyes_until + random.uniform(2, 6)
+            elif mode != 'inlove':
+                happy_eyes_until = 0
+                next_happy_eyes = now + random.uniform(2, 5)
+            happy_closed = mode == 'inlove' and now < happy_eyes_until
+            smile.show() if mode == 'inlove' else smile.hide()
+            happy_eyes.show() if happy_closed else happy_eyes.hide()
+            for index, heart in enumerate(hearts):
+                if mode == 'inlove':
+                    phase = (t * heart_speeds[index] + index / len(hearts)) % 1
+                    heart.setPos((-.55 if index % 2 else .55) + .07 * math.sin(t * 2 + index), -.2, 1.3 + phase * .95)
+                    heart.setScale(.7 + .3 * math.sin(math.pi * phase))
+                    heart.show()
+                else:
+                    heart.hide()
             if mode == 'angry' and now >= next_scowl:
                 scowl_start = now
                 scowl_duration = random.uniform(.8, 1.6)
@@ -421,7 +474,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high') else .7 - .28 * scowl if mode == 'angry' else 1)
+                    node.setSz(.05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high') else .7 - .28 * scowl if mode == 'angry' else 1)
                     if eye.startswith('Eye white'):
                         if mode in ('high', 'drunk'):
                             node.setColorScale(1, .35 if mode == 'high' else .55, .35 if mode == 'high' else .55, 1)

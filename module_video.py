@@ -140,7 +140,7 @@ class module_video(GDO_Module):
         except (AttributeError, RuntimeError, ValueError, OSError):
             pass  # A mood change must not start a video source.
 
-    def duck_event(self, key, duration=2.0):
+    def duck_event(self, key, duration=4.0):
         """Immediately replace an event; restore the latest base mood at its end."""
         connector = self.connector
         connector.duck_animation(key)
@@ -148,12 +148,25 @@ class module_video(GDO_Module):
         if previous and not previous.done():
             previous.cancel()
         self._duck_event_task = asyncio.create_task(self._finish_duck_event(connector, duration))
+        return self._duck_event_task
+
+    def finish_duck_event(self, task):
+        if task is not getattr(self, '_duck_event_task', None):
+            return
+        task.cancel()
+        self._duck_event_task = None
+        from gdo.base.ModuleLoader import ModuleLoader
+        mira = ModuleLoader.instance().get_module('mira')
+        self.connector.duck_animation(mira.cfg_mira_mood() if mira else 'idle')
 
     async def _finish_duck_event(self, connector, duration):
         from gdo.base.ModuleLoader import ModuleLoader
         from gdo.base.Logger import Logger
         try:
-            await asyncio.sleep(duration)
+            if duration is None:
+                await asyncio.Future()
+            else:
+                await asyncio.sleep(duration)
             if self.connector is connector:
                 mira = ModuleLoader.instance().get_module('mira')
                 connector.duck_animation(mira.cfg_mira_mood() if mira else 'idle')

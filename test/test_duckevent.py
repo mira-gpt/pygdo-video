@@ -19,7 +19,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         self.mira_notice = patch('gdo.mira.util.send_to_mira')
         self.send_to_mira = self.mira_notice.start()
         self.addCleanup(self.mira_notice.stop)
-        self.current_user = patch.object(Application, 'get_current_user', return_value=MagicMock(get_name=MagicMock(return_value='gizmore')))
+        self.current_user = patch.object(Application, 'get_current_user', return_value=MagicMock(get_name_sid=MagicMock(return_value='gizmore{bash}')))
         self.current_user.start()
         self.addCleanup(self.current_user.stop)
 
@@ -44,7 +44,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
                 patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
             method.gdo_execute()
         send.assert_called_once_with('video.ipc_duckevent', ['ouch'])
-        self.send_to_mira.assert_called_once_with('$duck.anim ouch (requested by "gizmore"; animation request queued for Dog)', interrupt=False)
+        self.send_to_mira.assert_called_once_with('$duck.anim ouch (requested by "gizmore{bash}"; animation request queued for Dog)', interrupt=False)
 
     def test_hello_animation_is_temporary_event(self):
         method = duckanim()
@@ -72,7 +72,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
             callback, *args = deferred.call_args.args
             callback(*args)
             send.assert_called_once_with('video.ipc_duckevent', ['hello'])
-            self.send_to_mira.assert_called_once_with('$duck.anim hello (requested by "gizmore"; animation request queued for Dog)', interrupt=False)
+            self.send_to_mira.assert_called_once_with('$duck.anim hello (requested by "gizmore{bash}"; animation request queued for Dog)', interrupt=False)
 
     def test_rolleye_supports_optional_speech(self):
         method = duckanim()
@@ -106,25 +106,23 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual('video.ipc_duckanim_speech', name)
                 self.assertEqual(key, args[0])
                 self.assertEqual('Please!', decode_text(args[1]))
-                self.send_to_mira.assert_called_with(f'$duck.anim {key} (requested by "gizmore"; animation request queued for Dog)\nSpeech text: "Please!"', interrupt=False)
+                self.send_to_mira.assert_called_with(f'$duck.anim {key} (requested by "gizmore{{bash}}"; animation request queued for Dog)\nSpeech text: "Please!"', interrupt=False)
 
     async def test_plz_speech_starts_event_and_speaks(self):
         from gdo.video.method.ipc_duckanim_speech import ipc_duckanim_speech
         from gdo.video.StarWarsIPC import encode_text
         method = ipc_duckanim_speech()
         method.param_val = MagicMock(side_effect=lambda name: {'key': 'plz', 'payload': encode_text('Please!'), 'lang': 'en'}[name])
-        event = MagicMock()
-        event.input.return_value = event
-        event.gdo_execute = AsyncMock()
+        video = MagicMock()
         speech = MagicMock()
         speech.input.return_value = speech
         speech.gdo_execute = AsyncMock()
         with patch.object(Application, 'IS_DOG', True), \
-                patch('gdo.video.method.ipc_duckanim_speech.ipc_duckevent', return_value=event), \
+                patch('gdo.video.method.ipc_duckanim_speech.module_video.instance', return_value=video), \
                 patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
             await method.gdo_execute()
-        event.input.assert_called_once_with('key', 'plz')
-        event.gdo_execute.assert_awaited_once()
+        video.duck_event.assert_called_once_with('plz', duration=None)
+        video.finish_duck_event.assert_called_once_with(video.duck_event.return_value)
         speech.input.assert_any_call('text', 'Please!')
         speech.gdo_execute.assert_awaited_once()
 
@@ -198,6 +196,21 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         module.connector = MagicMock()
         await asyncio.sleep(.04)
         old.duck_animation.assert_called_once_with('lol')
+
+    async def test_speech_event_does_not_restore_over_newer_event(self):
+        module = module_video()
+        module.connector = MagicMock()
+        old = module.duck_event('plz', duration=None)
+        new = module.duck_event('hello', duration=None)
+        module.finish_duck_event(old)
+        self.assertIs(new, module._duck_event_task)
+        self.assertEqual(['plz', 'hello'], [call.args[0] for call in module.connector.duck_animation.call_args_list])
+        mira = MagicMock()
+        mira.cfg_mira_mood.return_value = 'sad'
+        with patch('gdo.base.ModuleLoader.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))):
+            module.finish_duck_event(new)
+        self.assertEqual('sad', module.connector.duck_animation.call_args.args[0])
+        await asyncio.sleep(0)
 
     async def test_lol_event_changes_sad_base(self):
         method = ipc_duckevent()
