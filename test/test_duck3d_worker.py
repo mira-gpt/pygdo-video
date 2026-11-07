@@ -35,6 +35,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='tired')
             source.update(mode='cast')
             source.update(mode='zombie')
+            source.update(mode='pirate')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:
@@ -113,6 +114,9 @@ class Duck3DWorkerTest(unittest.TestCase):
             process.stdin.write((json.dumps({'mode': 'quacking', 'speaking': True}) + '\n').encode())
             changed = frame()
             self.assertNotEqual(first, changed)
+            process.stdin.write(b'{"mode":"pirate"}\n')
+            pirate_frames = [frame() for _ in range(12)]
+            self.assertTrue(any(candidate != first for candidate in pirate_frames))
             process.stdin.write(b'{"stop":true}\n')
             # Closing the reader also releases a producer blocked in write.
             process.stdout.close()

@@ -428,6 +428,43 @@ def main():
         news_brows.drawTo(side * .32, -.9, 1.75)
     news.attachNewNode(news_brows.create()).setLightOff()
     news.hide()
+    pirate = root.attachNewNode('pirate costume')
+    for name, frame, y, color in (
+        ('pirate eyepatch', (-.34, -.09, 1.52, 1.72), -.97, (.035, .035, .04, 1)),
+        ('pirate shirt', (-.39, .39, .49, .98), -.84, (.10, .10, .12, 1)),
+        ('pirate flag', (-.23, .23, .64, .87), -.86, (.035, .035, .04, 1)),
+        ('pirate hook black plastic flap', (-.80, -.62, .88, 1.06), -.94, (.035, .04, .05, 1)),
+        ('parrot body', (.44, .67, 1.26, 1.58), -.82, (.09, .69, .28, 1)),
+        ('parrot head', (.47, .65, 1.54, 1.72), -.84, (.12, .78, .35, 1)),
+        ('parrot beak', (.61, .74, 1.58, 1.66), -.86, (1, .65, .06, 1)),
+        ('parrot eye', (.57, .61, 1.64, 1.68), -.87, (.03, .03, .03, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = pirate.attachNewNode(card.generate())
+        part.setY(y)
+        part.setColor(*color)
+        part.setLightOff()
+    pirate_lines = LineSegs('pirate patch strap hook and skull')
+    pirate_lines.setThickness(5)
+    pirate_lines.setColor(.08, .08, .09, 1)
+    pirate_lines.moveTo(-.31, -.95, 1.69)
+    pirate_lines.drawTo(.28, -.95, 1.87)
+    pirate_lines.setColor(.75, .77, .80, 1)
+    pirate_lines.moveTo(-.65, -.91, .98)
+    pirate_lines.drawTo(-.82, -.91, .87)
+    for point in range(18):
+        angle = math.pi * (1 + point / 17)
+        pirate_lines.drawTo(-.82 + .13 * math.cos(angle), -.91, .99 + .13 * math.sin(angle))
+    pirate_lines.setColor(.96, .96, .90, 1)
+    for x in (-.09, .09):
+        pirate_lines.moveTo(x, -.88, .69)
+        pirate_lines.drawTo(-x, -.88, .82)
+    for point in range(25):
+        angle = math.tau * point / 24
+        (pirate_lines.moveTo if point == 0 else pirate_lines.drawTo)(.065 * math.cos(angle), -.88, .78 + .065 * math.sin(angle))
+    pirate.attachNewNode(pirate_lines.create()).setLightOff()
+    pirate.hide()
     magic = root.attachNewNode('wizard costume and frog')
     wizard_hat = GeomVertexData('wizard hat', GeomVertexFormat.getV3(), Geom.UHStatic)
     hat_writer = GeomVertexWriter(wizard_hat, 'vertex')
@@ -664,7 +701,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -883,6 +920,9 @@ def main():
             metal.show() if mode == 'metal' else metal.hide()
             ninja.show() if mode == 'ninja' else ninja.hide()
             news.show() if mode == 'news' else news.hide()
+            pirate.show() if mode == 'pirate' else pirate.hide()
+            if mode == 'pirate':
+                root.setR(4 * math.sin(t * 1.5))
             if mode == 'news':
                 root.setP(4 + 3 * math.sin(t * 3))
                 root.setR(2 * math.sin(t * 2))
