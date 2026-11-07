@@ -57,6 +57,17 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
             method.gdo_execute()
         send.assert_called_once_with('video.ipc_duckevent', ['hello'])
 
+    def test_teacher_is_temporary_event(self):
+        method = duckanim()
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'teacher', 'text': None}[key])
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        send.assert_called_once_with('video.ipc_duckevent', ['teacher'])
+
     def test_notification_waits_for_transaction_commit(self):
         method = duckanim()
         method.param_val = MagicMock(side_effect=lambda key: {'key': 'hello', 'text': None}[key])
@@ -99,7 +110,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), \
                 patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
-            for key in ('plz', 'quacking'):
+            for key in ('plz', 'xd', 'quacking'):
                 method.param_val = MagicMock(side_effect=lambda name: {'key': key, 'text': 'Please!', 'lang': 'en'}[name])
                 method.gdo_execute()
                 name, args = send.call_args.args

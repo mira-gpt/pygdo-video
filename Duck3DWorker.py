@@ -22,7 +22,7 @@ def transition_weight(elapsed, duration=TRANSITION_SECONDS):
 
 def main():
     import gltf
-    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TransparencyAttrib, Vec4, loadPrcFileData
+    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
     from direct.showbase.ShowBase import ShowBase
     from direct.actor.Actor import Actor
 
@@ -84,6 +84,39 @@ def main():
     angry_brows = root.attachNewNode(brows.create())
     angry_brows.setLightOff()
     angry_brows.hide()
+    teacher = root.attachNewNode('teacher accessories')
+    accessories = LineSegs('glasses beard and pointer')
+    accessories.setThickness(3)
+    accessories.setColor(.12, .08, .04, 1)
+    for side in (-1, 1):
+        for point in range(33):
+            angle = math.tau * point / 32
+            (accessories.moveTo if point == 0 else accessories.drawTo)(side * .22 + .17 * math.cos(angle), -.84, 1.59 + .15 * math.sin(angle))
+    accessories.moveTo(-.05, -.85, 1.59)
+    accessories.drawTo(.05, -.85, 1.59)
+    for side in (-1, 1):
+        accessories.moveTo(side * .19, -.82, 1.25)
+        accessories.drawTo(side * .13, -.86, .98)
+        accessories.drawTo(0, -.88, .87)
+    accessories.moveTo(.52, -.55, 1.0)
+    accessories.drawTo(1.03, -.5, 1.75)
+    teacher.attachNewNode(accessories.create()).setLightOff()
+    board = teacher.attachNewNode('chalkboard')
+    board.setPos(-.7, .45, 1.95)
+    board.setBillboardPointEye()
+    board_card = CardMaker('chalkboard surface')
+    board_card.setFrame(-.42, .42, -.21, .21)
+    board_surface = board.attachNewNode(board_card.generate())
+    board_surface.setColor(.04, .18, .11, 1)
+    board_surface.setLightOff()
+    chalk = TextNode('chalk title')
+    chalk.setText('ToDo:')
+    chalk.setTextColor(.95, .95, .85, 1)
+    chalk_node = board.attachNewNode(chalk)
+    chalk_node.setPos(-.33, -.01, .02)
+    chalk_node.setScale(.13)
+    chalk_node.setLightOff()
+    teacher.hide()
     smile_lines = LineSegs('happy smile')
     smile_lines.setThickness(3)
     smile_lines.setColor(.35, .09, .02, 1)
@@ -217,7 +250,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'angry', 'inlove'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'angry', 'inlove'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -311,8 +344,8 @@ def main():
             elif mode != 'inlove':
                 happy_eyes_until = 0
                 next_happy_eyes = now + random.uniform(2, 5)
-            happy_closed = mode == 'inlove' and now < happy_eyes_until
-            smile.show() if mode == 'inlove' else smile.hide()
+            happy_closed = mode == 'xd' or (mode == 'inlove' and now < happy_eyes_until)
+            smile.show() if mode in ('inlove', 'xd') else smile.hide()
             happy_eyes.show() if happy_closed else happy_eyes.hide()
             for index, heart in enumerate(hearts):
                 if mode == 'inlove':
@@ -357,6 +390,7 @@ def main():
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
+            teacher.show() if mode == 'teacher' else teacher.hide()
             if mode == 'angry':
                 angry_brows.show()
                 angry_brows.setSx(1 - .18 * scowl)
@@ -492,8 +526,8 @@ def main():
             index = int((time.monotonic() - speech_start) * 1000 / step_ms)
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.
-            tongue_out = mode == 'drunk' and now < tongue_until and not speaking
-            beak.pose('Duck rigAction', 7 if tongue_out else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
+            tongue_out = mode == 'xd' or (mode == 'drunk' and now < tongue_until and not speaking)
+            beak.pose('Duck rigAction', 7 if tongue_out and not speaking else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
             if not tongue_joint.isEmpty():
                 tongue_joint.setY(tongue_y - .24 if tongue_out else tongue_y)
             base.graphicsEngine.renderFrame()

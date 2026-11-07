@@ -30,7 +30,7 @@ class duckanim(Method):
         return 'owner'
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({key: key.title() for key in ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'lol', 'LOL', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz')}).errorhint_all().not_null().positional().tooltip('tt_video_duckanim_key'),
+        return [GDT_Enum('key').choices({key: key.title() for key in ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'lol', 'LOL', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd')}).errorhint_all().not_null().positional().tooltip('tt_video_duckanim_key'),
                 GDT_RestOfText('text').tooltip('tt_video_rolleye_text'),
                 GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).tooltip('tt_audio_say_language')]
 
@@ -47,7 +47,7 @@ class duckanim(Method):
                     raise ValueError('Speech request exceeds IPC size limit')
                 args = ('video.ipc_duckanim_speech', payload)
             else:
-                args = ('video.ipc_duckevent' if key in ('shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz') else 'video.ipc_duckanim', [key])
+                args = ('video.ipc_duckevent' if key in ('shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd') else 'video.ipc_duckanim', [key])
             user = getattr(self, '_env_user', None) or Application.get_current_user()
             requester = user.get_name_sid() if user else 'unknown'
             if Application.db().is_in_transaction():
