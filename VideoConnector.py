@@ -214,6 +214,10 @@ class VideoConnector:
         else:
             self.remove_effect('vintage')
 
+    def zap(self, duration=.666):
+        from gdo.video.TVStatic import TVStatic
+        self.put_effect('zap', TVStatic(duration))
+
     def microphone_meter(self, enabled):
         from gdo.video.MicrophoneLevel import MicrophoneLevel
         if enabled:

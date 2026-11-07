@@ -109,6 +109,12 @@ class DesktopOverlay:
             except (BrokenPipeError, OSError) as exc:
                 raise RuntimeError('Desktop overlay stopped') from exc
 
+    def zap(self, duration=.666):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            self._send_payload({'effect': 'zap', 'duration': duration})
+
     def draw_line(self, *line):
         line = validate_line(*line)
         with self.lock:

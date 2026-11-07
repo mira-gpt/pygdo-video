@@ -17,14 +17,14 @@ class duckhigh(Method):
         return 'owner'
 
     def gdo_parameters(self):
-        return [GDT_RestOfText('text'), GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese'})]
+        return [GDT_RestOfText('text'), GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'})]
 
     def gdo_execute(self):
         text = self.param_val('text')
         if text:
             language = speech_language(self, self.param_val('lang'))
             if language not in VOICES or len(text) > 300:
-                return self.err('video_error', ('Choose en, de, ko, vi or ja and speech text of at most 300 characters',))
+                return self.err('video_error', ('Choose en, de, ko, vi, ja or sq and speech text of at most 300 characters',))
             payload = [encode_text(text), language]
             if len(msgspec.json.encode(payload)) > IPC.MAX_EVENT_ARG_SIZE:
                 return self.err('video_error', ('Speech request exceeds IPC size limit',))

@@ -32,7 +32,7 @@ class duckanim(Method):
     def gdo_parameters(self):
         return [GDT_Enum('key').choices({key: key.title() for key in ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'lol', 'LOL', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz')}).not_null().positional().tooltip('tt_video_duckanim_key'),
                 GDT_RestOfText('text').tooltip('tt_video_rolleye_text'),
-                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese'}).tooltip('tt_audio_say_language')]
+                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).tooltip('tt_audio_say_language')]
 
     def gdo_execute(self):
         try:
@@ -41,7 +41,7 @@ class duckanim(Method):
             if text:
                 language = speech_language(self, self.param_val('lang'))
                 if language not in VOICES or len(text) > 300:
-                    raise ValueError('Choose en, de, ko, vi or ja and speech text of at most 300 characters')
+                    raise ValueError('Choose en, de, ko, vi, ja or sq and speech text of at most 300 characters')
                 payload = [key, encode_text(text), language]
                 if len(msgspec.json.encode(payload)) > IPC.MAX_EVENT_ARG_SIZE:
                     raise ValueError('Speech request exceeds IPC size limit')

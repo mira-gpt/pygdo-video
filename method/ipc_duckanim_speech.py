@@ -17,7 +17,7 @@ class ipc_duckanim_speech(Method):
         keys = ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz')
         return [GDT_Enum('key').choices({key: key.title() for key in keys}).not_null().positional(),
                 GDT_String('payload').ascii().maxlen(1024).not_null().positional(),
-                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese'}).not_null().positional()]
+                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).not_null().positional()]
 
     async def gdo_execute(self):
         if Application.IS_DOG:

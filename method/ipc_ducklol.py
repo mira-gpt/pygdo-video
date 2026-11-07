@@ -16,7 +16,7 @@ class ipc_ducklol(Method):
 
     def gdo_parameters(self):
         return [GDT_String('payload').ascii().maxlen(1024).not_null().positional(),
-                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese'}).not_null().positional()]
+                GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch', 'ko': 'Korean', 'vi': 'Vietnamese', 'ja': 'Japanese', 'sq': 'Albanian'}).not_null().positional()]
 
     async def gdo_execute(self):
         if not Application.IS_DOG:

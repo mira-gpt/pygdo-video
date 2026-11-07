@@ -60,6 +60,14 @@ def main(image_path, screensharing=False, window_suffix=''):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'zap':
+                for y in range(0, 360, 6):
+                    for x in range(0, 640, 6):
+                        shade = random.random()
+                        context.set_source_rgb(shade, shade, shade)
+                        context.rectangle(x, y, 6, 6)
+                        context.fill()
+                continue
             if key == 'duck':
                 context.save()
                 pixbuf = layer.get('frame') or (layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed'])
@@ -152,6 +160,10 @@ def main(image_path, screensharing=False, window_suffix=''):
         if not effect.get_visible():
             return False
         for key, layer in layers.ordered():
+            if key == 'zap':
+                if time.monotonic() >= layer['end']:
+                    layers.remove(key)
+                continue
             if key in ('image', 'drawing', 'mic', 'duck'):
                 continue
             if key == 'vintage':
@@ -193,6 +205,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if request.get('effect') == 'starwars' and isinstance(text, str) and text.strip() and len(text) <= 4096:
                     lines = [part for item in text.splitlines() for part in (textwrap.wrap(item, 36) or [''])]
                     layers.put('starwars', {'lines': lines, 'start': time.monotonic()})
+                elif request.get('effect') == 'zap' and isinstance(request.get('duration'), (int, float)) and .05 <= request['duration'] <= 30:
+                    layers.put('zap', {'end': time.monotonic() + request['duration']}, z=10000)
                 elif request.get('effect') == 'vintage' and isinstance(request.get('enabled'), bool):
                     if request['enabled']:
                         layers.put('vintage', {'scratches': []})

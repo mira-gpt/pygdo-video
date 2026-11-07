@@ -1,4 +1,8 @@
 module_video = "Video"
+mt_video_zap = "TV static"
+md_video_zap = "Brief television static picture and noise."
+video_zap_queued = "TV static request queued for Dog."
+tt_video_zap_duration = "Duration in seconds (0.05–30; default 0.666)."
 mt_video_duckmoods = "Duck moods"
 md_video_duckmoods = "List duck animations, highlighting base moods and the current mood."
 mt_video_welcome = "Duck welcome"
