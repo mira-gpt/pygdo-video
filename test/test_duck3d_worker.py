@@ -36,11 +36,28 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='cast')
             source.update(mode='zombie')
             source.update(mode='pirate')
+            source.update(mode='ghost')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:
             source.close()
         self.assertIsNotNone(source.process.poll())
+
+    def test_ghost_is_translucent_and_idle_restores_opacity(self):
+        from gdo.video.Duck3DSource import Duck3DSource
+        source = Duck3DSource()
+        try:
+            source.wait_ready(timeout=10)
+            source.update(mode='ghost')
+            time.sleep(1)
+            ghost = source.snapshot().getchannel('A')
+            source.update(mode='idle')
+            time.sleep(1)
+            idle = source.snapshot().getchannel('A')
+            self.assertLess(sum(ghost.histogram()[220:]), sum(idle.histogram()[220:]) * .6)
+            self.assertGreater(sum(ghost.histogram()[10:]), 1000)
+        finally:
+            source.close()
 
     def test_model_has_independent_wing_joints(self):
         import gltf

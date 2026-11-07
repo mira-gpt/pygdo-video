@@ -28,4 +28,4 @@ class close(Method):
                 IPC.send_to_dog(*args)
         except (ValueError, RuntimeError, OSError) as exc:
             return self.err('video_error', (str(exc),))
-        return self.reply('video_close_queued')
+        return self.empty() if Application.IS_DOG else self.reply('video_close_queued')

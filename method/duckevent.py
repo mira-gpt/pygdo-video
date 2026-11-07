@@ -21,4 +21,4 @@ class duckevent(Method):
             Application.defer_after_commit(IPC.send_to_dog, *args)
         else:
             IPC.send_to_dog(*args)
-        return self.reply('video_duckevent_queued')
+        return self.empty() if Application.IS_DOG else self.reply('video_duckevent_queued')

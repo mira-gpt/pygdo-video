@@ -18,4 +18,4 @@ class off(Method):
             Application.defer_after_commit(IPC.send_to_dog, 'video.ipc_off', args)
         else:
             IPC.send_to_dog('video.ipc_off', args)
-        return self.reply('video_off_queued')
+        return self.empty() if Application.IS_DOG else self.reply('video_off_queued')

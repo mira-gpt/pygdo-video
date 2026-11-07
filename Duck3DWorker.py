@@ -701,7 +701,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -891,6 +891,13 @@ def main():
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setH(360 * transition_weight(t, 3.0) if mode == 'turnaround' else 0)
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
+            if mode == 'ghost':
+                root.setTransparency(TransparencyAttrib.MAlpha)
+                root.setColorScale(.85, .95, 1, .38)
+                root.setZ(.14 + .045 * math.sin(t * 1.5))
+            else:
+                root.clearTransparency()
+                root.clearColorScale()
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
             if mode == 'shiver':
                 root.setR(3.5 * math.sin(t * 19) + 1.5 * math.sin(t * 29))

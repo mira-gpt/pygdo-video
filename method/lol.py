@@ -36,6 +36,6 @@ class lol(Method):
                 Application.defer_after_commit(IPC.send_to_dog, *args)
             else:
                 IPC.send_to_dog(*args)
-            return self.reply('video_ducklol_queued')
+            return self.empty() if Application.IS_DOG else self.reply('video_ducklol_queued')
         except (ValueError, RuntimeError, OSError) as error:
             return self.err('video_error', (str(error),))

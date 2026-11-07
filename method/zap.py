@@ -18,4 +18,4 @@ class zap(Method):
             Application.defer_after_commit(IPC.send_to_dog, 'video.ipc_zap', args)
         else:
             IPC.send_to_dog('video.ipc_zap', args)
-        return self.reply('video_zap_queued')
+        return self.empty() if Application.IS_DOG else self.reply('video_zap_queued')

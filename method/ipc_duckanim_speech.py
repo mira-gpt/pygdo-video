@@ -16,7 +16,8 @@ class ipc_duckanim_speech(Method):
         return ''
 
     def gdo_parameters(self):
-        keys = ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news')
+        from gdo.video.DuckAnimations import BASE_DEFAULTS
+        keys = BASE_DEFAULTS
         return [GDT_Enum('key').choices({key: key.title() for key in keys}).not_null().positional(),
                 GDT_String('payload').ascii().maxlen(1024).not_null().positional(),
                 GDT_Language('lang').audiolangs().not_null().positional()]
