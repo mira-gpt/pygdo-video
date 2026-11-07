@@ -21,7 +21,7 @@ def transition_weight(elapsed, duration=TRANSITION_SECONDS):
 
 def main():
     import gltf
-    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TransparencyAttrib, Vec4, loadPrcFileData
+    from panda3d.core import AmbientLight, CardMaker, DirectionalLight, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
     from direct.showbase.ShowBase import ShowBase
     from direct.actor.Actor import Actor
 
@@ -62,6 +62,17 @@ def main():
     pain_marks.setLightOff()
     pain_marks.setTransparency(TransparencyAttrib.MAlpha)
     pain_marks.hide()
+    notes = []
+    for index in range(3):
+        text = TextNode('music note')
+        text.setText('♪' if index != 1 else '♫')
+        note = base.render.attachNewNode(text)
+        note.setColor(1, .85, .15, 1)
+        note.setScale(.22)
+        note.setBillboardPointEye()
+        note.setLightOff()
+        note.hide()
+        notes.append(note)
     lens = OrthographicLens()
     lens.setFilmSize(2.7, 2.7)
     base.cam.node().setLens(lens)
@@ -84,7 +95,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -137,6 +148,15 @@ def main():
             root.setR(math.sin(t * (7 if mode == 'lol' else 5 if mode == 'quacking' else 1.4)) * (12 if mode == 'lol' else 8 if mode == 'quacking' else 2))
             root.setZ(abs(math.sin(t * 8)) * .22 if mode == 'lol' else abs(math.sin(t * 5)) * .08 if mode == 'quacking' else .012 * math.sin(t * 1.4))
             root.setP(20 + 2 * math.sin(t * .8) if mode in ('sad', 'cry') else 0)
+            if mode == 'music':
+                root.setP(8 * math.sin(t * 3.2))
+            for index, note in enumerate(notes):
+                if mode == 'music':
+                    phase = (t * .35 + index / 3) % 1
+                    note.setPos(.65 + .12 * math.sin(t + index), -.4, 1.25 + phase * 1.0)
+                    note.show()
+                else:
+                    note.hide()
             if mode == 'high':
                 root.setR(7 * math.sin(t * 1.1))
             root.setSz(.88 + .012 * math.sin(t * (7 if mode == 'cry' else .8)) if mode in ('sad', 'cry') else 1)

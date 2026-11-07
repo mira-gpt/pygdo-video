@@ -15,7 +15,7 @@ class duckanim(Method):
         return 'owner'
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'sad': 'Sad', 'lol': 'LOL', 'LOL': 'LOL', 'ouch': 'Ouch', 'hello': 'Hello', 'rolleye': 'Roll eyes'}).not_null().positional().tooltip('tt_video_duckanim_key'),
+        return [GDT_Enum('key').choices({'idle': 'Idle', 'quacking': 'Quacking', 'sad': 'Sad', 'music': 'Music', 'lol': 'LOL', 'LOL': 'LOL', 'ouch': 'Ouch', 'hello': 'Hello', 'rolleye': 'Roll eyes'}).not_null().positional().tooltip('tt_video_duckanim_key'),
                 GDT_RestOfText('text').tooltip('tt_video_rolleye_text'),
                 GDT_Enum('lang').choices({'en': 'English', 'de': 'Deutsch'}).tooltip('tt_audio_say_language')]
 
