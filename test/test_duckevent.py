@@ -14,6 +14,22 @@ from gdo.video.module_video import module_video
 
 
 class DuckEventTest(unittest.IsolatedAsyncioTestCase):
+    def test_no_key_lists_sorted_and_highlights_current_mode(self):
+        from gdo.video.DuckAnimations import BASE_DEFAULTS
+        method = duckanim()
+        method.param_val = MagicMock(return_value=None)
+        mira = MagicMock()
+        mira.cfg_mira_mood.return_value = 'idle'
+        video = MagicMock()
+        video.connector.duck_source.mode = 'work'
+        with patch.object(Application, 'IS_DOG', True), \
+                patch('gdo.video.method.duckanim.module_mira.instance', return_value=mira), \
+                patch('gdo.video.method.duckanim.module_video.instance', return_value=video), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            text = method.gdo_execute().render(Mode.render_markdown)
+        self.assertEqual('Duck animations: ' + ', '.join('**work**' if key == 'work' else key for key in sorted(BASE_DEFAULTS)), text)
+        send.assert_not_called()
+
     def test_duckanim_requires_admin(self):
         self.assertEqual('admin', duckanim().gdo_user_permission())
 
