@@ -26,39 +26,55 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
 
     def test_queues_command(self):
         method = liveshow()
-        method.param_value = MagicMock(return_value=True)
+        method.param_val = MagicMock(return_value='show')
         method.reply = MagicMock()
         db = MagicMock()
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
             method.gdo_execute()
-        send.assert_called_once_with('video.ipc_liveshow', ['1'])
+        send.assert_called_once_with('video.ipc_liveshow', ['show'])
 
     def test_no_argument_reports_persisted_flag_without_queuing(self):
         method = liveshow()
-        method.param_value = MagicMock(return_value=None)
-        method.reply = MagicMock(side_effect=lambda key: key)
+        method.param_val = MagicMock(return_value=None)
+        method.reply = MagicMock(side_effect=lambda key, args: (key, args))
         mira = MagicMock()
         loader = MagicMock(get_module=MagicMock(return_value=mira))
         with patch('gdo.video.method.liveshow.ModuleLoader.instance', return_value=loader), \
                 patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
-            for state in (True, False):
-                mira.get_config_value.return_value = state
-                self.assertEqual('video_liveshow_status_on' if state else 'video_liveshow_status_off', method.gdo_execute())
+            for state in ('off', 'work', 'show', 'discuss'):
+                mira.cfg_mira_livemode.return_value = state
+                self.assertEqual(('video_liveshow_status', (state,)), method.gdo_execute())
         send.assert_not_called()
 
     def test_enabled_is_optional_and_false_queues_disable(self):
         method = liveshow()
         self.assertFalse(method.gdo_parameters()[0]._not_null)
-        self.assertIsNone(method.param_value('enabled'))
-        method.param_value = MagicMock(return_value=False)
+        method.param_val = MagicMock(return_value='0')
         method.reply = MagicMock()
         db = MagicMock()
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), \
                 patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
             method.gdo_execute()
-        send.assert_called_once_with('video.ipc_liveshow', ['0'])
+        send.assert_called_once_with('video.ipc_liveshow', ['off'])
+
+    def test_all_modes_and_invalid_input(self):
+        method = liveshow()
+        method.reply = MagicMock()
+        method.err = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
+            for mode in ('off', 'work', 'show', 'discuss', '1'):
+                method.param_val = MagicMock(return_value=mode)
+                method.gdo_execute()
+            self.assertEqual(['off', 'work', 'show', 'discuss', 'show'],
+                             [call.args[1][0] for call in send.call_args_list])
+            method.param_val = MagicMock(return_value='bad')
+            method.gdo_execute()
+            method.err.assert_called_once_with('video_liveshow_invalid')
+            self.assertEqual(5, send.call_count)
 
     def test_duck_high_sets_persistent_mood(self):
         method = duckhigh()
@@ -113,15 +129,16 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_dog_persists_mode(self):
         handler = ipc_liveshow()
-        handler.param_value = MagicMock(return_value=True)
+        handler.param_val = MagicMock(return_value='show')
         handler.empty = MagicMock()
         mira = MagicMock()
+        mira.cfg_mira_livemode.return_value = 'off'
         mira.save_config_val = AsyncMock()
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_liveshow.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))), \
                 patch('gdo.video.method.ipc_liveshow.IPC.execute_dog_event', new_callable=AsyncMock) as send:
             await handler.gdo_execute()
-        mira.save_config_val.assert_awaited_once_with('mira_quacking', '1', force=True)
+        mira.save_config_val.assert_awaited_once_with('mira_livemode', 'show', force=True)
         self.assertEqual([('video.ipc_duck3d', ['1']), ('video.ipc_mic', ['1'])],
                          [call.args for call in send.await_args_list if call.args[0] != 'chat.shout'])
 
@@ -133,9 +150,9 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_liveshow.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))), \
                 patch('gdo.video.method.ipc_liveshow.IPC.execute_dog_event', new_callable=AsyncMock) as send:
-            for previous, enabled in ((False, True), (True, True), (True, False), (False, False)):
-                mira.get_config_value.return_value = previous
-                handler.param_value = MagicMock(return_value=enabled)
+            for previous, mode in (('off', 'show'), ('show', 'show'), ('show', 'off'), ('off', 'off')):
+                mira.cfg_mira_livemode.return_value = previous
+                handler.param_val = MagicMock(return_value=mode)
                 await handler.gdo_execute()
             notices = [call for call in send.await_args_list if call.args[0] == 'chat.shout']
             self.assertEqual(2, len(notices))
@@ -149,8 +166,8 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         module = module_video()
         module.connector = MagicMock()
         field = MagicMock()
-        field.get_value.return_value = True
-        await module.on_mira_quacking_changed(None, field)
+        field.get_value.return_value = 'show'
+        await module.on_mira_livemode_changed(None, field)
         module.connector.liveshow.assert_called_once_with(True)
         module.connector.start.assert_not_called()
         module.connector.microphone_meter.assert_not_called()

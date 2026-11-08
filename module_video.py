@@ -78,7 +78,7 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
         Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
-        Application.EVENTS.subscribe('module_mira_mira_quacking_changed', self.on_mira_quacking_changed)
+        Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
 
     async def on_live_join_welcome(self, user, channel):
@@ -86,7 +86,7 @@ class module_video(GDO_Module):
         from gdo.base.ModuleLoader import ModuleLoader
         from gdo.core.GDT_UserType import GDT_UserType
         mira = ModuleLoader.instance().get_module('mira')
-        if not mira or not mira.get_config_value('mira_quacking'):
+        if not mira or mira.cfg_mira_livemode() != 'show':
             return
         if any(user.is_type(kind) for kind in (GDT_UserType.BOT, GDT_UserType.CHAPPY,
                                                 GDT_UserType.SYSTEM, GDT_UserType.DEVICE)):
@@ -124,8 +124,8 @@ class module_video(GDO_Module):
         except (ImportError, ValueError, RuntimeError, OSError, AttributeError) as error:
             Logger.warning(f'Duck welcome failed: {error}')
 
-    async def on_mira_quacking_changed(self, module, field):
-        self.connector.liveshow(field.get_value())
+    async def on_mira_livemode_changed(self, module, field):
+        self.connector.liveshow(field.get_value() == 'show')
 
     def sync_liveshow(self):
         from gdo.base.ModuleLoader import ModuleLoader
@@ -133,7 +133,7 @@ class module_video(GDO_Module):
             mira = ModuleLoader.instance().get_module('mira')
         except AttributeError:
             mira = None
-        self.connector.liveshow(bool(mira.get_config_value('mira_quacking')) if mira else False)
+        self.connector.liveshow(mira.cfg_mira_livemode() == 'show' if mira else False)
 
     async def on_mira_mood_changed(self, module, field):
         task = getattr(self, '_duck_event_task', None)

@@ -107,15 +107,18 @@ off by default and require a per-channel opt-in. In the desired channel, staff
 can enable them with `$confc video.welcome video_welcome_enabled 1` and disable
 them with `$confc video.welcome video_welcome_enabled 0`. Manual welcomes do
 not require this opt-in. Actual channel-join events trigger a welcome only
-when opted in and `mira_quacking` is enabled, with an eight-second
+when opted in and `mira_livemode` is `show`, with an eight-second
 global cooldown; unsupported languages and bot/system accounts are skipped.
 Join snapshots are not welcomed. This can expose nicknames on the show; only
 enable live-show mode when that is intended. No stream or microphone is started.
 
-`$live` (also `$video.liveshow`) reports the persisted show flag without
-confirming whether a stream is broadcasting. `$live 1|0` sets Mira's persisted
-`mira_quacking` live-show mode and requests the 3D duck and microphone meter
-overlays on or off. The video connector must already be running; the requests
+`$live` (also `$video.liveshow`) reports the effective mode without confirming
+whether a stream is broadcasting. `$live off|work|show|discuss` selects
+`mira_livemode`; the old `$live 0|1` forms mean `off|show`. An old
+`mira_quacking` setting remains the fallback until a new mode is saved.
+Selecting `show` requests the 3D duck and microphone meter overlays on; other
+modes request them off. `work` and `discuss` do not themselves control music or
+microphone routing. The video connector must already be running; the requests
 do not start capture or guarantee the overlays are visible.
 When the microphone meter is visible, a red border marks the enabled mode in
 both video outputs. It does not start or prove a stream or microphone capture;

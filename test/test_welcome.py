@@ -43,7 +43,7 @@ class WelcomeTest(unittest.IsolatedAsyncioTestCase):
         video = module_video()
         video.play_welcome = AsyncMock()
         mira = MagicMock()
-        mira.get_config_value.return_value = False
+        mira.cfg_mira_livemode.return_value = 'off'
         loader = MagicMock(get_module=MagicMock(return_value=mira))
         user = MagicMock()
         user.is_type.return_value = False
@@ -54,7 +54,7 @@ class WelcomeTest(unittest.IsolatedAsyncioTestCase):
                 patch.object(welcome, 'get_config_channel_value', return_value=False) as enabled:
             await video.on_live_join_welcome(user, channel)
             video.play_welcome.assert_not_called()
-            mira.get_config_value.return_value = True
+            mira.cfg_mira_livemode.return_value = 'show'
             await video.on_live_join_welcome(user, channel)
             video.play_welcome.assert_not_called()
             enabled.return_value = True
