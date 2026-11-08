@@ -13,7 +13,9 @@ import cairo
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+gi.require_version('Pango', '1.0')
+gi.require_version('PangoCairo', '1.0')
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango, PangoCairo
 from LayerStack import LayerStack
 from DrawingProtocol import validate_line
 from MediaTransition import media_transition
@@ -94,15 +96,20 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.paint()
                 caption = layer['text'] if layer['speaking'] else layer.get('caption', '') if time.monotonic() < layer.get('caption_until', 0) else ''
                 if caption:
-                    lines = textwrap.wrap(caption, 65)[:4]
+                    layout = PangoCairo.create_layout(context)
+                    layout.set_font_description(Pango.FontDescription('Sans Bold 15px'))
+                    layout.set_width(608 * Pango.SCALE)
+                    layout.set_height(-4)
+                    layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+                    layout.set_ellipsize(Pango.EllipsizeMode.END)
+                    layout.set_text(caption, -1)
+                    _, text_height = layout.get_pixel_size()
                     context.set_source_rgba(.05, .05, .08, .9)
-                    context.rectangle(10, 10, 620, 18 + len(lines) * 19)
+                    context.rectangle(10, 10, 620, 12 + text_height)
                     context.fill()
                     context.set_source_rgb(1, 1, 1)
-                    context.set_font_size(15)
-                    for i, line in enumerate(lines):
-                        context.move_to(16, 28 + i * 19)
-                        context.show_text(line)
+                    context.move_to(16, 16)
+                    PangoCairo.show_layout(context, layout)
                 context.restore()
                 continue
             if key == 'mic':

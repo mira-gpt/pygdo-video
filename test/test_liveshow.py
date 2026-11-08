@@ -34,6 +34,32 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
             method.gdo_execute()
         send.assert_called_once_with('video.ipc_liveshow', ['1'])
 
+    def test_no_argument_reports_persisted_flag_without_queuing(self):
+        method = liveshow()
+        method.param_value = MagicMock(return_value=None)
+        method.reply = MagicMock(side_effect=lambda key: key)
+        mira = MagicMock()
+        loader = MagicMock(get_module=MagicMock(return_value=mira))
+        with patch('gdo.video.method.liveshow.ModuleLoader.instance', return_value=loader), \
+                patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
+            for state in (True, False):
+                mira.get_config_value.return_value = state
+                self.assertEqual('video_liveshow_status_on' if state else 'video_liveshow_status_off', method.gdo_execute())
+        send.assert_not_called()
+
+    def test_enabled_is_optional_and_false_queues_disable(self):
+        method = liveshow()
+        self.assertFalse(method.gdo_parameters()[0]._not_null)
+        self.assertIsNone(method.param_value('enabled'))
+        method.param_value = MagicMock(return_value=False)
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        send.assert_called_once_with('video.ipc_liveshow', ['0'])
+
     def test_duck_high_sets_persistent_mood(self):
         method = duckhigh()
         method.param_val = MagicMock(return_value=None)

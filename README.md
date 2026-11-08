@@ -112,7 +112,8 @@ global cooldown; unsupported languages and bot/system accounts are skipped.
 Join snapshots are not welcomed. This can expose nicknames on the show; only
 enable live-show mode when that is intended. No stream or microphone is started.
 
-`$live 1|0` (also `$video.liveshow 1|0`) sets Mira's persisted
+`$live` (also `$video.liveshow`) reports the persisted show flag without
+confirming whether a stream is broadcasting. `$live 1|0` sets Mira's persisted
 `mira_quacking` live-show mode and requests the 3D duck and microphone meter
 overlays on or off. The video connector must already be running; the requests
 do not start capture or guarantee the overlays are visible.

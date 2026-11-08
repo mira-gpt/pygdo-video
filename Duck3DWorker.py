@@ -465,6 +465,33 @@ def main():
         (pirate_lines.moveTo if point == 0 else pirate_lines.drawTo)(.065 * math.cos(angle), -.88, .78 + .065 * math.sin(angle))
     pirate.attachNewNode(pirate_lines.create()).setLightOff()
     pirate.hide()
+    work = root.attachNewNode('construction worker costume')
+    for name, frame, y, color in (
+        ('hard hat crown', (-.34, .34, 1.82, 2.02), -.35, (1, .72, .04, 1)),
+        ('hard hat brim', (-.43, .43, 1.80, 1.85), -.37, (1, .60, .02, 1)),
+        ('blue overalls', (-.38, .38, .42, .86), -.86, (.08, .25, .65, 1)),
+        ('left strap', (-.32, -.20, .82, 1.12), -.88, (.08, .25, .65, 1)),
+        ('right strap', (.20, .32, .82, 1.12), -.88, (.08, .25, .65, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = work.attachNewNode(card.generate())
+        part.setY(y)
+        part.setColor(*color)
+        part.setLightOff()
+    drill = work.attachNewNode('pneumatic drill')
+    for name, frame, color in (
+        ('drill handle', (.40, .78, 1.04, 1.10), (.12, .12, .13, 1)),
+        ('drill housing', (.49, .69, .51, 1.08), (.38, .40, .42, 1)),
+        ('drill bit', (.56, .62, .17, .53), (.65, .67, .69, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = drill.attachNewNode(card.generate())
+        part.setY(-1.0)
+        part.setColor(*color)
+        part.setLightOff()
+    work.hide()
     magic = root.attachNewNode('wizard costume and frog')
     wizard_hat = GeomVertexData('wizard hat', GeomVertexFormat.getV3(), Geom.UHStatic)
     hat_writer = GeomVertexWriter(wizard_hat, 'vertex')
@@ -701,7 +728,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -928,6 +955,11 @@ def main():
             ninja.show() if mode == 'ninja' else ninja.hide()
             news.show() if mode == 'news' else news.hide()
             pirate.show() if mode == 'pirate' else pirate.hide()
+            work.show() if mode == 'work' else work.hide()
+            if mode == 'work':
+                drilling = (t % 5.0) < 1.5
+                drill.setZ(.035 * math.sin(t * 35) if drilling else 0)
+                root.setP(5 + 1.5 * math.sin(t * 24) if drilling else 0)
             if mode == 'pirate':
                 root.setR(4 * math.sin(t * 1.5))
             if mode == 'news':
