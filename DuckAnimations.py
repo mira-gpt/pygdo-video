@@ -5,5 +5,5 @@ BASE_DEFAULTS = {
     for key in ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk',
                 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'lol', 'shrug',
                 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd',
-                'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work')
+                'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday')
 }

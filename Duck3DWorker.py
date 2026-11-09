@@ -492,6 +492,65 @@ def main():
         part.setColor(*color)
         part.setLightOff()
     work.hide()
+    birthday = root.attachNewNode('birthday party')
+    hat_data = GeomVertexData('birthday hat', GeomVertexFormat.getV3(), Geom.UHStatic)
+    hat_vertices = GeomVertexWriter(hat_data, 'vertex')
+    for x, z in ((-.30, 1.85), (.30, 1.85), (.02, 2.23)):
+        hat_vertices.addData3(x, 0, z)
+    hat_faces = GeomTriangles(Geom.UHStatic)
+    hat_faces.addVertices(0, 1, 2)
+    hat_mesh = Geom(hat_data)
+    hat_mesh.addPrimitive(hat_faces)
+    hat_node = GeomNode('birthday hat')
+    hat_node.addGeom(hat_mesh)
+    party_hat = birthday.attachNewNode(hat_node)
+    party_hat.setY(-.35)
+    party_hat.setColor(.80, .12, .50, 1)
+    party_hat.setLightOff()
+    party_hat.setTwoSided(True)
+    for name, frame, y, color in (
+        ('cake plate', (-.57, .57, .06, .12), -1.13, (.85, .91, 1, 1)),
+        ('birthday cake', (-.49, .49, .12, .42), -1.14, (.63, .29, .12, 1)),
+        ('cake icing', (-.50, .50, .39, .46), -1.16, (1, .74, .80, 1)),
+        ('blower mouthpiece', (.19, .36, 1.22, 1.27), -1.06, (1, .76, .15, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = birthday.attachNewNode(card.generate())
+        part.setY(y)
+        part.setColor(*color)
+        part.setLightOff()
+        part.setTwoSided(True)
+    blower = birthday.attachNewNode('party blower unrolling')
+    blower.setPos(.35, -1.08, 1.245)
+    blower_card = CardMaker('party blower paper')
+    blower_card.setFrame(0, .54, -.045, .045)
+    blower_paper = blower.attachNewNode(blower_card.generate())
+    blower_paper.setColor(.20, .72, .96, 1)
+    blower_paper.setLightOff()
+    blower_paper.setTwoSided(True)
+    flames = []
+    for index in range(46):
+        row, column = divmod(index, 23)
+        x = -.44 + column * .04
+        z = .46 + row * .08
+        y = -1.18 + row * .10
+        candle_card = CardMaker('birthday candle')
+        candle_card.setFrame(-.009, .009, 0, .095)
+        candle = birthday.attachNewNode(candle_card.generate())
+        candle.setPos(x, y, z)
+        candle.setColor(*((1, .92, .34, 1) if index % 2 else (.32, .72, 1, 1)))
+        candle.setLightOff()
+        candle.setTwoSided(True)
+        flame_card = CardMaker('birthday candle flame')
+        flame_card.setFrame(-.010, .010, 0, .045)
+        flame = birthday.attachNewNode(flame_card.generate())
+        flame.setPos(x, y - .01, z + .095)
+        flame.setColor(1, .55, .06, 1)
+        flame.setLightOff()
+        flame.setTwoSided(True)
+        flames.append(flame)
+    birthday.hide()
     magic = root.attachNewNode('wizard costume and frog')
     wizard_hat = GeomVertexData('wizard hat', GeomVertexFormat.getV3(), Geom.UHStatic)
     hat_writer = GeomVertexWriter(wizard_hat, 'vertex')
@@ -728,7 +787,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -956,6 +1015,14 @@ def main():
             news.show() if mode == 'news' else news.hide()
             pirate.show() if mode == 'pirate' else pirate.hide()
             work.show() if mode == 'work' else work.hide()
+            birthday.show() if mode == 'bday' else birthday.hide()
+            if mode == 'bday':
+                phase = t % 5.0
+                extension = max(0.0, min(1.0, (phase - .5) * 2, (2.5 - phase) * 2))
+                blower.setSx(.18 + .82 * extension)
+                for index, flame in enumerate(flames):
+                    flame.setSz(.75 + .25 * math.sin(t * 9 + index * 1.7))
+                    flame.setR(8 * math.sin(t * 7 + index * 1.3))
             if mode == 'work':
                 drilling = (t % 5.0) < 1.5
                 drill.setZ(.035 * math.sin(t * 35) if drilling else 0)

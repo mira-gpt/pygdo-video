@@ -38,6 +38,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='pirate')
             source.update(mode='ghost')
             source.update(mode='work')
+            source.update(mode='bday')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:
@@ -135,6 +136,10 @@ class Duck3DWorkerTest(unittest.TestCase):
             process.stdin.write(b'{"mode":"pirate"}\n')
             pirate_frames = [frame() for _ in range(12)]
             self.assertTrue(any(candidate != first for candidate in pirate_frames))
+            process.stdin.write(b'{"mode":"bday"}\n')
+            birthday_frames = [frame() for _ in range(20)]
+            self.assertTrue(any(candidate != first for candidate in birthday_frames))
+            self.assertGreater(len(set(birthday_frames)), 1)
             process.stdin.write(b'{"stop":true}\n')
             # Closing the reader also releases a producer blocked in write.
             process.stdout.close()

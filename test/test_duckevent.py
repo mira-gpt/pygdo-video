@@ -68,6 +68,18 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         send.assert_called_once_with('video.ipc_duckevent', ['ouch'])
         self.send_to_mira.assert_not_called()
 
+    def test_bday_is_queued_as_persistent_animation(self):
+        method = duckanim()
+        method.param_value = MagicMock(return_value=None)
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'bday', 'text': None}[key])
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        send.assert_called_once_with('video.ipc_duckbase', ['bday', '-', '-'])
+
     def test_duckanim_suppresses_acknowledgement_only_in_dog(self):
         method = duckanim()
         method.param_val = MagicMock(side_effect=lambda key: {'key': 'music', 'text': None}[key])
