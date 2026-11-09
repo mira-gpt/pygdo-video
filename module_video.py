@@ -126,6 +126,7 @@ class module_video(GDO_Module):
 
     async def on_mira_livemode_changed(self, module, field):
         self.connector.liveshow(field.get_value() == 'show')
+        self.connector.live_indicator(field.get_value())
 
     def sync_liveshow(self):
         from gdo.base.ModuleLoader import ModuleLoader
@@ -134,6 +135,7 @@ class module_video(GDO_Module):
         except AttributeError:
             mira = None
         self.connector.liveshow(mira.cfg_mira_livemode() == 'show' if mira else False)
+        self.connector.live_indicator(mira.cfg_mira_livemode() if mira else 'off')
 
     async def on_mira_mood_changed(self, module, field):
         task = getattr(self, '_duck_event_task', None)

@@ -69,6 +69,19 @@ def main(image_path, screensharing=False, window_suffix=''):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'live_indicator':
+                context.save()
+                context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+                context.set_font_size(16)
+                context.move_to(10, 25)
+                context.text_path(layer['mode'])
+                context.set_source_rgb(1, 1, 1)
+                context.set_line_width(2)
+                context.stroke_preserve()
+                context.set_source_rgb(*( (0.86, 0, 0) if layer['active'] else (0, 0, 0) ))
+                context.fill()
+                context.restore()
+                continue
             if key == 'away':
                 context.set_source_rgba(0, 0, 0, .28)
                 context.rectangle(0, 0, 640, 360)
@@ -246,7 +259,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if time.monotonic() >= layer['end']:
                     layers.remove(key)
                 continue
-            if key in ('image', 'drawing', 'mic', 'duck', 'away'):
+            if key in ('image', 'drawing', 'mic', 'duck', 'away', 'live_indicator'):
                 continue
             if key == 'vintage':
                 now = time.monotonic()
@@ -314,6 +327,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                             layers.put('drawing', drawing)
                 elif request.get('effect') == 'liveshow' and isinstance(request.get('enabled'), bool):
                     show_state['liveshow'] = request['enabled']
+                elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss') and isinstance(request.get('active'), bool):
+                    layers.put('live_indicator', {'mode': request['mode'], 'active': request['active']}, z=8000)
                 elif request.get('effect') == 'mic':
                     if request.get('remove') is True:
                         layers.remove('mic')

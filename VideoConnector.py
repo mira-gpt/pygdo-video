@@ -32,6 +32,7 @@ class VideoConnector:
         self.enabled = {'desktop': False, 'bg_image': False}
         self.duck3d_pythonpath = None
         self.liveshow_enabled = False
+        self.live_mode = 'off'
 
     @staticmethod
     def virtual_camera_allowed():
@@ -249,6 +250,14 @@ class VideoConnector:
             mic = self.effects.get('mic')
             if mic:
                 mic.liveshow = self.liveshow_enabled
+
+    def live_indicator(self, mode):
+        from gdo.video.LiveIndicator import LiveIndicator
+        if mode not in ('off', 'work', 'show', 'discuss'):
+            raise ValueError('Invalid live mode')
+        self.live_mode = mode
+        if self.is_running():
+            self.put_effect('live_indicator', LiveIndicator(mode), z=8000)
 
     def duck(self, enabled):
         from gdo.video.DuckLayer import DuckLayer

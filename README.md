@@ -19,6 +19,11 @@ to a virtual camera, even if `video_live` is enabled; use screen sharing or a
 local compositor preview for tests.
 Layers can be switched while running. YouTube and Twitch are planned outputs.
 
+The upper-left live-mode indicator shows `off`, `work`, `show`, or `discuss`.
+It is black normally and red when the existing microphone meter reports
+nonzero input. It does not start microphone capture; black can also mean the
+meter is unavailable, not necessarily that the microphone is muted.
+
 # Video (For ALs)
 
 ## Architecture draft

@@ -29,6 +29,8 @@ class DesktopOverlay:
         self.duck3d_pythonpath = None
         self.liveshow_enabled = False
         self.virtual_output = None
+        self.live_mode = 'off'
+        self._indicator_stop = threading.Event()
 
     def start_virtual_output(self, display, device):
         """Send the already-overlaid desktop to a virtual camera."""
@@ -47,6 +49,24 @@ class DesktopOverlay:
             self.liveshow_enabled = bool(enabled)
             if self.is_running():
                 self._send_payload({'effect': 'liveshow', 'enabled': self.liveshow_enabled})
+
+    def live_indicator(self, mode):
+        if mode not in ('off', 'work', 'show', 'discuss'):
+            raise ValueError('Invalid live mode')
+        self.live_mode = mode
+
+    def _pump_indicator(self):
+        while not self._indicator_stop.wait(.1):
+            try:
+                from gdo.audio.meter import MicrophoneMeter
+                status, level = MicrophoneMeter.snapshot()
+                state = (self.live_mode, status == 'on' and level > 0)
+                with self.lock:
+                    if not self.is_running():
+                        return
+                    self._send_payload({'effect': 'live_indicator', 'mode': state[0], 'active': state[1]})
+            except (ImportError, RuntimeError, OSError):
+                return
 
     def away(self, messages, cycle):
         from gdo.video.AwayScreen import AwayScreen
@@ -69,6 +89,8 @@ class DesktopOverlay:
             threading.Thread(target=self._read_overlay_events, args=(self.process,), daemon=True,
                              name='video-desktop-events').start()
             self.enabled = True
+            self._indicator_stop.clear()
+            threading.Thread(target=self._pump_indicator, daemon=True, name='video-live-indicator').start()
 
     def _read_overlay_events(self, process):
         from gdo.video.MicTicker import MicTicker
@@ -99,6 +121,7 @@ class DesktopOverlay:
             self.enabled = enabled
 
     def stop(self):
+        self._indicator_stop.set()
         virtual, self.virtual_output = self.virtual_output, None
         if virtual:
             virtual.stop()
