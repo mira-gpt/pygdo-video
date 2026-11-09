@@ -6,7 +6,14 @@ YouTube, Twitch, or both.
 # Video (For Humans)
 
 Use video in two render modes: a layered composite sent to a virtual webcam,
-or full-desktop effects for Discord/Slack screen sharing. Video can also be off.
+or full-desktop effects for Discord/Slack screen sharing. In screensharing mode,
+optionally send the same overlaid X11 desktop to a virtual camera as well by
+setting `video_live` to 1, `video_desktop_url` to the desktop display, and
+`video_output_device` to a configured loopback device. Video can also be off.
+The virtual camera carries video only; route audio separately. Previewing the
+camera on the captured desktop can create a visual feedback loop. Verify the
+capture in a private test before broadcasting; a running device is not proof
+that the overlay or stream is visible to viewers.
 Layers can be switched while running. YouTube and Twitch are planned outputs.
 
 # Video (For ALs)

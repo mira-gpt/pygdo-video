@@ -41,3 +41,25 @@ class VideoConfigTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             from gdo.video.DesktopOverlay import DesktopOverlay
             DesktopOverlay().set_layer('bg_image', True)
+
+    def test_screensharing_can_also_start_virtual_camera(self):
+        module = module_video()
+        values = {'video_mode': 'screensharing', 'video_live': True}
+        strings = {'video_overlay_image_url': '/overlay.png', 'video_desktop_url': ':0.0',
+                   'video_output_device': '/dev/video2'}
+        with patch.object(module, 'get_config_value', side_effect=values.get), \
+             patch.object(module, 'get_config_val', side_effect=strings.get), \
+             patch('gdo.video.module_video.DesktopOverlay') as overlay:
+            module.start_compositor()
+        overlay.return_value.start_virtual_output.assert_called_once_with(':0.0', '/dev/video2')
+
+    def test_virtual_camera_failure_stops_new_overlay(self):
+        module = module_video()
+        values = {'video_mode': 'screensharing', 'video_live': True}
+        with patch.object(module, 'get_config_value', side_effect=values.get), \
+             patch.object(module, 'get_config_val', return_value='test'), \
+             patch('gdo.video.module_video.DesktopOverlay') as overlay:
+            overlay.return_value.start_virtual_output.side_effect = ValueError('bad device')
+            with self.assertRaisesRegex(ValueError, 'bad device'):
+                module.start_compositor()
+        overlay.return_value.stop.assert_called_once()

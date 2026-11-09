@@ -28,6 +28,19 @@ class DesktopOverlay:
         self.duck_source = None
         self.duck3d_pythonpath = None
         self.liveshow_enabled = False
+        self.virtual_output = None
+
+    def start_virtual_output(self, display, device):
+        """Send the already-overlaid desktop to a virtual camera."""
+        if not self.is_running():
+            raise RuntimeError('Desktop overlay is not running')
+        if self.virtual_output is not None:
+            raise RuntimeError('Virtual camera output is already configured')
+        if not display:
+            raise ValueError('Configure an X11 desktop display for virtual camera output')
+        output = VideoConnector()
+        output.start(display, None, False, True, device)
+        self.virtual_output = output
 
     def liveshow(self, enabled):
         with self.lock:
@@ -78,6 +91,9 @@ class DesktopOverlay:
             self.enabled = enabled
 
     def stop(self):
+        virtual, self.virtual_output = self.virtual_output, None
+        if virtual:
+            virtual.stop()
         source, self.duck_source = self.duck_source, None
         if source:
             source.close()
@@ -388,7 +404,10 @@ class DesktopOverlay:
 
     def status(self):
         if self.is_running():
-            return f'running; desktop overlay={"on" if self.enabled else "off"}'
+            result = f'running; desktop overlay={"on" if self.enabled else "off"}'
+            if self.virtual_output:
+                result += '; virtual camera ' + self.virtual_output.status()
+            return result
         if self.process and self.process.returncode:
             return f'stopped (desktop overlay exited with code {self.process.returncode})'
         return 'stopped'

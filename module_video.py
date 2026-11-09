@@ -208,6 +208,13 @@ class module_video(GDO_Module):
             worker = DesktopOverlay(screensharing=True)
             worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
+            try:
+                if self.get_config_value('video_live') in (True, 1, '1'):
+                    worker.start_virtual_output(self.get_config_val('video_desktop_url'),
+                                                self.get_config_val('video_output_device'))
+            except Exception:
+                worker.stop()
+                raise
             self.connector = worker
             self.sync_liveshow()
             return
