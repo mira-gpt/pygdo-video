@@ -68,6 +68,34 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         send.assert_called_once_with('video.ipc_duckevent', ['ouch'])
         self.send_to_mira.assert_not_called()
 
+    def test_hah_queues_default_speech_as_temporary_event(self):
+        method = duckanim()
+        method.param_value = MagicMock(return_value=None)
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'hah', 'text': None, 'lang': 'en'}[key])
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.speech_language', return_value='en'), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        name, payload = send.call_args.args
+        self.assertEqual('video.ipc_duckanim_speech', name)
+        self.assertEqual(('hah', 'Hah!', 'en'), (payload[0], decode_text(payload[1]), payload[2]))
+
+    def test_animation_jingle_is_queued(self):
+        from gdo.mira.GDT_MiraMood import ANIMATIONS
+        method = duckanim()
+        method.param_val = MagicMock(side_effect=lambda key: {'key': 'hello', 'text': None}[key])
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.dict(ANIMATIONS['hello'], {'jingle': 'duck'}), \
+                patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        self.assertEqual(('audio.ipc_jingle', ['duck']), send.call_args_list[1].args)
+
     def test_bday_is_queued_as_persistent_animation(self):
         method = duckanim()
         method.param_value = MagicMock(return_value=None)

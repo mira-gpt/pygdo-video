@@ -9,6 +9,7 @@ from gdo.message.GDT_Bold import GDT_Bold
 from gdo.message.GDT_Glyph import GDT_Glyph
 from gdo.message.GDT_Span import GDT_Span
 from gdo.mira.module_mira import module_mira
+from gdo.mira.GDT_MiraMood import ANIMATIONS
 from gdo.video.StarWarsIPC import encode_text
 from gdo.video.DuckAnimations import BASE_DEFAULTS
 from gdo.video.module_video import module_video
@@ -44,9 +45,13 @@ class duckanim(Method):
                     output.add_field(GDT_Bold().add_field(item) if name == current else item)
                 return output
             key = raw_key.lower()
-            text = self.param_val('text')
+            text = self.param_val('text') or ANIMATIONS[key]['speech']
             base = self.param_value('base')
             base = BASE_DEFAULTS[key] if base is None else base
+            jingle = ANIMATIONS[key]['jingle']
+            if jingle:
+                from gdo.audio.jingles import jingle_path
+                jingle_path(jingle)
             if text:
                 language = speech_language(self, self.param_val('lang'))
                 if language not in VOICES or len(text) > 300:
@@ -61,6 +66,11 @@ class duckanim(Method):
                 Application.defer_after_commit(IPC.send_to_dog, *args)
             else:
                 IPC.send_to_dog(*args)
+            if jingle:
+                if Application.db().is_in_transaction():
+                    Application.defer_after_commit(IPC.send_to_dog, 'audio.ipc_jingle', [jingle])
+                else:
+                    IPC.send_to_dog('audio.ipc_jingle', [jingle])
             return self.empty() if Application.IS_DOG else self.reply('video_duckanim_queued')
         except (ValueError, RuntimeError, OSError) as error:
             return self.err('video_error', (str(error),))

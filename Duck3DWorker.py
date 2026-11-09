@@ -60,6 +60,14 @@ def main():
     beak.reparentTo(root)
     tongue_joint = beak.controlJoint(None, 'modelRoot', 'Tongue')
     tongue_y = tongue_joint.getY() if not tongue_joint.isEmpty() else 0
+    # Keep the eyes and beak together when the head snaps back.
+    head_pivot = root.attachNewNode('head pivot')
+    head_pivot.setPos(0, -.32, 1.05)
+    for name in ('Head', 'Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
+        part = root.find('**/' + name)
+        if not part.isEmpty():
+            part.wrtReparentTo(head_pivot)
+    beak.wrtReparentTo(head_pivot)
     wing_actor = Actor(root.find('**/Wing rig'), copy=False)
     wing_actor.reparentTo(root)
     wing_base = wing_actor.controlJoint(None, 'modelRoot', 'WingBase')
@@ -787,7 +795,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -812,7 +820,7 @@ def main():
 
     threading.Thread(target=receive, daemon=True).start()
     start = time.monotonic()
-    nodes = [(root, 'R'), (root, 'Z'), (root, 'P'), (root, 'Sz')]
+    nodes = [(root, 'R'), (root, 'Z'), (root, 'P'), (root, 'Sz'), (head_pivot, 'P')]
     head_node = root.find('**/Head')
     if not head_node.isEmpty():
         nodes.append((head_node, 'H'))
@@ -1171,6 +1179,12 @@ def main():
                 phase = (time.monotonic() - mode_start) * 18
                 root.setR(5 * math.sin(phase / 2))
                 root.setZ(.05 * abs(math.sin(phase / 2)))
+            if mode == 'hah':
+                elapsed = time.monotonic() - mode_start
+                pulse = min(1, elapsed / .12) * max(0, 1 - max(0, elapsed - .35) / .5)
+                head_pivot.setP(-38 * pulse)
+            else:
+                head_pivot.setP(0)
             if mode == 'ouch' or (outgoing_mode == 'ouch' and blend < 1):
                 pain_marks.show()
                 pain_marks.setColorScale(1, 1, 1, blend if mode == 'ouch' else 1 - blend)
@@ -1197,7 +1211,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1)
+                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja', 'hah') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1)
                     if eye.startswith('Eye white'):
                         if mode in ('high', 'hippi', 'drunk'):
                             node.setColorScale(1, .35 if mode in ('high', 'hippi') else .55, .35 if mode in ('high', 'hippi') else .55, 1)
