@@ -21,6 +21,7 @@ from DrawingProtocol import validate_line
 from MediaTransition import media_transition
 from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
+from MicWarning import MicWarning
 
 
 def main(image_path, screensharing=False, window_suffix=''):
@@ -132,15 +133,24 @@ def main(image_path, screensharing=False, window_suffix=''):
                 alpha = transcript_alpha(time.monotonic(), layer.get('text_updated', 0)) if state == 'on' and layer.get('text') else 1.0
                 if alpha == 0:
                     label, alpha = placeholder, 1.0
+                ticker = layer.get('ticker', '')
+                if ticker:
+                    label, alpha = ticker, 1.0
+                warning = layer['warning'].update(layer['status'], layer['level'], time.monotonic(), layer['warning_texts'])
+                if warning and not ticker:
+                    label, alpha = warning, 1.0
                 label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
                 context.save()
                 context.rectangle(462, 327, 162, 13)
                 context.clip()
-                text_width = context.text_extents(label).width
-                offset = (time.monotonic() * 30) % (text_width + 40) if text_width > 162 else 0
-                context.move_to(462 - offset, 337)
+                layout = PangoCairo.create_layout(context)
+                layout.set_font_description(Pango.FontDescription('Sans 10px'))
+                layout.set_text(label, -1)
+                text_width, _ = layout.get_pixel_size()
+                offset = (time.monotonic() - layer['ticker_started']) * 30 if ticker and text_width > 162 else (time.monotonic() * 30) % (text_width + 40) if text_width > 162 else 0
+                context.move_to(462 - offset, 327)
                 context.set_source_rgba(1, 1, 1, alpha)
-                context.show_text(label)
+                PangoCairo.show_layout(context, layout)
                 context.restore()
                 if layer['status'] == 'on':
                     context.set_source_rgb(.24, .88, .31)
@@ -272,7 +282,14 @@ def main(image_path, screensharing=False, window_suffix=''):
                     if request.get('remove') is True:
                         layers.remove('mic')
                     elif request.get('status') in ('on', 'off', 'unknown') and isinstance(request.get('level'), (float, int)):
+                        previous = layers.get('mic') or {}
+                        texts = request.get('warning_texts', [])
+                        if not isinstance(texts, list) or not all(isinstance(item, str) for item in texts):
+                            texts = []
                         layers.put('mic', {'status': request['status'], 'level': max(0.0, min(1.0, request['level'])),
+                                           'warning': previous.get('warning', MicWarning()), 'warning_texts': texts,
+                                           'ticker': request.get('ticker', '') if isinstance(request.get('ticker', ''), str) else '',
+                                           'ticker_started': request.get('ticker_started', 0) if isinstance(request.get('ticker_started', 0), (int, float)) else 0,
                                            'transcription': request.get('transcription', 'unknown'),
                                            'language': request.get('language', '') if isinstance(request.get('language', ''), str) else '',
                                            'text': request.get('text', '') if isinstance(request.get('text', ''), str) else '',

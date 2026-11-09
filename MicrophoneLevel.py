@@ -1,12 +1,19 @@
 """Display the local Dog microphone listener's level, not system-wide capture."""
 import time
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from gdo.video.TranscriptFade import transcript_alpha
+from gdo.video.MicWarning import MicWarning, warning_texts
+from gdo.video.MicTicker import MicTicker
 
 
 class MicrophoneLevel:
     def __init__(self, liveshow=False):
         self.liveshow = liveshow
+        self.warning = MicWarning()
+        try:
+            self.font = ImageFont.truetype('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', 10)
+        except OSError:
+            self.font = ImageFont.load_default()
 
     def draw(self, frame):
         try:
@@ -33,13 +40,19 @@ class MicrophoneLevel:
         alpha = transcript_alpha(time.monotonic(), updated) if transcription == 'on' and text else 1.0
         if alpha == 0:
             label, alpha = placeholder, 1.0
+        ticker, ticker_started = MicTicker.snapshot()
+        if ticker:
+            label, alpha = ticker, 1.0
+        warning = self.warning.update(status, level, time.monotonic(), warning_texts())
+        if warning and not ticker:
+            label, alpha = warning, 1.0
         label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
         text_width = max(1, right - left - 8)
         surface = Image.new('RGBA', (text_width, 13))
         text_draw = ImageDraw.Draw(surface)
-        length = text_draw.textlength(label)
-        offset = int((time.monotonic() * 30) % (length + 40)) if length > text_width else 0
-        text_draw.text((-offset, 0), label, fill=(255, 255, 255, round(255 * alpha)))
+        length = text_draw.textlength(label, font=self.font)
+        offset = int((time.monotonic() - ticker_started) * 30) if ticker and length > text_width else int((time.monotonic() * 30) % (length + 40)) if length > text_width else 0
+        text_draw.text((-offset, 0), label, font=self.font, fill=(255, 255, 255, round(255 * alpha)))
         frame.paste(surface, (left + 4, top + 2), surface)
         if status == 'on':
             bar_left, bar_right = left + 4, right - 4

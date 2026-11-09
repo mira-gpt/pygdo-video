@@ -22,6 +22,44 @@ class MicrophoneLevelTest(unittest.TestCase):
         self.assertEqual(0, transcript_alpha(111, 100))
         self.assertEqual(1, transcript_alpha(110.5, 105))
 
+    def test_zero_warning_cycles_only_after_sustained_valid_zero(self):
+        from gdo.video.MicWarning import MicWarning
+        warning = MicWarning()
+        texts = ['first', 'second']
+        self.assertIsNone(warning.update('on', 0, 10, texts))
+        self.assertIsNone(warning.update('on', 0, 12.9, texts))
+        self.assertEqual('first', warning.update('on', 0, 13, texts))
+        self.assertEqual('second', warning.update('on', 0, 17, texts))
+        self.assertIsNone(warning.update('on', .001, 18, texts))
+        self.assertIsNone(warning.update('unknown', 0, 25, texts))
+        self.assertIsNone(warning.update('on', 0, 30, texts))
+
+    def test_warning_translations_cover_voice_languages(self):
+        import tomlkit
+        from pathlib import Path
+        from gdo.audio.language import LANGUAGES
+        directory = Path(__file__).resolve().parents[1] / 'lang'
+        for iso in LANGUAGES:
+            with self.subTest(language=iso):
+                data = tomlkit.parse((directory / f'video_{iso}.toml').read_text())
+                self.assertTrue(data['video_mic_no_gain'])
+
+    def test_zero_level_replaces_transcript_after_delay(self):
+        overlay = MicrophoneLevel()
+        frame = Image.new('RGB', (320, 180))
+        with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=('on', 0)), \
+                patch('gdo.audio.meter.MicrophoneMeter.transcription_snapshot', return_value='off'), \
+                patch('gdo.video.MicrophoneLevel.warning_texts', return_value=['Microphone off']), \
+                patch('gdo.video.MicrophoneLevel.time.monotonic', return_value=10):
+            overlay.draw(frame)
+        first = frame.tobytes()
+        with patch('gdo.audio.meter.MicrophoneMeter.snapshot', return_value=('on', 0)), \
+                patch('gdo.audio.meter.MicrophoneMeter.transcription_snapshot', return_value='off'), \
+                patch('gdo.video.MicrophoneLevel.warning_texts', return_value=['Microphone off']), \
+                patch('gdo.video.MicrophoneLevel.time.monotonic', return_value=14):
+            overlay.draw(frame)
+        self.assertNotEqual(first, frame.tobytes())
+
     def test_states_draw_and_loud_differs_from_silence(self):
         images = []
         for status, level, transcription, text in [('off', 0, 'off', ''), ('on', .2, 'off', ''), ('on', .2, 'on', 'Hello there')]:

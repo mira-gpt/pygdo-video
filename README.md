@@ -403,3 +403,8 @@ Close the preview window to stop it. Desktop capture may show private content.
 - Animated duck/avatar overlay, with modes such as work or brainstorm.
 - Combine microphone and optional generated speech with the video.
 - Per-destination health, reconnect policy and explicit failure reporting.
+- `$video.mic_ticker <text>` (alias `$mic.ticker`) queues a single-line,
+  maximum 300-character message through the shared microphone ticker IPC.
+  It is owner-only; modules can call `queue_ticker(text)`, which defers IPC
+  until commit when needed. The queue is bounded and not restart-persistent;
+  queueing IPC does not guarantee on-screen playback.

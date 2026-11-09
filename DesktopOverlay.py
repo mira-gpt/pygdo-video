@@ -284,19 +284,23 @@ class DesktopOverlay:
         wake.set()
         try:
             while not stop.is_set():
-                wake.wait()
+                wake.wait(.25)
                 wake.clear()
                 status, level = MicrophoneMeter.snapshot()
                 transcription = MicrophoneMeter.transcription_snapshot()
                 language = MicrophoneMeter.transcription_language()
                 text = MicrophoneMeter.transcription_text_snapshot()
                 text_updated = MicrophoneMeter.transcription_text_timestamp()
+                from gdo.video.MicWarning import warning_texts
+                from gdo.video.MicTicker import MicTicker
+                ticker, ticker_started = MicTicker.snapshot()
                 with self.lock:
                     if stop.is_set() or self._mic_stop is not stop or not self.is_running():
                         return
                     try:
                         self._send_payload({'effect': 'mic', 'status': status, 'level': level,
-                                            'transcription': transcription, 'language': language, 'text': text, 'text_updated': text_updated})
+                                            'transcription': transcription, 'language': language, 'text': text, 'text_updated': text_updated,
+                                            'warning_texts': warning_texts(), 'ticker': ticker, 'ticker_started': ticker_started})
                     except RuntimeError:
                         return
         finally:
