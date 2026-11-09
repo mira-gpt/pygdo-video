@@ -5,6 +5,13 @@ from gdo.video.DesktopOverlay import DesktopOverlay
 
 
 class DualOutputTest(unittest.TestCase):
+    def test_test_config_rejects_camera_at_output_boundary(self):
+        from gdo.base.Application import Application
+        from gdo.video.VideoConnector import VideoConnector
+        with patch.object(Application, 'CONFIG_PATH', '/home/gizmore/www/pygdo/protected/pygdo_tes.toml'):
+            with self.assertRaisesRegex(ValueError, 'disabled in test'):
+                VideoConnector.output_commands(False, True, '/dev/video2')
+
     def test_captures_overlay_without_adding_effects_twice(self):
         overlay = DesktopOverlay(screensharing=True)
         overlay.is_running = MagicMock(return_value=True)

@@ -63,3 +63,14 @@ class VideoConfigTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'bad device'):
                 module.start_compositor()
         overlay.return_value.stop.assert_called_once()
+
+    def test_testdog_screensharing_never_starts_virtual_camera(self):
+        from gdo.base.Application import Application
+        module = module_video()
+        values = {'video_mode': 'screensharing', 'video_live': True}
+        with patch.object(Application, 'CONFIG_PATH', '/home/gizmore/www/pygdo/protected/pygdo_tes.toml'), \
+             patch.object(module, 'get_config_value', side_effect=values.get), \
+             patch.object(module, 'get_config_val', return_value='/overlay.png'), \
+             patch('gdo.video.module_video.DesktopOverlay') as overlay:
+            module.start_compositor()
+        overlay.return_value.start_virtual_output.assert_not_called()

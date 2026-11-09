@@ -23,6 +23,7 @@ from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
 from MicWarning import MicWarning
 from MicTicker import TickerScroll
+from AwayScreen import AwayScreen, HEADER
 
 
 def main(image_path, screensharing=False, window_suffix=''):
@@ -68,6 +69,30 @@ def main(image_path, screensharing=False, window_suffix=''):
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         for key, layer in layers.ordered():
+            if key == 'away':
+                context.set_source_rgba(0, 0, 0, .28)
+                context.rectangle(0, 0, 640, 360)
+                context.fill()
+                for text, font, centered in ((HEADER, 'Sans Bold 13px', False),
+                                             (layer.current(), 'Sans Bold 24px', True)):
+                    layout = PangoCairo.create_layout(context)
+                    layout.set_font_description(Pango.FontDescription(font))
+                    layout.set_width(600 * Pango.SCALE)
+                    layout.set_height(150 * Pango.SCALE)
+                    layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+                    layout.set_ellipsize(Pango.EllipsizeMode.END)
+                    layout.set_alignment(Pango.Alignment.CENTER)
+                    layout.set_text(text, -1)
+                    _, text_height = layout.get_pixel_size()
+                    y = (360 - text_height) / 2 if centered else 18
+                    context.move_to(20, y)
+                    PangoCairo.layout_path(context, layout)
+                    context.set_source_rgba(0, 0, 0, .95)
+                    context.set_line_width(3)
+                    context.stroke_preserve()
+                    context.set_source_rgb(1, 1, 1)
+                    context.fill()
+                continue
             if key == 'crt_off':
                 state = crt_state(time.monotonic() - layer['start'], layer['duration'])
                 if state:
@@ -221,7 +246,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if time.monotonic() >= layer['end']:
                     layers.remove(key)
                 continue
-            if key in ('image', 'drawing', 'mic', 'duck'):
+            if key in ('image', 'drawing', 'mic', 'duck', 'away'):
                 continue
             if key == 'vintage':
                 now = time.monotonic()
@@ -266,6 +291,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                     layers.put('zap', {'end': time.monotonic() + request['duration']}, z=10000)
                 elif request.get('effect') == 'crt_off' and isinstance(request.get('duration'), (int, float)) and 0 <= request['duration'] <= 60:
                     layers.put('crt_off', {'start': time.monotonic(), 'duration': request['duration']}, z=10001)
+                elif request.get('effect') == 'away':
+                    layers.put('away', AwayScreen(request.get('messages'), request.get('cycle')), z=9000)
                 elif request.get('effect') == 'vintage' and isinstance(request.get('enabled'), bool):
                     if request['enabled']:
                         layers.put('vintage', {'scratches': []})

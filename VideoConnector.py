@@ -34,6 +34,13 @@ class VideoConnector:
         self.liveshow_enabled = False
 
     @staticmethod
+    def virtual_camera_allowed():
+        """Test configurations must never write to a host camera device."""
+        from gdo.base.Application import Application
+        config = getattr(Application, 'CONFIG_PATH', '')
+        return os.path.basename(config) not in ('pygdo_tes.toml', 'config_test.toml')
+
+    @staticmethod
     def local_file(value):
         parsed = urlsplit(value or '')
         if parsed.scheme == 'file' and not parsed.netloc and not parsed.query and not parsed.fragment:
@@ -73,6 +80,8 @@ class VideoConnector:
             commands.append(['ffplay', '-loglevel', 'error', '-window_title', 'Mira Video Preview',
                              '-left', '0', '-top', '0', '-x', str(preview_w), '-y', str(preview_h), *source])
         if live:
+            if not cls.virtual_camera_allowed():
+                raise ValueError('Virtual camera output is disabled in test configurations')
             cls.validate_output(device)
             commands.append(['ffmpeg', '-nostdin', '-loglevel', 'error', *source,
                              '-pix_fmt', 'yuv420p', '-f', 'v4l2', device])
@@ -177,6 +186,10 @@ class VideoConnector:
             if not self.is_running():
                 raise RuntimeError('Video connector is not running')
             self.effects.put('starwars', effect)
+
+    def away(self, messages, cycle):
+        from gdo.video.AwayScreen import AwayScreen
+        self.put_effect('away', AwayScreen(messages, cycle), z=9000)
 
     def put_effect(self, key, effect, z=None):
         """Install a frame-drawing effect; called by plugins in the Dog process."""

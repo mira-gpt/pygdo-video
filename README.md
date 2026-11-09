@@ -14,6 +14,9 @@ The virtual camera carries video only; route audio separately. Previewing the
 camera on the captured desktop can create a visual feedback loop. Verify the
 capture in a private test before broadcasting; a running device is not proof
 that the overlay or stream is visible to viewers.
+The `pygdo_tes.toml` and `config_test.toml` test configurations cannot write
+to a virtual camera, even if `video_live` is enabled; use screen sharing or a
+local compositor preview for tests.
 Layers can be switched while running. YouTube and Twitch are planned outputs.
 
 # Video (For ALs)

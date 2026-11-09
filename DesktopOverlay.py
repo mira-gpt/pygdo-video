@@ -48,6 +48,14 @@ class DesktopOverlay:
             if self.is_running():
                 self._send_payload({'effect': 'liveshow', 'enabled': self.liveshow_enabled})
 
+    def away(self, messages, cycle):
+        from gdo.video.AwayScreen import AwayScreen
+        AwayScreen(messages, cycle)  # validate before sending to the GTK helper
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            self._send_payload({'effect': 'away', 'messages': messages, 'cycle': cycle})
+
     def start(self, image):
         image = VideoConnector.local_file(image)
         with self.lock:

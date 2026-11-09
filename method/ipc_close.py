@@ -17,7 +17,15 @@ class ipc_close(Method):
     def gdo_execute(self):
         if Application.IS_DOG:
             try:
-                module_video.instance().connector.close_effects(effect_key(self.param_val('key')))
+                key = effect_key(self.param_val('key'))
+                if key in ('away', 'all'):
+                    from gdo.base.ModuleLoader import ModuleLoader
+                    mira = ModuleLoader.instance().get_module('mira')
+                    task = getattr(mira, '_away_task', None) if mira else None
+                    if task:
+                        task.cancel()
+                        mira._away_task = None
+                module_video.instance().connector.close_effects(key)
             except (ValueError, RuntimeError, OSError, AttributeError) as exc:
                 Logger.warning(f'Video close IPC failed: {exc}')
         return self.empty()
