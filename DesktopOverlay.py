@@ -44,8 +44,22 @@ class DesktopOverlay:
             self.process = subprocess.Popen(['/usr/bin/python3', script, image,
                                              'screensharing' if self.screensharing else 'overlay',
                                              self.window_suffix], stdin=subprocess.PIPE,
-                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            threading.Thread(target=self._read_overlay_events, args=(self.process,), daemon=True,
+                             name='video-desktop-events').start()
             self.enabled = True
+
+    def _read_overlay_events(self, process):
+        from gdo.video.MicTicker import MicTicker
+        for line in process.stdout:
+            try:
+                event = json.loads(line)
+                if isinstance(event, dict) and event.get('event') == 'ticker_finished':
+                    started = event.get('started')
+                    if isinstance(started, (float, int)) and not isinstance(started, bool):
+                        MicTicker.finish(started)
+            except (ValueError, TypeError):
+                continue
 
     def is_running(self):
         return bool(self.process and self.process.poll() is None)

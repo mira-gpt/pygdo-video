@@ -3,13 +3,14 @@ import time
 from PIL import Image, ImageDraw, ImageFont
 from gdo.video.TranscriptFade import transcript_alpha
 from gdo.video.MicWarning import MicWarning, warning_texts
-from gdo.video.MicTicker import MicTicker
+from gdo.video.MicTicker import MicTicker, TickerScroll
 
 
 class MicrophoneLevel:
     def __init__(self, liveshow=False):
         self.liveshow = liveshow
         self.warning = MicWarning()
+        self.ticker_scroll = TickerScroll()
         try:
             self.font = ImageFont.truetype('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', 10)
         except OSError:
@@ -51,9 +52,17 @@ class MicrophoneLevel:
         surface = Image.new('RGBA', (text_width, 13))
         text_draw = ImageDraw.Draw(surface)
         length = text_draw.textlength(label, font=self.font)
-        offset = int((time.monotonic() - ticker_started) * 30) if ticker and length > text_width else int((time.monotonic() * 30) % (length + 40)) if length > text_width else 0
+        now = time.monotonic()
+        ticker_done = False
+        if ticker:
+            offset, ticker_done = self.ticker_scroll.frame(ticker_started, now, length)
+            offset = int(offset)
+        else:
+            offset = int((now * 30) % (length + 40)) if length > text_width else 0
         text_draw.text((-offset, 0), label, font=self.font, fill=(255, 255, 255, round(255 * alpha)))
         frame.paste(surface, (left + 4, top + 2), surface)
+        if ticker and ticker_done:
+            MicTicker.finish(ticker_started)
         if status == 'on':
             bar_left, bar_right = left + 4, right - 4
             bar_width = max(0, int((bar_right - bar_left) * min(1.0, level * 100)))

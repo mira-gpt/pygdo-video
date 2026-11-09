@@ -35,7 +35,7 @@ class ipc_duckanim_speech(Method):
                 text = decode_text(self.param_val('payload'))
                 if len(text) > 300:
                     raise ValueError('Speech text is limited to 300 characters')
-                if key in ('lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'hah'):
+                if key in ('lol', 'shrug', 'cry', 'ouch', 'hello', 'rolleye', 'barf', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'hah', 'cheers'):
                     if key in ('cry', 'lol'):
                         mira = ModuleLoader.instance().get_module('mira')
                         if mira and key == 'cry':

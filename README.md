@@ -153,7 +153,8 @@ when the meter is hidden no border is visible.
   follows synthesized audio energy and pauses; this is not phoneme-level lip
   sync. Older audio modules retain the simple speaking animation.
   `lol` makes the duck hop excitedly and flap its wings.
-  `bday` adds a party hat, an intermittently unrolling party blower and a
+  `cheers` raises a randomly chosen whiskey glass, beer bottle or wine glass,
+  with gently sloshing liquid. `bday` adds a party hat, an intermittently unrolling party blower and a
   birthday cake with 46 flickering candles.
   `$duck.anim --base=1 <key> [text]` saves any animation as the persistent
   `mira_mood`; `--base=0` plays any animation temporarily and then restores the
@@ -407,4 +408,6 @@ Close the preview window to stop it. Desktop capture may show private content.
   maximum 300-character message through the shared microphone ticker IPC.
   It is owner-only; modules can call `queue_ticker(text)`, which defers IPC
   until commit when needed. The queue is bounded and not restart-persistent;
-  queueing IPC does not guarantee on-screen playback.
+  queueing IPC does not guarantee on-screen playback. An entry advances only
+  when the renderer confirms that the measured text has completely scrolled
+  out; time without rendering does not consume its display duration.

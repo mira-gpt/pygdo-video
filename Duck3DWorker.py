@@ -744,6 +744,28 @@ def main():
     for index in range(3):
         copy = mug.copyTo(root)
         mugs.append((copy, copy.find('**/beer fill'), copy.find('**/beer foam')))
+    # Flat, camera-facing drink props in the same style as the other costumes.
+    drinks = []
+    for name, outline, frame, color in (
+        ('whiskey', [(-.11, .27), (-.09, 0), (.09, 0), (.11, .27), (-.11, .27)], (-.075, .075, .03, .14), (.72, .35, .06, 1)),
+        ('beer bottle', [(-.085, 0), (-.085, .22), (-.035, .30), (-.035, .42), (.035, .42), (.035, .30), (.085, .22), (.085, 0), (-.085, 0)], (-.065, .065, .025, .17), (.62, .31, .04, 1)),
+        ('wine glass', [(-.12, .32), (-.10, .18), (-.04, .12), (0, .11), (0, 0), (-.07, 0), (.07, 0), (0, 0), (0, .11), (.04, .12), (.10, .18), (.12, .32), (-.12, .32)], (-.07, .07, .14, .21), (.65, .06, .14, 1)),
+    ):
+        drink = root.attachNewNode('cheers ' + name)
+        drink.setBillboardPointEye()
+        drink.setLightOff()
+        lines = LineSegs(name + ' outline')
+        lines.setThickness(3)
+        lines.setColor(.95, .91, .78, 1)
+        for index, (x, z) in enumerate(outline):
+            (lines.moveTo if index == 0 else lines.drawTo)(x, -.01, z)
+        drink.attachNewNode(lines.create())
+        card = CardMaker(name + ' liquid')
+        card.setFrame(*frame)
+        liquid = drink.attachNewNode(card.generate())
+        liquid.setColor(*color)
+        drink.hide()
+        drinks.append((drink, liquid))
     barf_drops = []
     for index in range(20):
         chunk = index % 3 == 0
@@ -795,7 +817,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -874,6 +896,7 @@ def main():
     dizzy_kind, dizzy_until, dizzy_count, dizzy_offset, mug_count = 'none', 0, 0, 0.0, 0
     music_pulse = 0.0
     skin_override = None
+    cheers_drink = 0
     try:
         while True:
             with lock:
@@ -887,6 +910,8 @@ def main():
                 origin = [getattr(node, 'get' + prop)() for node, prop in nodes]
                 outgoing_mode, previous_mode = previous_mode, mode
                 transition_stamp = mode_start
+                if mode == 'cheers':
+                    cheers_drink = random.randrange(len(drinks))
                 sway_rates = (random.uniform(1.3, 1.9), random.uniform(.8, 1.3), random.uniform(.25, .5))
             blend = transition_weight(time.monotonic() - mode_start)
             t = time.monotonic() - start
@@ -1024,6 +1049,16 @@ def main():
             pirate.show() if mode == 'pirate' else pirate.hide()
             work.show() if mode == 'work' else work.hide()
             birthday.show() if mode == 'bday' else birthday.hide()
+            for index, (drink, liquid) in enumerate(drinks):
+                if mode == 'cheers' and index == cheers_drink:
+                    elapsed = now - mode_start
+                    lift = min(1.0, elapsed / .55)
+                    drink.setPos(.62, -.95, .75 + .58 * lift)
+                    drink.setR(8 * math.sin(elapsed * 3))
+                    liquid.setR(5 * math.sin(elapsed * 5) * math.exp(-elapsed * .35))
+                    drink.show()
+                else:
+                    drink.hide()
             if mode == 'bday':
                 phase = t % 5.0
                 extension = max(0.0, min(1.0, (phase - .5) * 2, (2.5 - phase) * 2))
@@ -1198,7 +1233,7 @@ def main():
                 wing_base.setR(50 + 30 * wave)
                 wing_tip.setR(30 * wave)
             else:
-                wing_base.setR(30 + 25 * math.sin(t * 11) if mode in ('lol', 'plz') or angry_flapping else 55 if mode == 'shrug' else 70 if mode == 'zombie' else -25 if mode in ('sad', 'cry') else 0)
+                wing_base.setR(30 + 25 * math.sin(t * 11) if mode in ('lol', 'plz') or angry_flapping else 55 if mode in ('shrug', 'cheers') else 70 if mode == 'zombie' else -25 if mode in ('sad', 'cry') else 0)
                 wing_tip.setR(0)
             for index, name in enumerate(('Foot', 'Foot.001')):
                 foot = root.find('**/' + name)

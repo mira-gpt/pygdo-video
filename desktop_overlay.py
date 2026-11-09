@@ -22,6 +22,7 @@ from MediaTransition import media_transition
 from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
 from MicWarning import MicWarning
+from MicTicker import TickerScroll
 
 
 def main(image_path, screensharing=False, window_suffix=''):
@@ -55,7 +56,7 @@ def main(image_path, screensharing=False, window_suffix=''):
     effect.set_default_size(effect_width, effect_height)
     effect.stick()
     layers = LayerStack()
-    show_state = {'liveshow': False}
+    show_state = {'liveshow': False, 'ticker_ack': None, 'ticker_scroll': TickerScroll()}
 
     def draw_effect(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)
@@ -147,11 +148,19 @@ def main(image_path, screensharing=False, window_suffix=''):
                 layout.set_font_description(Pango.FontDescription('Sans 10px'))
                 layout.set_text(label, -1)
                 text_width, _ = layout.get_pixel_size()
-                offset = (time.monotonic() - layer['ticker_started']) * 30 if ticker and text_width > 162 else (time.monotonic() * 30) % (text_width + 40) if text_width > 162 else 0
+                now = time.monotonic()
+                ticker_done = False
+                if ticker:
+                    offset, ticker_done = show_state['ticker_scroll'].frame(layer['ticker_started'], now, text_width)
+                else:
+                    offset = (now * 30) % (text_width + 40) if text_width > 162 else 0
                 context.move_to(462 - offset, 327)
                 context.set_source_rgba(1, 1, 1, alpha)
                 PangoCairo.show_layout(context, layout)
                 context.restore()
+                if ticker and show_state['ticker_ack'] != layer['ticker_started'] and ticker_done:
+                    show_state['ticker_ack'] = layer['ticker_started']
+                    print(json.dumps({'event': 'ticker_finished', 'started': layer['ticker_started']}), flush=True)
                 if layer['status'] == 'on':
                     context.set_source_rgb(.24, .88, .31)
                     context.rectangle(462, 342, 162 * min(1.0, layer['level'] * 100), 5)
