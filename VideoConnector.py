@@ -219,9 +219,13 @@ class VideoConnector:
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Video connector is not running')
-            keys = [name for name, _ in self.effects.ordered()] if key == 'all' else [key]
+            keys = ([name for name, _ in self.effects.ordered()
+                     if key == 'all' or name not in ('duck', 'mic')]
+                    if key in ('all', 'presentation') else [key])
             for name in keys:
                 self.remove_effect(name)
+            if key == 'presentation':
+                self.enabled['bg_image'] = False
 
     def vintage(self, enabled):
         if enabled:

@@ -12,6 +12,21 @@ class CloseEffectsTest(unittest.TestCase):
     def setUp(self):
         Application.mode(Mode.render_cli)
 
+    def test_presentation_keeps_duck_and_mic_but_closes_other_layers(self):
+        worker = VideoConnector()
+        worker.worker = MagicMock()
+        worker.worker.is_alive.return_value = True
+        worker.enabled = {'desktop': True, 'bg_image': True}
+        duck, mic, media = MagicMock(), MagicMock(), MagicMock()
+        for name, item in (('duck', duck), ('mic', mic), ('media', media)):
+            worker.effects.put(name, item)
+        worker.close_effects('presentation')
+        self.assertEqual([name for name, _ in worker.effects.ordered()], ['duck', 'mic'])
+        media.close.assert_called_once()
+        duck.close.assert_not_called()
+        mic.close.assert_not_called()
+        self.assertEqual(worker.enabled, {'desktop': True, 'bg_image': False})
+
     def test_named_and_all_leave_sources_and_close_resources(self):
         worker = VideoConnector()
         worker.worker = MagicMock()
@@ -47,6 +62,8 @@ class CloseEffectsTest(unittest.TestCase):
         handler.empty = MagicMock()
         module = MagicMock()
         with patch.object(Application, 'IS_DOG', True), \
+             patch('gdo.base.ModuleLoader.ModuleLoader.instance') as loader, \
              patch('gdo.video.method.ipc_close.module_video.instance', return_value=module):
+            loader.return_value.get_module.return_value = None
             handler.gdo_execute()
         module.connector.close_effects.assert_called_once_with('all')

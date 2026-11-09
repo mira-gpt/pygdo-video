@@ -380,6 +380,10 @@ def main(image_path, screensharing=False, window_suffix=''):
                     key = request.get('key')
                     if key == 'all':
                         layers.clear()
+                    elif key == 'presentation':
+                        for name, _ in layers.ordered():
+                            if name not in ('duck', 'mic'):
+                                layers.remove(name)
                     elif isinstance(key, str):
                         layers.remove('image' if key == 'media' else key)
                     else:

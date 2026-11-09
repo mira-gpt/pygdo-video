@@ -1,4 +1,7 @@
 module_video = "Video"
+mt_video_screenshot = "Take screenshot"
+md_video_screenshot = "Capture the desktop and publish the image (admin only)."
+video_screenshot_public = "Screenshot saved publicly: %s"
 mt_video_off = "CRT switch-off effect"
 md_video_off = "Briefly show a CRT switch-off animation without stopping the video source."
 video_off_queued = "CRT switch-off effect queued for Dog."

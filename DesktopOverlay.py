@@ -408,6 +408,8 @@ class DesktopOverlay:
 
     def close_effects(self, key):
         source = None
+        if key == 'presentation':
+            self._indicator_stop.set()
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
@@ -420,9 +422,9 @@ class DesktopOverlay:
                 self.duck_speech_id = None
                 source, self.duck_source = self.duck_source, None
             media = None
-            if key in ('all', 'media'):
+            if key in ('all', 'media', 'presentation'):
                 media, self.media_layer = self.media_layer, None
-            if key in ('all', 'overlay'):
+            if key in ('all', 'overlay', 'presentation'):
                 self.process.stdin.write(b'hide\n')
                 self.process.stdin.flush()
                 self.enabled = False

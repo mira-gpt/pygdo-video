@@ -19,6 +19,11 @@ to a virtual camera, even if `video_live` is enabled; use screen sharing or a
 local compositor preview for tests.
 Layers can be switched while running. YouTube and Twitch are planned outputs.
 
+`$cheese` (also `$video.screenshot`) lets an admin capture the configured
+local X11 desktop and publishes a PNG under `gdo/mira/public`, returning its
+URL. The whole desktop may contain passwords or other private information;
+check the screen before using this command. The returned image is public.
+
 The upper-left live-mode indicator shows `off`, `work`, `show`, or `discuss`.
 It is black normally and red when the existing microphone meter reports
 nonzero input. It does not start microphone capture; black can also mean the
