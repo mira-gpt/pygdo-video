@@ -11,6 +11,16 @@ import time
 from unittest.mock import MagicMock, patch
 
 
+class GothMotionTest(unittest.TestCase):
+    def test_fringe_snaps_away_then_returns_slowly(self):
+        from gdo.video.Duck3DWorker import goth_hair_motion
+        self.assertEqual((0.0, 0.0), goth_hair_motion(2.0))
+        self.assertGreater(goth_hair_motion(4.18)[1], .9)
+        self.assertEqual(1.0, goth_hair_motion(4.5)[0])
+        self.assertGreater(goth_hair_motion(6.0)[0], goth_hair_motion(7.0)[0])
+        self.assertEqual((0.0, 0.0), goth_hair_motion(8.5))
+
+
 @unittest.skipUnless(importlib.util.find_spec('panda3d') and importlib.util.find_spec('gltf')
                      and os.environ.get('DISPLAY'), 'optional 3D dependencies and X11 required')
 class Duck3DWorkerTest(unittest.TestCase):
@@ -40,6 +50,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='work')
             source.update(mode='bday')
             source.update(mode='cheers')
+            source.update(mode='goth')
             with self.assertRaises(ValueError):
                 source.update(mode='invalid')
         finally:

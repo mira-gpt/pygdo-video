@@ -30,6 +30,23 @@ def metal_head_pitch(pulse):
     return 3 + 30 * max(0.0, min(1.0, pulse))
 
 
+def goth_hair_motion(elapsed):
+    """Snap the fringe aside, then let it fall back slowly."""
+    phase = elapsed % 9.0
+    if phase < 4.0:
+        return 0.0, 0.0
+    if phase < 4.22:
+        amount = (phase - 4.0) / .22
+    elif phase < 5.0:
+        amount = 1.0
+    elif phase < 8.0:
+        amount = 1.0 - (phase - 5.0) / 3.0
+    else:
+        amount = 0.0
+    head = max(0.0, 1.0 - abs(phase - 4.18) / .35)
+    return amount, head
+
+
 def spell_bat_position(elapsed, index, count):
     """Spread rising bats within the duck overlay's visible area."""
     phase = (elapsed * .22 + index / count) % 1
@@ -373,6 +390,72 @@ def main():
         puff.setLightOff()
         smoke_puffs.append(puff)
     hippi.hide()
+    goth = root.attachNewNode('goth outfit and cigarette')
+    goth_face = head_pivot.attachNewNode('goth face and cigarette')
+    goth_face.setPos(0, .32, -1.05)
+    for name, frame, y, color in (
+        ('cigarette', (.18, .48, 1.33, 1.37), -1.12, (.92, .90, .81, 1)),
+        ('cigarette ember', (.47, .50, 1.33, 1.37), -1.13, (1, .20, .03, 1)),
+    ):
+        card = CardMaker(name)
+        card.setFrame(*frame)
+        part = goth_face.attachNewNode(card.generate())
+        part.setY(y)
+        part.setColor(*color)
+        part.setLightOff()
+    goth_lines = LineSegs('goth eye circles')
+    goth_lines.setThickness(2)
+    goth_lines.setColor(.34, .22, .32, 1)
+    for side in (-1, 1):
+        goth_lines.moveTo(side * .12, -.86, 1.49)
+        goth_lines.drawTo(side * .21, -.86, 1.47)
+        goth_lines.drawTo(side * .30, -.86, 1.49)
+    goth_face.attachNewNode(goth_lines.create()).setLightOff()
+    cross = LineSegs('silver christian cross')
+    cross.setThickness(5)
+    cross.setColor(.82, .84, .88, 1)
+    cross.moveTo(0, -1.0, .93)
+    cross.drawTo(0, -1.0, .53)
+    cross.moveTo(-.13, -1.0, .81)
+    cross.drawTo(.13, -1.0, .81)
+    goth.attachNewNode(cross.create()).setLightOff()
+    # A dark crown and asymmetrical fringe, attached to the existing head
+    # pivot so the hair moves with the head rather than floating beside it.
+    goth_hair = head_pivot.attachNewNode('goth black hair')
+    goth_hair.setPos(0, .32, -1.05)
+    goth_hair.setLightOff()
+    crown_data = GeomVertexData('goth hair crown', GeomVertexFormat.getV3(), Geom.UHStatic)
+    crown_writer = GeomVertexWriter(crown_data, 'vertex')
+    crown_points = [(-.43, 1.72), (-.42, 1.91), (-.30, 2.02), (-.15, 2.09),
+                    (0, 2.11), (.15, 2.09), (.30, 2.02), (.42, 1.91),
+                    (.43, 1.72), (.23, 1.82), (0, 1.86), (-.23, 1.82)]
+    for x, z in crown_points:
+        crown_writer.addData3(x, -.65, z)
+    crown_triangles = GeomTriangles(Geom.UHStatic)
+    for index in range(1, len(crown_points) - 1):
+        crown_triangles.addVertices(0, index, index + 1)
+    crown_geom = Geom(crown_data)
+    crown_geom.addPrimitive(crown_triangles)
+    crown_node = GeomNode('black hair crown')
+    crown_node.addGeom(crown_geom)
+    crown = goth_hair.attachNewNode(crown_node)
+    crown.setColor(.025, .018, .035, 1)
+    crown.setTwoSided(True)
+    fringe = goth_hair.attachNewNode('goth fringe')
+    fringe.setPos(.04, -1.08, 1.94)
+    fringe_lines = LineSegs('black locks over one eye')
+    fringe_lines.setThickness(12)
+    fringe_lines.setColor(.025, .015, .035, 1)
+    for shift in (-.045, 0, .045):
+        fringe_lines.moveTo(shift, 0, 0)
+        fringe_lines.drawTo(.09 + shift, 0, -.15)
+        fringe_lines.drawTo(.17 + shift, 0, -.30)
+        fringe_lines.drawTo(.13 + shift, 0, -.42)
+    fringe.attachNewNode(fringe_lines.create())
+    goth_hair.hide()
+    goth_smoke = [puff.copyTo(goth_face) for puff in smoke_puffs]
+    goth_face.hide()
+    goth.hide()
     metal = root.attachNewNode('metal horns')
     horns = LineSegs('raised metal hand')
     horns.setThickness(7)
@@ -643,6 +726,11 @@ def main():
     zombie_skin = [root.find('**/' + name) for name in ('Body', 'Head', 'Wing L')]
     zombie_skin.append(wing_actor)
     skin_colors = [(skin, skin.hasColor(), skin.getColor()) for skin in zombie_skin if not skin.isEmpty()]
+    # GLB textures/materials live on GeomNodes and override parent colors.
+    # Save their original render states so leaving goth restores the model.
+    goth_skin_geometry = [(geometry, geometry.getState())
+                          for skin, _, _ in skin_colors if skin.getName() == 'Body'
+                          for geometry in skin.findAllMatches('**/+GeomNode')]
     sand_card = CardMaker('giveup sand')
     sand_card.setFrame(-.65, .65, -.4, .4)
     sand = base.render.attachNewNode(sand_card.generate())
@@ -817,7 +905,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -892,6 +980,7 @@ def main():
     next_trip_look, trip_look_start, trip_look_duration, trip_direction = start + random.uniform(4, 9), 0, 3, 1
     next_trip_hiccup, trip_hiccup_at = start + random.uniform(12, 25), 0
     next_yawn, yawn_until = start + random.uniform(6, 12), 0
+    next_goth_glance, goth_glance_start, goth_glance_duration = start + random.uniform(4, 8), 0, 2.5
     heart_speeds = [random.uniform(.20, .35) for _ in hearts]
     dizzy_kind, dizzy_until, dizzy_count, dizzy_offset, mug_count = 'none', 0, 0, 0.0, 0
     music_pulse = 0.0
@@ -916,6 +1005,16 @@ def main():
             blend = transition_weight(time.monotonic() - mode_start)
             t = time.monotonic() - start
             now = time.monotonic()
+            if mode == 'goth':
+                if now >= next_goth_glance:
+                    goth_glance_start = now
+                    goth_glance_duration = random.uniform(2, 3.5)
+                    next_goth_glance = now + goth_glance_duration + random.uniform(5, 11)
+            else:
+                goth_glance_start = 0
+                next_goth_glance = now + random.uniform(4, 8)
+            goth_glance = (math.sin(math.pi * (now - goth_glance_start) / goth_glance_duration)
+                           if goth_glance_start and now - goth_glance_start < goth_glance_duration else 0)
             if mode == 'tired' and now >= next_yawn:
                 yawn_until = now + random.uniform(1.1, 2.0)
                 next_yawn = yawn_until + random.uniform(8, 16)
@@ -985,14 +1084,23 @@ def main():
                     head.setColorScale(1, .17, .17, 1)
                 elif mode != 'zombie':
                     head.clearColorScale()
-            new_skin_override = mode if mode in ('shiver', 'ninja') else None
+            new_skin_override = mode if mode in ('shiver', 'ninja', 'goth') else None
             if new_skin_override != skin_override:
                 skin_override = new_skin_override
+                for geometry, original_state in goth_skin_geometry:
+                    if skin_override == 'goth':
+                        geometry.setTextureOff(100)
+                        geometry.setMaterialOff(100)
+                        geometry.setColor(.07, .07, .09, 1, 100)
+                    else:
+                        geometry.setState(original_state)
                 for skin, had_color, original_color in skin_colors:
                     if skin_override == 'shiver':
                         skin.setColor(.58, .68, .76, 1, 1)
                     elif skin_override == 'ninja':
                         skin.setColor(.07, .07, .09, 1, 1)
+                    elif skin_override == 'goth' and skin.getName() == 'Body':
+                        skin.setColor(.07, .07, .09, 1, 100)
                     elif had_color:
                         skin.setColor(original_color)
                     else:
@@ -1002,6 +1110,11 @@ def main():
                     continue
                 if mode == 'zombie':
                     skin.setColorScale(.45, .95, .32, 1)
+                elif mode == 'goth' and skin.getName() == 'Body':
+                    # The GLB supplies its own yellow material on child
+                    # geometry. A high-priority scale darkens that material
+                    # even when a plain NodePath color is overridden.
+                    skin.setColorScale(.08, .08, .09, 1, 100)
                 elif skin != head or mode != 'embarrassed':
                     skin.clearColorScale()
             zombie_marks.show() if mode == 'zombie' else zombie_marks.hide()
@@ -1043,6 +1156,9 @@ def main():
             king.show() if mode == 'king' else king.hide()
             rambo.show() if mode == 'rambo' else rambo.hide()
             hippi.show() if mode == 'hippi' else hippi.hide()
+            goth.show() if mode == 'goth' else goth.hide()
+            goth_face.show() if mode == 'goth' else goth_face.hide()
+            goth_hair.show() if mode == 'goth' else goth_hair.hide()
             metal.show() if mode == 'metal' else metal.hide()
             ninja.show() if mode == 'ninja' else ninja.hide()
             news.show() if mode == 'news' else news.hide()
@@ -1087,6 +1203,14 @@ def main():
                     phase = (t * .35 + index / len(smoke_puffs)) % 1
                     puff.setPos(.40 + .04 * math.sin(t * 2 + index), -1.09, 1.27 + phase * .35)
                     puff.setScale(.6 + phase * .7)
+            if mode == 'goth':
+                root.setR(1.5 * math.sin(t * .8))
+                fringe_lift, head_toss = goth_hair_motion(now - mode_start)
+                fringe.setR(75 * fringe_lift)
+                for index, puff in enumerate(goth_smoke):
+                    phase = (t * .25 + index / len(goth_smoke)) % 1
+                    puff.setPos(.50 + .025 * math.sin(t + index), -1.13, 1.37 + phase * .32)
+                    puff.setScale(.5 + phase * .6)
             if mode == 'rambo':
                 muzzle_flash.show() if int(t * 12) % 3 else muzzle_flash.hide()
                 rambo.setR(1.5 * math.sin(t * 15))
@@ -1218,6 +1342,8 @@ def main():
                 elapsed = time.monotonic() - mode_start
                 pulse = min(1, elapsed / .12) * max(0, 1 - max(0, elapsed - .35) / .5)
                 head_pivot.setP(-38 * pulse)
+            elif mode == 'goth':
+                head_pivot.setP(-25 * head_toss + 7 * goth_glance)
             else:
                 head_pivot.setP(0)
             if mode == 'ouch' or (outgoing_mode == 'ouch' and blend < 1):
@@ -1246,7 +1372,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja', 'hah') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1)
+                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja', 'hah') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1 - .35 * goth_glance if mode == 'goth' else 1)
                     if eye.startswith('Eye white'):
                         if mode in ('high', 'hippi', 'drunk'):
                             node.setColorScale(1, .35 if mode in ('high', 'hippi') else .55, .35 if mode in ('high', 'hippi') else .55, 1)
@@ -1255,7 +1381,7 @@ def main():
             for pupil, (x, z) in zip(pupils, pupil_origins):
                 phase = (time.monotonic() - mode_start) * 5
                 pupil.setX(x + .035 * math.sin(phase) if mode == 'rolleye' else x + .055 * trip_look if mode == 'trip' else x)
-                pupil.setZ(z + .045 * math.cos(phase) if mode == 'rolleye' else z + .025 if mode == 'sorry' else z)
+                pupil.setZ(z + .045 * math.cos(phase) if mode == 'rolleye' else z + .025 if mode == 'sorry' else z - .035 * goth_glance if mode == 'goth' else z)
                 pupil.setSx(1 - .7 * scowl if mode == 'angry' else 1.65 if mode == 'trip' else 1)
             if blend < 1:
                 for (node, prop), start_value in zip(nodes, origin):

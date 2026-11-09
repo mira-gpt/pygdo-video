@@ -160,6 +160,7 @@ when the meter is hidden no border is visible.
   follows synthesized audio energy and pauses; this is not phoneme-level lip
   sync. Older audio modules retain the simple speaking animation.
   `lol` makes the duck hop excitedly and flap its wings.
+  `goth` adds an exaggerated dark outfit, eye makeup and a smoking cigarette;
   `cheers` raises a randomly chosen whiskey glass, beer bottle or wine glass,
   with gently sloshing liquid. `bday` adds a party hat, an intermittently unrolling party blower and a
   birthday cake with 46 flickering candles.
