@@ -51,7 +51,7 @@ class DesktopOverlay:
                 self._send_payload({'effect': 'liveshow', 'enabled': self.liveshow_enabled})
 
     def live_indicator(self, mode):
-        if mode not in ('off', 'work', 'show', 'discuss'):
+        if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
             raise ValueError('Invalid live mode')
         self.live_mode = mode
 

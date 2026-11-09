@@ -55,6 +55,8 @@ class module_video(GDO_Module):
             GDT_String('video_file_url').maxlen(2048).tooltip('tt_video_file_url'),
             GDT_String('video_webcam_url').maxlen(2048).tooltip('tt_video_webcam_url'),
             GDT_Bool('video_duck_overlay').not_null().initial('0').tooltip('tt_video_duck_overlay'),
+            GDT_Bool('video_mic_overlay').not_null().initial('0').tooltip('tt_video_mic_overlay'),
+            GDT_Bool('video_duck3d_overlay').not_null().initial('0').tooltip('tt_video_duck3d_overlay'),
             GDT_String('video_duck3d_pythonpath').maxlen(512).tooltip('tt_video_duck3d_pythonpath'),
             GDT_String('video_output_device').not_null().initial('/dev/video2').maxlen(255).tooltip('tt_video_output_device'),
             GDT_Bool('video_output_preview').not_null().initial('0').tooltip('tt_video_output_preview'),
@@ -70,6 +72,8 @@ class module_video(GDO_Module):
         return []
 
     def gdo_init(self):
+        from gdo.video.YouTubeSender import YouTubeSender
+        self.youtube_sender = YouTubeSender()
         Connector.register(Video, is_text=False)
 
     def gdo_subscribe_events(self):
@@ -136,6 +140,23 @@ class module_video(GDO_Module):
             mira = None
         self.connector.liveshow(mira.cfg_mira_livemode() == 'show' if mira else False)
         self.connector.live_indicator(mira.cfg_mira_livemode() if mira else 'off')
+
+    def restore_overlays(self):
+        from gdo.base.Logger import Logger
+        try:
+            if self.get_config_value('video_mic_overlay'):
+                self.connector.microphone_meter(True)
+        except (ValueError, RuntimeError, OSError, AttributeError) as error:
+            Logger.warning(f'Restoring microphone overlay failed: {error}')
+        try:
+            if self.get_config_value('video_duck3d_overlay'):
+                self.connector.duck3d(True)
+                from gdo.base.ModuleLoader import ModuleLoader
+                mira = ModuleLoader.instance().get_module('mira')
+                if mira:
+                    self.connector.duck_animation(mira.cfg_mira_mood())
+        except (ValueError, RuntimeError, OSError, AttributeError) as error:
+            Logger.warning(f'Restoring 3D duck overlay failed: {error}')
 
     async def on_mira_mood_changed(self, module, field):
         task = getattr(self, '_duck_event_task', None)
@@ -220,6 +241,7 @@ class module_video(GDO_Module):
                 raise
             self.connector = worker
             self.sync_liveshow()
+            self.restore_overlays()
             return
         if mode != 'virtualwebcam':
             raise ValueError('Unknown video mode')
@@ -236,6 +258,7 @@ class module_video(GDO_Module):
             self.get_config_value('video_preview_h'))
         self.connector = worker
         self.sync_liveshow()
+        self.restore_overlays()
 
     def gdo_load_scripts(self, page: 'GDT_Page'):
         self.add_js('js/pygdo-video.js')

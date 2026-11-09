@@ -1,5 +1,6 @@
+import asyncio
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from PIL import Image
 from gdo.base.Application import Application
@@ -97,9 +98,10 @@ class MicrophoneLevelTest(unittest.TestCase):
         handler.param_value = MagicMock(return_value=True)
         handler.empty = MagicMock()
         module = MagicMock(connector=worker)
+        module.save_config_val = AsyncMock()
         with patch.object(Application, 'IS_DOG', True), \
                 patch('gdo.video.method.ipc_mic.module_video.instance', return_value=module):
-            handler.gdo_execute()
+            asyncio.run(handler.gdo_execute())
         self.assertIsInstance(worker.effects.get('mic'), MicrophoneLevel)
 
     def test_desktop_meter_starts_and_stops_forwarding(self):

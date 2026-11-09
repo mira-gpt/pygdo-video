@@ -13,11 +13,13 @@ class ipc_mic(Method):
     def gdo_parameters(self):
         return [GDT_Bool('enabled').not_null().positional()]
 
-    def gdo_execute(self):
+    async def gdo_execute(self):
         if Application.IS_DOG:
             try:
-                connector = module_video.instance().connector
-                connector.microphone_meter(self.param_value('enabled'))
+                module = module_video.instance()
+                enabled = self.param_value('enabled')
+                module.connector.microphone_meter(enabled)
+                await module.save_config_val('video_mic_overlay', '1' if enabled else '0')
             except (ValueError, RuntimeError, OSError, AttributeError) as error:
                 Logger.warning(f'Video microphone meter failed: {error}')
         return self.empty()

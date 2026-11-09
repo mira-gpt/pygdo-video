@@ -327,7 +327,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                             layers.put('drawing', drawing)
                 elif request.get('effect') == 'liveshow' and isinstance(request.get('enabled'), bool):
                     show_state['liveshow'] = request['enabled']
-                elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss') and isinstance(request.get('active'), bool):
+                elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'cohost') and isinstance(request.get('active'), bool):
                     layers.put('live_indicator', {'mode': request['mode'], 'active': request['active']}, z=8000)
                 elif request.get('effect') == 'mic':
                     if request.get('remove') is True:

@@ -14,15 +14,17 @@ class ipc_duck3d(Method):
     def gdo_parameters(self):
         return [GDT_Bool('enabled').not_null().positional()]
 
-    def gdo_execute(self):
+    async def gdo_execute(self):
         if Application.IS_DOG:
             try:
-                connector = module_video.instance().connector
+                module = module_video.instance()
+                connector = module.connector
                 enabled = self.param_value('enabled')
                 connector.duck3d(enabled)
                 mira = ModuleLoader.instance().get_module('mira') if enabled else None
                 if mira:
                     connector.duck_animation(mira.cfg_mira_mood())
+                await module.save_config_val('video_duck3d_overlay', '1' if enabled else '0')
             except (ValueError, RuntimeError, OSError, AttributeError) as error:
                 Logger.warning(f'3D duck failed: {error}')
         return self.empty()
