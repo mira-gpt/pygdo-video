@@ -1,8 +1,5 @@
-import json
-
 from gdo.base.Application import Application
 from gdo.base.IPC import IPC
-from gdo.base.Logger import Logger
 from gdo.base.Method import Method
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_Bool import GDT_Bool
@@ -15,18 +12,6 @@ from gdo.mira.module_mira import module_mira
 from gdo.video.StarWarsIPC import encode_text
 from gdo.video.DuckAnimations import BASE_DEFAULTS
 from gdo.video.module_video import module_video
-
-
-def queue_and_notify(animation_request, args, key, requester, text):
-    IPC.send_to_dog(animation_request, args)
-    try:
-        from gdo.mira.util import send_to_mira
-        message = f'$duck.anim {key} (requested by {json.dumps(requester, ensure_ascii=True)}; animation request queued for Dog)'
-        if text:
-            message += f'\nSpeech text: {json.dumps(text, ensure_ascii=True)}'
-        send_to_mira(message, interrupt=False)
-    except (ImportError, OSError, RuntimeError, ValueError) as error:
-        Logger.warning(f'Duck animation notification failed: {error}')
 
 
 class duckanim(Method):
@@ -72,12 +57,10 @@ class duckanim(Method):
                 args = ('video.ipc_duckbase', payload) if base else ('video.ipc_duckanim_speech', payload)
             else:
                 args = ('video.ipc_duckbase', [key, '-', '-']) if base else ('video.ipc_duckevent', [key])
-            user = getattr(self, '_env_user', None) or Application.get_current_user()
-            requester = user.get_name_sid() if user else 'unknown'
             if Application.db().is_in_transaction():
-                Application.defer_after_commit(queue_and_notify, *args, key, requester, text)
+                Application.defer_after_commit(IPC.send_to_dog, *args)
             else:
-                queue_and_notify(*args, key, requester, text)
+                IPC.send_to_dog(*args)
             return self.empty() if Application.IS_DOG else self.reply('video_duckanim_queued')
         except (ValueError, RuntimeError, OSError) as error:
             return self.err('video_error', (str(error),))

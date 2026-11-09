@@ -66,7 +66,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
                 patch('gdo.video.method.duckanim.IPC.send_to_dog') as send:
             method.gdo_execute()
         send.assert_called_once_with('video.ipc_duckevent', ['ouch'])
-        self.send_to_mira.assert_called_once_with('$duck.anim ouch (requested by "gizmore{bash}"; animation request queued for Dog)', interrupt=False)
+        self.send_to_mira.assert_not_called()
 
     def test_duckanim_suppresses_acknowledgement_only_in_dog(self):
         method = duckanim()
@@ -107,7 +107,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
             method.gdo_execute()
         send.assert_called_once_with('video.ipc_duckevent', ['teacher'])
 
-    def test_notification_waits_for_transaction_commit(self):
+    def test_animation_waits_for_transaction_commit_without_notification(self):
         method = duckanim()
         method.param_val = MagicMock(side_effect=lambda key: {'key': 'hello', 'text': None}[key])
         method.reply = MagicMock()
@@ -122,7 +122,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
             callback, *args = deferred.call_args.args
             callback(*args)
             send.assert_called_once_with('video.ipc_duckevent', ['hello'])
-            self.send_to_mira.assert_called_once_with('$duck.anim hello (requested by "gizmore{bash}"; animation request queued for Dog)', interrupt=False)
+            self.send_to_mira.assert_not_called()
 
     def test_rolleye_supports_optional_speech(self):
         method = duckanim()
@@ -156,7 +156,7 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual('video.ipc_duckanim_speech', name)
                 self.assertEqual(key, args[0])
                 self.assertEqual('Please!', decode_text(args[1]))
-                self.send_to_mira.assert_called_with(f'$duck.anim {key} (requested by "gizmore{{bash}}"; animation request queued for Dog)\nSpeech text: "Please!"', interrupt=False)
+                self.send_to_mira.assert_not_called()
 
     def test_giveup_is_temporary_event_without_speech(self):
         method = duckanim()
