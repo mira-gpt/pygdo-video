@@ -69,6 +69,26 @@ class CommentaryTickerTest(unittest.TestCase):
         self.assertEqual(60, ticker_offset(0, 3, COMMENTARY_SPEED))
         self.assertEqual(30, ticker_offset(0, 3))
 
+    def test_backlog_increases_speed_with_a_cap(self):
+        from gdo.video.TickerLayout import commentary_speed
+        self.assertEqual(60, commentary_speed(0))
+        self.assertEqual(80, commentary_speed(2))
+        self.assertEqual(120, commentary_speed(6))
+        self.assertEqual(120, commentary_speed(64))
+
+    def test_speed_change_does_not_jump_the_current_message(self):
+        from gdo.video.MicTicker import TickerScroll
+        scroll = TickerScroll(60)
+        for step in range(7):
+            offset, _ = scroll.frame(1, step * .5, 1000)
+        self.assertEqual(60, offset)
+        scroll.speed = 120
+        offset, _ = scroll.frame(1, 3.5, 1000)
+        self.assertEqual(120, offset)
+        scroll.speed = 60
+        offset, _ = scroll.frame(1, 4, 1000)
+        self.assertEqual(150, offset)
+
     def test_queue_drops_oldest_pending_when_full(self):
         CommentaryTicker.set('current')
         _, sequence = CommentaryTicker.snapshot()

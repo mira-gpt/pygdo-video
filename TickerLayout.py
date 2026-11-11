@@ -2,6 +2,12 @@
 
 GOLDEN_SMALL = (3 - 5 ** 0.5) / 2
 COMMENTARY_SPEED = 60.0
+COMMENTARY_MAX_SPEED = 120.0
+
+
+def commentary_speed(pending):
+    """Add 10 pixels/second per waiting message, up to a readable cap."""
+    return min(COMMENTARY_MAX_SPEED, COMMENTARY_SPEED + max(0, pending) * 10.0)
 
 
 def ticker_bounds(width):

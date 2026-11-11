@@ -23,7 +23,7 @@ from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
 from MicWarning import MicWarning
 from MicTicker import TickerScroll
-from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED
+from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED, commentary_speed
 from AwayScreen import AwayScreen, HEADER
 
 
@@ -168,7 +168,10 @@ def main(image_path, screensharing=False, window_suffix=''):
                 layout.set_font_description(Pango.FontDescription('Sans 10px'))
                 layout.set_text(commentary, -1)
                 commentary_width, _ = layout.get_pixel_size()
-                offset, done = show_state['thoughts_scroll'].frame(sequence, now, commentary_width) if sequence is not None else (0, False)
+                scroll = show_state['thoughts_scroll']
+                scroll.speed = commentary_speed(layer.get('pending', 0))
+                scroll.min_duration = 6.0 * COMMENTARY_SPEED / scroll.speed
+                offset, done = scroll.frame(sequence, now, commentary_width) if sequence is not None else (0, False)
                 context.move_to(16 - offset, 330)
                 context.set_source_rgb(1, 1, 1)
                 PangoCairo.show_layout(context, layout)
@@ -378,8 +381,10 @@ def main(image_path, screensharing=False, window_suffix=''):
                         text = request.get('text', '')
                         sequence = request.get('sequence')
                         next_text = request.get('next', '')
+                        pending = request.get('pending', 0)
                         layers.put('thoughts', {'text': text if isinstance(text, str) else '', 'sequence': sequence if type(sequence) is int else None,
-                                                'next': next_text if isinstance(next_text, str) else ''})
+                                                'next': next_text if isinstance(next_text, str) else '',
+                                                'pending': max(0, min(64, pending)) if type(pending) is int else 0})
                 elif request.get('effect') == 'mic':
                     if request.get('remove') is True:
                         layers.remove('mic')

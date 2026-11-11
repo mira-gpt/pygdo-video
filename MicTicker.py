@@ -52,17 +52,22 @@ class TickerScroll:
     """Count rendered time, not time spent with a stopped/hidden renderer."""
     def __init__(self, speed=30.0):
         self.speed = speed
+        self.min_duration = 6.0
         self.started = None
         self.last_frame = None
         self.elapsed = 0.0
+        self.offset = 0.0
 
     def frame(self, started, now, rendered_width):
         if started != self.started:
-            self.started, self.last_frame, self.elapsed = started, now, 0.0
+            self.started, self.last_frame, self.elapsed, self.offset = started, now, 0.0, 0.0
         else:
             delta = max(0.0, now - self.last_frame)
             # A gap means rendering stopped; do not skip an unseen section.
             if delta <= .5:
+                previous = self.elapsed
                 self.elapsed += delta
+                moving_time = max(0.0, self.elapsed - 2.0) - max(0.0, previous - 2.0)
+                self.offset += moving_time * self.speed
             self.last_frame = now
-        return ticker_offset(0, self.elapsed, self.speed), ticker_finished(0, self.elapsed, rendered_width, self.speed)
+        return self.offset, self.elapsed >= self.min_duration and self.offset >= rendered_width

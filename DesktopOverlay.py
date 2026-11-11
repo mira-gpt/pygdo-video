@@ -73,7 +73,8 @@ class DesktopOverlay:
                         from gdo.video.CommentaryTicker import CommentaryTicker
                         text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'cohost') else ('', None)
                         next_text = CommentaryTicker.peek() if sequence is not None else ''
-                        self._send_payload({'effect': 'thoughts', 'text': text, 'sequence': sequence, 'next': next_text})
+                        pending = CommentaryTicker.pending_count() if sequence is not None else 0
+                        self._send_payload({'effect': 'thoughts', 'text': text, 'sequence': sequence, 'next': next_text, 'pending': pending})
             except (ImportError, RuntimeError, OSError):
                 return
 

@@ -36,6 +36,11 @@ class CommentaryTicker:
             return cls._queue[0][0] if cls._current is not None and cls._queue else ''
 
     @classmethod
+    def pending_count(cls):
+        with cls._lock:
+            return len(cls._queue)
+
+    @classmethod
     def finish(cls, sequence):
         with cls._lock:
             if cls._current is None or cls._current[1] != sequence:

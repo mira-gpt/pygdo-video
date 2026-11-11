@@ -2,7 +2,7 @@
 import time
 from PIL import Image, ImageDraw, ImageFont
 from gdo.video.CommentaryTicker import CommentaryTicker
-from gdo.video.TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED
+from gdo.video.TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED, commentary_speed
 from gdo.video.MicTicker import TickerScroll
 
 
@@ -34,6 +34,8 @@ class ThoughtsLayer:
         surface = Image.new('RGBA', (available, 13))
         painter = ImageDraw.Draw(surface)
         length = painter.textlength(text, font=self.font)
+        self.scroll.speed = commentary_speed(CommentaryTicker.pending_count()) if sequence is not None else COMMENTARY_SPEED
+        self.scroll.min_duration = 6.0 * COMMENTARY_SPEED / self.scroll.speed
         offset, done = self.scroll.frame(sequence, now, length) if sequence is not None else (0, False)
         offset = int(offset)
         painter.text((-offset, 0), text, font=self.font, fill=(255, 255, 255, 255))

@@ -453,6 +453,8 @@ Updates are discarded outside work/show/discuss/cohost, and the overlay clears
 on leaving those modes. A bounded FIFO advances when a message has finished
 rendering; if more than 64 messages are pending, the oldest pending message is
 discarded. The next message slides in faster from the right, separated by `||`.
+Scrolling accelerates with the number of waiting messages, from 60 to at most
+120 logical pixels per second, without jumping the current text.
 Commentary can be seen by viewers; this is not a
 secret detector. Neither the microphone layer nor video output is started
 automatically. An isolated test Dog should use a synthetic readable log.
