@@ -163,12 +163,13 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
                              [args[1][0] for args in overlays])
 
     async def test_event_updates_video_without_starting_capture(self):
+        from gdo.mira.GDT_MiraLiveMode import GDT_MiraLiveMode
         module = module_video()
         module.connector = MagicMock()
-        field = MagicMock()
-        field.get_value.return_value = 'show'
+        field = GDT_MiraLiveMode().val('show')
         await module.on_mira_livemode_changed(None, field)
         module.connector.liveshow.assert_called_once_with(True)
+        module.connector.live_indicator.assert_called_once_with('show')
         module.connector.start.assert_not_called()
         module.connector.microphone_meter.assert_not_called()
 

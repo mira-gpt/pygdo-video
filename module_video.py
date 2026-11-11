@@ -129,8 +129,9 @@ class module_video(GDO_Module):
             Logger.warning(f'Duck welcome failed: {error}')
 
     async def on_mira_livemode_changed(self, module, field):
-        self.connector.liveshow(field.get_value() == 'show')
-        self.connector.live_indicator(field.get_value())
+        mode = field.get_val()
+        self.connector.liveshow(mode == 'show')
+        self.connector.live_indicator(mode)
 
     def sync_liveshow(self):
         from gdo.base.ModuleLoader import ModuleLoader
