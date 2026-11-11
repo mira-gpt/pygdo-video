@@ -1,5 +1,7 @@
 """Keyed layers ordered bottom to top, independent of rendering backend."""
 
+PERSISTENT_LAYERS = frozenset(('image', 'drawing', 'mic', 'duck', 'away', 'live_indicator', 'thoughts'))
+
 
 class LayerStack:
     def __init__(self):

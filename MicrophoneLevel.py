@@ -4,11 +4,13 @@ from PIL import Image, ImageDraw, ImageFont
 from gdo.video.TranscriptFade import transcript_alpha
 from gdo.video.MicWarning import MicWarning, warning_texts
 from gdo.video.MicTicker import MicTicker, TickerScroll
+from gdo.video.TickerLayout import ticker_bounds
 
 
 class MicrophoneLevel:
-    def __init__(self, liveshow=False):
+    def __init__(self, liveshow=False, live_mode='off'):
         self.liveshow = liveshow
+        self.live_mode = live_mode
         self.warning = MicWarning()
         self.ticker_scroll = TickerScroll()
         try:
@@ -31,8 +33,8 @@ class MicrophoneLevel:
             text = ''
             updated = 0
         width, height = frame.size
-        left, top = max(0, width - 182), max(0, height - 34)
-        right = min(width - 1, left + 170)
+        left, right = ticker_bounds(width)
+        top = max(0, height - 34)
         draw = ImageDraw.Draw(frame)
         draw.rectangle((left, top, right, min(height - 1, top + 24)), fill=(16, 16, 16),
                        outline=(255, 35, 35) if self.liveshow else (220, 220, 220), width=2 if self.liveshow else 1)

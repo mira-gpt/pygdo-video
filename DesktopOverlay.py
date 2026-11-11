@@ -30,6 +30,7 @@ class DesktopOverlay:
         self.liveshow_enabled = False
         self.virtual_output = None
         self.live_mode = 'off'
+        self.thoughts_enabled = False
         self._indicator_stop = threading.Event()
 
     def start_virtual_output(self, display, device):
@@ -54,6 +55,9 @@ class DesktopOverlay:
         if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
             raise ValueError('Invalid live mode')
         self.live_mode = mode
+        if mode not in ('work', 'show', 'discuss', 'cohost'):
+            from gdo.video.CommentaryTicker import CommentaryTicker
+            CommentaryTicker.clear()
 
     def _pump_indicator(self):
         while not self._indicator_stop.wait(.1):
@@ -65,8 +69,21 @@ class DesktopOverlay:
                     if not self.is_running():
                         return
                     self._send_payload({'effect': 'live_indicator', 'mode': state[0], 'active': state[1]})
+                    if self.thoughts_enabled:
+                        from gdo.video.CommentaryTicker import CommentaryTicker
+                        text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'cohost') else ('', None)
+                        next_text = CommentaryTicker.peek() if sequence is not None else ''
+                        self._send_payload({'effect': 'thoughts', 'text': text, 'sequence': sequence, 'next': next_text})
             except (ImportError, RuntimeError, OSError):
                 return
+
+    def thoughts(self, enabled):
+        with self.lock:
+            if not self.is_running():
+                raise RuntimeError('Desktop overlay is not running')
+            self.thoughts_enabled = bool(enabled)
+            if not enabled:
+                self._send_payload({'effect': 'thoughts', 'remove': True})
 
     def away(self, messages, cycle):
         from gdo.video.AwayScreen import AwayScreen
@@ -101,6 +118,11 @@ class DesktopOverlay:
                     started = event.get('started')
                     if isinstance(started, (float, int)) and not isinstance(started, bool):
                         MicTicker.finish(started)
+                elif isinstance(event, dict) and event.get('event') == 'thoughts_finished':
+                    from gdo.video.CommentaryTicker import CommentaryTicker
+                    sequence = event.get('sequence')
+                    if type(sequence) is int:
+                        CommentaryTicker.finish(sequence)
             except (ValueError, TypeError):
                 continue
 

@@ -437,3 +437,20 @@ Close the preview window to stop it. Desktop capture may show private content.
   argument. Past times are rejected. `video_timer_frequency` controls the interval (default five
   minutes). A new timer replaces the active timer; it expires at the event and
   is not preserved across Dog restarts. The ticker layer must be visible.
+
+### Optional commentary ticker
+
+The independently controlled `$video.thoughts 1` panel shows audience-facing
+Codex commentary on the left; `$video.thoughts 0` hides it. The name is playful:
+it does not display private reasoning. The panel remains visible between updates.
+Set `video_commentary_log` to the intended local session JSONL file; an empty
+value disables the follower. The Dog process must have permission to read it.
+Dog starts a follower thread for that path, starting at the end and accepting
+only new assistant commentary and final answers. Rotation or truncation reopens at the new end.
+Updates are discarded outside work/show/discuss/cohost, and the overlay clears
+on leaving those modes. A bounded FIFO advances when a message has finished
+rendering; if more than 64 messages are pending, the oldest pending message is
+discarded. The next message slides in faster from the right, separated by `||`.
+Commentary can be seen by viewers; this is not a
+secret detector. Neither the microphone layer nor video output is started
+automatically. An isolated test Dog should use a synthetic readable log.

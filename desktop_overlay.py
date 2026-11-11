@@ -16,13 +16,14 @@ gi.require_version('Gdk', '3.0')
 gi.require_version('Pango', '1.0')
 gi.require_version('PangoCairo', '1.0')
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango, PangoCairo
-from LayerStack import LayerStack
+from LayerStack import LayerStack, PERSISTENT_LAYERS
 from DrawingProtocol import validate_line
 from MediaTransition import media_transition
 from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
 from MicWarning import MicWarning
 from MicTicker import TickerScroll
+from TickerLayout import ticker_bounds, next_message_x
 from AwayScreen import AwayScreen, HEADER
 
 
@@ -57,7 +58,7 @@ def main(image_path, screensharing=False, window_suffix=''):
     effect.set_default_size(effect_width, effect_height)
     effect.stick()
     layers = LayerStack()
-    show_state = {'liveshow': False, 'ticker_ack': None, 'ticker_scroll': TickerScroll()}
+    show_state = {'liveshow': False, 'ticker_ack': None, 'ticker_scroll': TickerScroll(), 'thoughts_scroll': TickerScroll(), 'thoughts_ack': None}
 
     def draw_effect(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)
@@ -152,16 +153,57 @@ def main(image_path, screensharing=False, window_suffix=''):
                     PangoCairo.show_layout(context, layout)
                 context.restore()
                 continue
+            if key == 'thoughts':
+                mic_left, _ = ticker_bounds(640)
+                commentary = layer.get('text') or 'Mira: ...'
+                now = time.monotonic()
+                sequence = layer.get('sequence')
+                context.set_source_rgba(.06, .06, .06, .9)
+                context.rectangle(12, 326, mic_left - 20, 24)
+                context.fill()
+                context.save()
+                context.rectangle(16, 327, mic_left - 28, 20)
+                context.clip()
+                layout = PangoCairo.create_layout(context)
+                layout.set_font_description(Pango.FontDescription('Sans 10px'))
+                layout.set_text(commentary, -1)
+                commentary_width, _ = layout.get_pixel_size()
+                offset, done = show_state['thoughts_scroll'].frame(sequence, now, commentary_width) if sequence is not None else (0, False)
+                context.move_to(16 - offset, 330)
+                context.set_source_rgb(1, 1, 1)
+                PangoCairo.show_layout(context, layout)
+                next_text = layer.get('next', '')
+                if sequence is not None and next_text:
+                    separator = PangoCairo.create_layout(context)
+                    separator.set_font_description(Pango.FontDescription('Sans 10px'))
+                    separator.set_text(' || ', -1)
+                    separator_width, _ = separator.get_pixel_size()
+                    x = next_message_x(mic_left - 28, commentary_width, offset, show_state['thoughts_scroll'].elapsed, separator_width)
+                    context.move_to(16 + x - separator_width, 330)
+                    PangoCairo.show_layout(context, separator)
+                    following = PangoCairo.create_layout(context)
+                    following.set_font_description(Pango.FontDescription('Sans 10px'))
+                    following.set_text(next_text, -1)
+                    context.move_to(16 + x, 330)
+                    PangoCairo.show_layout(context, following)
+                context.restore()
+                if done and show_state['thoughts_ack'] != sequence:
+                    show_state['thoughts_ack'] = sequence
+                    print(json.dumps({'event': 'thoughts_finished', 'sequence': sequence}), flush=True)
+                continue
             if key == 'mic':
                 if layer['status'] == 'on' and time.monotonic() - layer['updated'] > 2:
                     layer['status'] = 'unknown'
                 context.set_source_rgba(.06, .06, .06, .9)
-                context.rectangle(458, 326, 170, 24)
+                mic_left, mic_right = ticker_bounds(640)
+                mic_width = mic_right - mic_left
+                text_left, text_width_available = mic_left + 4, mic_width - 8
+                context.rectangle(mic_left, 326, mic_width, 24)
                 context.fill()
                 if show_state['liveshow']:
                     context.set_source_rgb(1, .12, .12)
                     context.set_line_width(2)
-                    context.rectangle(459, 327, 168, 22)
+                    context.rectangle(mic_left + 1, 327, mic_width - 2, 22)
                     context.stroke()
                 context.set_source_rgb(1, 1, 1)
                 context.set_font_size(10)
@@ -180,7 +222,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                     label, alpha = warning, 1.0
                 label = label.replace('\n', ' ').replace('\r', ' ').replace('\x00', '')
                 context.save()
-                context.rectangle(462, 327, 162, 13)
+                context.rectangle(text_left, 327, text_width_available, 13)
                 context.clip()
                 layout = PangoCairo.create_layout(context)
                 layout.set_font_description(Pango.FontDescription('Sans 10px'))
@@ -191,8 +233,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if ticker:
                     offset, ticker_done = show_state['ticker_scroll'].frame(layer['ticker_started'], now, text_width)
                 else:
-                    offset = (now * 30) % (text_width + 40) if text_width > 162 else 0
-                context.move_to(462 - offset, 327)
+                    offset = (now * 30) % (text_width + 40) if text_width > text_width_available else 0
+                context.move_to(text_left - offset, 327)
                 context.set_source_rgba(1, 1, 1, alpha)
                 PangoCairo.show_layout(context, layout)
                 context.restore()
@@ -201,7 +243,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                     print(json.dumps({'event': 'ticker_finished', 'started': layer['ticker_started']}), flush=True)
                 if layer['status'] == 'on':
                     context.set_source_rgb(.24, .88, .31)
-                    context.rectangle(462, 342, 162 * min(1.0, layer['level'] * 100), 5)
+                    context.rectangle(text_left, 342, text_width_available * min(1.0, layer['level'] * 100), 5)
                     context.fill()
                 continue
             if key == 'drawing':
@@ -259,7 +301,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if time.monotonic() >= layer['end']:
                     layers.remove(key)
                 continue
-            if key in ('image', 'drawing', 'mic', 'duck', 'away', 'live_indicator'):
+            if key in PERSISTENT_LAYERS:
                 continue
             if key == 'vintage':
                 now = time.monotonic()
@@ -329,6 +371,15 @@ def main(image_path, screensharing=False, window_suffix=''):
                     show_state['liveshow'] = request['enabled']
                 elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'cohost') and isinstance(request.get('active'), bool):
                     layers.put('live_indicator', {'mode': request['mode'], 'active': request['active']}, z=8000)
+                elif request.get('effect') == 'thoughts':
+                    if request.get('remove') is True:
+                        layers.remove('thoughts')
+                    else:
+                        text = request.get('text', '')
+                        sequence = request.get('sequence')
+                        next_text = request.get('next', '')
+                        layers.put('thoughts', {'text': text if isinstance(text, str) else '', 'sequence': sequence if type(sequence) is int else None,
+                                                'next': next_text if isinstance(next_text, str) else ''})
                 elif request.get('effect') == 'mic':
                     if request.get('remove') is True:
                         layers.remove('mic')

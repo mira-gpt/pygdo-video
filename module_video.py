@@ -11,6 +11,7 @@ from gdo.base.GDO import GDO
 from gdo.base.GDT import GDT
 from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_Enum import GDT_Enum
+from gdo.core.GDT_Path import GDT_Path
 from gdo.core.GDT_String import GDT_String
 from gdo.date.GDT_Duration import GDT_Duration
 from gdo.ui.GDT_Link import GDT_Link
@@ -65,6 +66,8 @@ class module_video(GDO_Module):
             GDT_Height('video_preview_h').not_null().initial('180').min(1).max(8192).tooltip('tt_video_preview_h'),
             GDT_Bool('video_live').not_null().initial('0').tooltip('tt_video_live'),
             GDT_Duration('video_timer_frequency').not_null().min(10).initial('5m').tooltip('tt_video_timer_frequency'),
+            GDT_Path('video_commentary_log').maxlen(2048).tooltip('tt_video_commentary_log'),
+            GDT_Bool('video_thoughts_overlay').not_null().initial('0').tooltip('tt_video_thoughts_overlay'),
         ]
 
     def gdo_user_config(self) -> list[GDT]:
@@ -83,6 +86,7 @@ class module_video(GDO_Module):
     def gdo_subscribe_events(self):
         from gdo.base.Application import Application
         Application.EVENTS.add_timer_async(1, self.video_timer_tick, Application.EVENTS.FOREVER)
+        Application.EVENTS.add_timer_async(2, self.commentary_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
@@ -99,6 +103,34 @@ class module_video(GDO_Module):
                                             self.get_config_value('video_timer_frequency'))
             if message:
                 MicTicker.enqueue(message)
+
+    async def commentary_tick(self):
+        from gdo.base.Application import Application
+        from gdo.base.ModuleLoader import ModuleLoader
+        from gdo.core.method.launch import launch
+        try:
+            with open(launch.lock_path(), 'r', encoding='ascii') as lock:
+                is_this_dog = int(lock.read().strip()) == os.getpid()
+        except (OSError, ValueError):
+            is_this_dog = False
+        if not Application.IS_DOG or not is_this_dog:
+            return
+        path = self.get_config_val('video_commentary_log') or ''
+        if path and not os.path.isabs(path):
+            path = Application.file_path(path)
+        mira = ModuleLoader.instance().get_module('mira')
+        mode = mira.get_config_val('mira_livemode') if mira else None
+        worker = getattr(self, '_commentary_follower', None)
+        if worker and (worker.path != path or not worker.is_alive()):
+            worker.stop()
+            worker.join(timeout=1)
+            self._commentary_follower = worker = None
+        if path and not worker:
+            from gdo.video.CommentaryFollower import CommentaryFollower
+            self._commentary_follower = worker = CommentaryFollower(path, mode)
+            worker.start()
+        if worker:
+            worker.set_mode(mode)
 
     async def on_live_join_welcome(self, user, channel):
         """Greet actual joins only during a live show, with a global cooldown."""
@@ -145,6 +177,8 @@ class module_video(GDO_Module):
 
     async def on_mira_livemode_changed(self, module, field):
         mode = field.get_val()
+        if worker := getattr(self, '_commentary_follower', None):
+            worker.set_mode(mode)
         self.connector.liveshow(mode == 'show')
         self.connector.live_indicator(mode)
 
@@ -159,6 +193,11 @@ class module_video(GDO_Module):
 
     def restore_overlays(self):
         from gdo.base.Logger import Logger
+        try:
+            if self.get_config_value('video_thoughts_overlay'):
+                self.connector.thoughts(True)
+        except (ValueError, RuntimeError, OSError, AttributeError) as error:
+            Logger.warning(f'Restoring commentary overlay failed: {error}')
         try:
             if self.get_config_value('video_mic_overlay'):
                 self.connector.microphone_meter(True)

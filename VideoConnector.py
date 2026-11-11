@@ -244,9 +244,16 @@ class VideoConnector:
     def microphone_meter(self, enabled):
         from gdo.video.MicrophoneLevel import MicrophoneLevel
         if enabled:
-            self.put_effect('mic', MicrophoneLevel(self.liveshow_enabled))
+            self.put_effect('mic', MicrophoneLevel(self.liveshow_enabled, self.live_mode))
         else:
             self.remove_effect('mic')
+
+    def thoughts(self, enabled):
+        from gdo.video.ThoughtsLayer import ThoughtsLayer
+        if enabled:
+            self.put_effect('thoughts', ThoughtsLayer(self.live_mode))
+        else:
+            self.remove_effect('thoughts')
 
     def liveshow(self, enabled):
         with self.lock:
@@ -260,6 +267,16 @@ class VideoConnector:
         if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
             raise ValueError('Invalid live mode')
         self.live_mode = mode
+        if mode == 'off':
+            from gdo.video.CommentaryTicker import CommentaryTicker
+            CommentaryTicker.clear()
+        with self.lock:
+            mic = self.effects.get('mic')
+            if mic:
+                mic.live_mode = mode
+            thoughts = self.effects.get('thoughts')
+            if thoughts:
+                thoughts.live_mode = mode
         if self.is_running():
             self.put_effect('live_indicator', LiveIndicator(mode), z=8000)
 
