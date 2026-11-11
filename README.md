@@ -432,3 +432,8 @@ Close the preview window to stop it. Desktop capture may show private content.
   queueing IPC does not guarantee on-screen playback. An entry advances only
   when the renderer confirms that the measured text has completely scrolled
   out; time without rendering does not consume its display duration.
+- `$video.timer "8:45" WeChall News` announces today’s local 08:45 on the
+  same ticker. An ISO date and time may also be provided as the quoted first
+  argument. Past times are rejected. `video_timer_frequency` controls the interval (default five
+  minutes). A new timer replaces the active timer; it expires at the event and
+  is not preserved across Dog restarts. The ticker layer must be visible.

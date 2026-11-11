@@ -12,6 +12,7 @@ from gdo.base.GDT import GDT
 from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_String import GDT_String
+from gdo.date.GDT_Duration import GDT_Duration
 from gdo.ui.GDT_Link import GDT_Link
 from gdo.ui.GDT_Width import GDT_Width
 from gdo.ui.GDT_Height import GDT_Height
@@ -63,6 +64,7 @@ class module_video(GDO_Module):
             GDT_Width('video_preview_w').not_null().initial('320').min(1).max(8192).tooltip('tt_video_preview_w'),
             GDT_Height('video_preview_h').not_null().initial('180').min(1).max(8192).tooltip('tt_video_preview_h'),
             GDT_Bool('video_live').not_null().initial('0').tooltip('tt_video_live'),
+            GDT_Duration('video_timer_frequency').not_null().min(10).initial('5m').tooltip('tt_video_timer_frequency'),
         ]
 
     def gdo_user_config(self) -> list[GDT]:
@@ -73,17 +75,30 @@ class module_video(GDO_Module):
 
     def gdo_init(self):
         from gdo.video.YouTubeSender import YouTubeSender
+        from gdo.video.VideoTimer import VideoTimer
         self.youtube_sender = YouTubeSender()
+        self.video_timer = VideoTimer()
         Connector.register(Video, is_text=False)
 
     def gdo_subscribe_events(self):
         from gdo.base.Application import Application
+        Application.EVENTS.add_timer_async(1, self.video_timer_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
         Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
         Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
+
+    async def video_timer_tick(self):
+        from datetime import datetime
+        from gdo.base.Application import Application
+        from gdo.video.MicTicker import MicTicker
+        if Application.IS_DOG:
+            message = self.video_timer.tick(datetime.now().astimezone(), time.monotonic(),
+                                            self.get_config_value('video_timer_frequency'))
+            if message:
+                MicTicker.enqueue(message)
 
     async def on_live_join_welcome(self, user, channel):
         """Greet actual joins only during a live show, with a global cooldown."""
