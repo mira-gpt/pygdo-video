@@ -1,6 +1,7 @@
 """Shared bottom-right ticker geometry for both video renderers."""
 
 GOLDEN_SMALL = (3 - 5 ** 0.5) / 2
+COMMENTARY_SPEED = 60.0
 
 
 def ticker_bounds(width):

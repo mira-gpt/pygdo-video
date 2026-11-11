@@ -23,7 +23,7 @@ from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
 from MicWarning import MicWarning
 from MicTicker import TickerScroll
-from TickerLayout import ticker_bounds, next_message_x
+from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED
 from AwayScreen import AwayScreen, HEADER
 
 
@@ -58,7 +58,7 @@ def main(image_path, screensharing=False, window_suffix=''):
     effect.set_default_size(effect_width, effect_height)
     effect.stick()
     layers = LayerStack()
-    show_state = {'liveshow': False, 'ticker_ack': None, 'ticker_scroll': TickerScroll(), 'thoughts_scroll': TickerScroll(), 'thoughts_ack': None}
+    show_state = {'liveshow': False, 'ticker_ack': None, 'ticker_scroll': TickerScroll(), 'thoughts_scroll': TickerScroll(COMMENTARY_SPEED), 'thoughts_ack': None}
 
     def draw_effect(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)

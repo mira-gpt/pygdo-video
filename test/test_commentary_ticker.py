@@ -63,6 +63,12 @@ class CommentaryTickerTest(unittest.TestCase):
         CommentaryTicker.finish(sequence)
         self.assertEqual('Second', CommentaryTicker.snapshot()[0])
 
+    def test_commentary_scrolls_twice_as_fast_as_music(self):
+        from gdo.video.MicTicker import ticker_offset
+        from gdo.video.TickerLayout import COMMENTARY_SPEED
+        self.assertEqual(60, ticker_offset(0, 3, COMMENTARY_SPEED))
+        self.assertEqual(30, ticker_offset(0, 3))
+
     def test_queue_drops_oldest_pending_when_full(self):
         CommentaryTicker.set('current')
         _, sequence = CommentaryTicker.snapshot()

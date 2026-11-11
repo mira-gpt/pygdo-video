@@ -2,7 +2,7 @@
 import time
 from PIL import Image, ImageDraw, ImageFont
 from gdo.video.CommentaryTicker import CommentaryTicker
-from gdo.video.TickerLayout import ticker_bounds, next_message_x
+from gdo.video.TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED
 from gdo.video.MicTicker import TickerScroll
 
 
@@ -11,7 +11,7 @@ class ThoughtsLayer:
         self.live_mode = live_mode
         self.text = ''
         self.started = 0.0
-        self.scroll = TickerScroll()
+        self.scroll = TickerScroll(COMMENTARY_SPEED)
         try:
             self.font = ImageFont.truetype('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc', 10)
         except OSError:

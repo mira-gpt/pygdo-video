@@ -30,6 +30,12 @@ def metal_head_pitch(pulse):
     return 3 + 30 * max(0.0, min(1.0, pulse))
 
 
+def sleep_mouth_frame(elapsed):
+    """Two quiet beak smacks occasionally; speech still takes precedence."""
+    phase = elapsed % 11.0
+    return 4 if 7.0 <= phase < 7.13 or 7.3 <= phase < 7.43 else 0
+
+
 def goth_hair_motion(elapsed):
     """Snap the fringe aside, then let it fall back slowly."""
     phase = elapsed % 9.0
@@ -174,6 +180,17 @@ def main():
     chalk_node.setScale(.13)
     chalk_node.setLightOff()
     teacher.hide()
+    sleep_letters = []
+    for index in range(3):
+        letter = TextNode(f'sleep Z {index}')
+        letter.setText('Z')
+        letter.setTextColor(.9, .95, 1, 1)
+        node = root.attachNewNode(letter)
+        node.setBillboardPointEye()
+        node.setScale(.13 + index * .025)
+        node.setLightOff()
+        node.hide()
+        sleep_letters.append(node)
     nerd = root.attachNewNode('nerd glasses and teeth')
     glasses = LineSegs('large glasses')
     glasses.setThickness(5)
@@ -905,7 +922,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -1041,7 +1058,14 @@ def main():
             elif mode != 'inlove':
                 happy_eyes_until = 0
                 next_happy_eyes = now + random.uniform(2, 5)
-            happy_closed = mode == 'xd' or (mode == 'inlove' and now < happy_eyes_until)
+            happy_closed = mode in ('xd', 'zzz') or (mode == 'inlove' and now < happy_eyes_until)
+            for index, letter in enumerate(sleep_letters):
+                if mode == 'zzz':
+                    phase = ((now - mode_start) * .18 + index / 3) % 1
+                    letter.setPos(.37 + .12 * phase, -.85, 1.88 + .35 * phase)
+                    letter.show()
+                else:
+                    letter.hide()
             smile.show() if mode in ('inlove', 'xd', 'trip') else smile.hide()
             happy_eyes.show() if happy_closed else happy_eyes.hide()
             for index, heart in enumerate(hearts):
@@ -1143,6 +1167,9 @@ def main():
             elif mode == 'tired':
                 root.setR(2 * math.sin(t * .45))
                 root.setP(10 + 4 * math.sin(t * .4))
+            elif mode == 'zzz':
+                root.setR(2 * math.sin(t * .45))
+                root.setP(8 + 1.5 * math.sin(t * .5))
             if mode == 'sorry':
                 sorry_brows.show()
                 root.setP(10 + 1.5 * math.sin(t * 1.2))
@@ -1391,7 +1418,7 @@ def main():
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.
             tongue_out = mode == 'xd' or (mode == 'drunk' and now < tongue_until and not speaking)
-            beak.pose('Duck rigAction', 7 if not speaking and (tongue_out or (mode == 'tired' and now < yawn_until)) else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
+            beak.pose('Duck rigAction', sleep_mouth_frame(now - mode_start) if mode == 'zzz' and not speaking else 7 if not speaking and (tongue_out or (mode == 'tired' and now < yawn_until)) else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
             if not tongue_joint.isEmpty():
                 tongue_joint.setY(tongue_y - .24 if tongue_out else tongue_y)
             base.graphicsEngine.renderFrame()

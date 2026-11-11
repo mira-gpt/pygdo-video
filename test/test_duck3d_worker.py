@@ -12,6 +12,14 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_sleep_smacks_are_occasional(self):
+        from gdo.video.Duck3DWorker import sleep_mouth_frame
+        self.assertEqual(0, sleep_mouth_frame(1))
+        self.assertEqual(4, sleep_mouth_frame(7.05))
+        self.assertEqual(0, sleep_mouth_frame(7.2))
+        self.assertEqual(4, sleep_mouth_frame(7.35))
+        self.assertEqual(0, sleep_mouth_frame(8))
+
     def test_fringe_snaps_away_then_returns_slowly(self):
         from gdo.video.Duck3DWorker import goth_hair_motion
         self.assertEqual((0.0, 0.0), goth_hair_motion(2.0))
@@ -43,6 +51,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='trip')
             source.update(mode='nerd')
             source.update(mode='tired')
+            source.update(mode='zzz')
             source.update(mode='cast')
             source.update(mode='zombie')
             source.update(mode='pirate')

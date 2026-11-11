@@ -183,12 +183,14 @@ when the meter is hidden no border is visible.
   the per-key defaults in `DuckAnimations.BASE_DEFAULTS` apply:
 
   - Persistent by default: `idle`, `quacking`, `sad`, `high`, `music`, `tipsy`,
-    `drunk`, `embarrassed`, `angry`, `inlove`, `trip`, `tired`, `shrug`, `plz`,
+    `drunk`, `embarrassed`, `angry`, `inlove`, `trip`, `tired`, `zzz`, `shrug`, `plz`,
     `teacher`, `xd`, `sorry`, `nerd`, `zombie`, `giveup`.
   - Temporary by default: `lol`, `cry`, `ouch`, `hello`, `rolleye`, `barf`, `cast`.
 
   Persistent animations require the Mira module. `$duck.lol` remains a
   temporary event.
+  `zzz` closes the eyes, floats Zs above the duck and occasionally moves the
+  beak as if sleepily smacking; it does not play a sound.
 - `$duck.event <key>` plays `idle`, `quacking`, `lol`, or `shrug` for two seconds, then
   restores the current `mira_mood` (`idle` if Mira is unavailable). A new event
   immediately replaces the previous event and its timer. A mood change during an

@@ -39,18 +39,19 @@ class MicTicker:
             return True
 
 
-def ticker_offset(started, now):
-    """Give readers two seconds before moving left at 30 pixels/second."""
-    return max(0.0, now - started - 2.0) * 30.0
+def ticker_offset(started, now, speed=30.0):
+    """Give readers two seconds before scrolling at the selected speed."""
+    return max(0.0, now - started - 2.0) * speed
 
 
-def ticker_finished(started, now, rendered_width):
-    return now - started >= 6.0 and ticker_offset(started, now) >= rendered_width
+def ticker_finished(started, now, rendered_width, speed=30.0):
+    return now - started >= 6.0 and ticker_offset(started, now, speed) >= rendered_width
 
 
 class TickerScroll:
     """Count rendered time, not time spent with a stopped/hidden renderer."""
-    def __init__(self):
+    def __init__(self, speed=30.0):
+        self.speed = speed
         self.started = None
         self.last_frame = None
         self.elapsed = 0.0
@@ -64,4 +65,4 @@ class TickerScroll:
             if delta <= .5:
                 self.elapsed += delta
             self.last_frame = now
-        return ticker_offset(0, self.elapsed), ticker_finished(0, self.elapsed, rendered_width)
+        return ticker_offset(0, self.elapsed, self.speed), ticker_finished(0, self.elapsed, rendered_width, self.speed)
