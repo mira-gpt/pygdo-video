@@ -231,7 +231,9 @@ class DesktopOverlay:
         layer.begin_transition()
         if isinstance(layer, VideoLayer):
             layer.start()
-        payload = self._image_payload(layer, layer.image, transition_start=True)
+            payload = {'effect': 'image', 'remove': True}
+        else:
+            payload = self._image_payload(layer, layer.image, transition_start=True)
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
@@ -396,7 +398,7 @@ class DesktopOverlay:
             MicrophoneMeter.unsubscribe(wake.set)
 
     def _pump_video(self, layer):
-        last = -1
+        last = 0
         while True:
             image, generation, finished = layer.snapshot()
             with self.lock:
@@ -411,7 +413,7 @@ class DesktopOverlay:
                     return
                 if generation != last:
                     try:
-                        self._send_payload(self._image_payload(layer, image))
+                        self._send_payload(self._image_payload(layer, image, transition_start=last == 0))
                     except (RuntimeError, ValueError):
                         self.media_layer = None
                         layer.close()

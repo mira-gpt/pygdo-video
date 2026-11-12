@@ -40,6 +40,11 @@ class VideoLayer(ImageLayer):
             self.thread = threading.Thread(target=self._read, daemon=True, name='video-media-decoder')
             self.thread.start()
 
+    def begin_transition(self):
+        # The decoder may take longer than the entrance itself to start.
+        with self.lock:
+            self.transition_start = None
+
     def _read(self):
         size = self.FRAME_SIZE[0] * self.FRAME_SIZE[1] * 4
         try:
@@ -88,6 +93,10 @@ class VideoLayer(ImageLayer):
         with self.lock:
             if self.finished:
                 return False
+            if self.generation == 0:
+                return True
+            if self.transition_start is None:
+                super().begin_transition()
             return super().draw(frame)
 
     def snapshot(self):

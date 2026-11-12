@@ -4,7 +4,9 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+from PIL import Image
 
 from gdo.video.MediaLayer import VideoLayer, load_media
 from gdo.video.VideoConnector import VideoConnector
@@ -12,6 +14,39 @@ from gdo.video.DesktopOverlay import DesktopOverlay
 
 
 class MediaLayerTest(unittest.TestCase):
+    def test_video_transition_waits_for_first_drawable_frame(self):
+        layer = VideoLayer('/unused', transition='throw')
+        layer.begin_transition()
+        frame = Image.new('RGBA', (640, 360))
+        with patch('gdo.video.ImageLayer.time.monotonic', return_value=100):
+            layer.draw(frame)
+            self.assertIsNone(layer.transition_start)
+            layer.generation = 1
+            layer.draw(frame)
+            self.assertEqual(100, layer.transition_start)
+
+    def test_desktop_waits_for_first_frame_to_start_transition(self):
+        overlay = DesktopOverlay()
+        overlay.is_running = MagicMock(return_value=True)
+        overlay._send_payload = MagicMock()
+        layer = VideoLayer('/unused', transition='throw')
+        layer.start = MagicMock()
+        image = Image.new('RGBA', (10, 10), 'red')
+        layer.snapshot = MagicMock(side_effect=[(image, 0, False), (image, 1, False),
+                                                (image, 2, False), (image, 2, True)])
+        with patch('gdo.video.DesktopOverlay.threading.Thread') as thread, \
+             patch('gdo.video.DesktopOverlay.time.sleep'):
+            overlay.put_effect('media', layer)
+            self.assertEqual({'effect': 'image', 'remove': True}, overlay._send_payload.call_args.args[0])
+            thread.assert_called_once()
+            overlay._pump_video(layer)
+        messages = [call.args[0] for call in overlay._send_payload.call_args_list]
+        frames = [message for message in messages if 'png' in message]
+        self.assertEqual(2, len(frames))
+        self.assertTrue(frames[0]['transition_start'])
+        self.assertFalse(frames[1]['transition_start'])
+        self.assertEqual({'effect': 'image', 'remove': True}, messages[-1])
+
     @staticmethod
     def make_video(path):
         subprocess.run(['ffmpeg', '-y', '-v', 'error', '-f', 'lavfi', '-i',
