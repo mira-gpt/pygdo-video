@@ -454,8 +454,8 @@ and substitutes a localized phrase for URL schemes and
 bare-domain URLs; the visible ticker remains unchanged. The pending speech queue is
 bounded to 16 chunks and is cleared when audio is disabled or
 the live mode is left. Consecutive sentences are grouped into speech chunks of
-up to 200 characters; longer sentences are split. Sentence boundaries use `.`,
-`?` and `!`, so this simple rule can also split decimals. A chunk already
+up to 200 characters; longer sentences are split. Sentence boundaries use `?`
+and `!`, or `.` followed by whitespace or the end of the text. A chunk already
 playing may finish.
 Set `video_commentary_log` to the intended local session JSONL file; an empty
 value disables the follower. The Dog process must have permission to read it.

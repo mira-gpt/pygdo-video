@@ -122,8 +122,11 @@ class CommentaryTickerTest(unittest.TestCase):
 
     def test_speech_splits_sentences_and_bounds_long_ones(self):
         from gdo.video.CommentaryFollower import speech_sentences
-        self.assertEqual(['Hello! How are you? Fine. Next'],
+        self.assertEqual(['Hello! How are you? Fine.Next'],
                          list(speech_sentences('Hello! How are you? Fine.Next')))
+        self.assertEqual(['Version 1.23 bleibt. Weiter!'],
+                         list(speech_sentences('Version 1.23 bleibt. Weiter!')))
+        self.assertEqual(['Wirklich?! Ja.'], list(speech_sentences('Wirklich?! Ja.')))
         parts = list(speech_sentences('a' * 450 + '.'))
         self.assertTrue(all(len(part) <= 200 for part in parts))
         self.assertEqual('a' * 450 + '.', ''.join(parts))

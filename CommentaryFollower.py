@@ -34,7 +34,7 @@ def speech_filter(text, url_phrase):
 def speech_sentences(text):
     """Group sentences into bounded speech-sized chunks."""
     chunk = ''
-    for sentence in re.findall(r'[^.!?]+[.!?]+|[^.!?]+$', text):
+    for sentence in re.split(r'(?<=[!?])(?=[^!?]|$)|(?<=\.)(?=\s|$)', text):
         for part in textwrap.wrap(sentence.strip(), width=200):
             if chunk and len(chunk) + 1 + len(part) > 200:
                 yield chunk
