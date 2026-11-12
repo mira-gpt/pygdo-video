@@ -74,7 +74,8 @@ class DesktopOverlay:
                         text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'cohost') else ('', None)
                         next_text = CommentaryTicker.peek() if sequence is not None else ''
                         pending = CommentaryTicker.pending_count() if sequence is not None else 0
-                        self._send_payload({'effect': 'thoughts', 'text': text, 'sequence': sequence, 'next': next_text, 'pending': pending})
+                        from gdo.video.CodexActivity import CodexActivity
+                        self._send_payload({'effect': 'thoughts', 'text': text, 'sequence': sequence, 'next': next_text, 'pending': pending, 'activity': CodexActivity.status})
             except (ImportError, RuntimeError, OSError):
                 return
 

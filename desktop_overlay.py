@@ -161,6 +161,11 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.set_source_rgba(.06, .06, .06, .9)
                 context.rectangle(12, 326, mic_left - 20, 24)
                 context.fill()
+                if layer.get('activity') in ('active', 'idle'):
+                    context.set_source_rgb(*((.85, .2, .2) if layer['activity'] == 'active' else (.2, .75, .3)))
+                    context.set_line_width(2)
+                    context.rectangle(13, 327, mic_left - 22, 22)
+                    context.stroke()
                 context.save()
                 context.rectangle(16, 327, mic_left - 28, 20)
                 context.clip()
@@ -382,9 +387,11 @@ def main(image_path, screensharing=False, window_suffix=''):
                         sequence = request.get('sequence')
                         next_text = request.get('next', '')
                         pending = request.get('pending', 0)
+                        activity = request.get('activity')
                         layers.put('thoughts', {'text': text if isinstance(text, str) else '', 'sequence': sequence if type(sequence) is int else None,
                                                 'next': next_text if isinstance(next_text, str) else '',
-                                                'pending': max(0, min(64, pending)) if type(pending) is int else 0})
+                                                'pending': max(0, min(64, pending)) if type(pending) is int else 0,
+                                                'activity': activity if activity in ('active', 'idle') else 'unknown'})
                 elif request.get('effect') == 'mic':
                     if request.get('remove') is True:
                         layers.remove('mic')

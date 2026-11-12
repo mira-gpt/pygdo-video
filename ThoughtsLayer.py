@@ -31,6 +31,10 @@ class ThoughtsLayer:
             self.text, self.started = text, now
         draw = ImageDraw.Draw(frame)
         draw.rectangle((12, top, right, min(height - 1, top + 24)), fill=(16, 16, 16))
+        from gdo.video.CodexActivity import CodexActivity
+        if CodexActivity.status in ('active', 'idle'):
+            color = (217, 51, 51) if CodexActivity.status == 'active' else (51, 191, 77)
+            draw.rectangle((12, top, right, min(height - 1, top + 24)), outline=color, width=2)
         surface = Image.new('RGBA', (available, 13))
         painter = ImageDraw.Draw(surface)
         length = painter.textlength(text, font=self.font)

@@ -87,6 +87,7 @@ class module_video(GDO_Module):
         from gdo.base.Application import Application
         Application.EVENTS.add_timer_async(1, self.video_timer_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.add_timer_async(2, self.commentary_tick, Application.EVENTS.FOREVER)
+        Application.EVENTS.add_timer_async(3, self.codex_activity_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
@@ -103,6 +104,15 @@ class module_video(GDO_Module):
                                             self.get_config_value('video_timer_frequency'))
             if message:
                 MicTicker.enqueue(message)
+
+    async def codex_activity_tick(self):
+        from gdo.base.Application import Application
+        from gdo.video.CodexActivity import CodexActivity
+        if Application.IS_DOG:
+            path = self.get_config_val('video_commentary_log') or ''
+            if path and not os.path.isabs(path):
+                path = Application.file_path(path)
+            CodexActivity.poll(path)
 
     async def commentary_tick(self):
         from gdo.base.Application import Application
