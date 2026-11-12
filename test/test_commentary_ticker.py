@@ -10,6 +10,17 @@ from gdo.video.CommentaryFollower import commentary
 
 
 class CommentaryTickerTest(unittest.TestCase):
+    def test_announcement_requires_active_speech_mode(self):
+        from gdo.video.CommentaryFollower import CommentaryFollower
+        worker = CommentaryFollower('/unused', 'show')
+        self.assertFalse(worker.announce('Läuft gerade: Artist - Song'))
+        worker.set_audio(True, 'ein Link', 'Wie schön!', 'de')
+        self.assertTrue(worker.announce('Läuft gerade: Artist - Song'))
+        self.assertEqual('Läuft gerade: Artist - Song', CommentaryTicker.snapshot()[0])
+        self.assertEqual('Läuft gerade: Artist - Song', worker.next_speech())
+        worker.set_mode('off')
+        self.assertFalse(worker.announce('Anderer Song'))
+
     def test_gtk_keeps_thoughts_layer_during_animation(self):
         from gdo.video.LayerStack import PERSISTENT_LAYERS
         self.assertIn('thoughts', PERSISTENT_LAYERS)

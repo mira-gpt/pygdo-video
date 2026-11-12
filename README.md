@@ -462,6 +462,10 @@ Use `$video.thoughts 1 --audio=1` to also read new updates aloud; audio defaults
 to off, and `$video.thoughts 1 --audio=0` disables it. The enabled Audio module
 and its configured output are required. Speech uses `audio_microphone_language`;
 this chooses the voice language but does not translate the text.
+Set `audio_announce_songs` in the Audio module to enable announcements of new
+song titles in this panel and its speech queue. It defaults to off and requires
+both the thoughts panel and its audio to be enabled; the normal music ticker is
+unchanged. Announcements are queued, not guaranteed to be displayed or heard.
 Speech strips paired Markdown emphasis markers, preserves standalone asterisks,
 and substitutes a localized phrase for URL schemes and
 bare-domain URLs; the visible ticker remains unchanged. The pending speech queue is

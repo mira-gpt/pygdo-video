@@ -100,6 +100,17 @@ class CommentaryFollower(Thread):
                 return self.speech_queue.popleft()
             return None
 
+    def announce(self, text):
+        """Queue an opted-in announcement through the existing ticker and speech path."""
+        with self.mode_lock:
+            if not self.audio_enabled or self.mode not in LIVE_MODES or self.stop_event.is_set():
+                return False
+            for part in textwrap.wrap(text, width=300):
+                CommentaryTicker.set(part)
+            self.speech_queue.extend(speech_sentences(speech_filter(
+                text, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
+            return True
+
     def stop(self):
         self.set_mode('off')
         self.stop_event.set()

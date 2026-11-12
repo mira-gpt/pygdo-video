@@ -94,6 +94,7 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
         Application.EVENTS.subscribe('audio_speech_envelope', self.on_speech_envelope)
+        Application.EVENTS.subscribe('mira_current_song_changed', self.on_current_song_changed)
         Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
         Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
@@ -116,6 +117,17 @@ class module_video(GDO_Module):
             if path and not os.path.isabs(path):
                 path = Application.file_path(path)
             CodexActivity.poll(path)
+
+    async def on_current_song_changed(self, artist, title):
+        from gdo.base.ModuleLoader import ModuleLoader
+        from gdo.base.Trans import Trans
+        audio = ModuleLoader.instance().get_module('audio')
+        worker = getattr(self, '_commentary_follower', None)
+        if (audio and audio.is_enabled() and audio.get_config_value('audio_announce_songs')
+                and self.get_config_value('video_thoughts_overlay')
+                and self.get_config_value('video_thoughts_audio') and worker):
+            language = audio.get_config_val('audio_microphone_language') or 'en'
+            worker.announce(Trans.tiso2(language, 'mira_current_song_playing', (artist, title)))
 
     async def commentary_tick(self):
         from gdo.base.Application import Application
