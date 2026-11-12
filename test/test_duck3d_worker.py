@@ -25,6 +25,15 @@ class GothMotionTest(unittest.TestCase):
         self.assertAlmostEqual(.45, shower_water_height(30))
         self.assertEqual(1.35, shower_water_height(1000))
 
+    def test_shower_head_lifts_shakes_and_returns(self):
+        from gdo.video.Duck3DWorker import shower_head_motion
+        self.assertEqual((0.0, 0.0), shower_head_motion(2))
+        self.assertLess(shower_head_motion(7.75)[0], -29)
+        self.assertNotEqual(0, shower_head_motion(7.2)[1])
+        self.assertGreater(abs(shower_head_motion(7.25)[1]), 10)
+        self.assertEqual((0.0, 0.0), shower_head_motion(10))
+        self.assertAlmostEqual(shower_head_motion(7.2)[1], shower_head_motion(24.2)[1])
+
     def test_coffee_has_a_sigh_and_a_sustained_wakeful_spell(self):
         from gdo.video.Duck3DWorker import coffee_pose
         self.assertEqual((.3, 0.0), coffee_pose(1))

@@ -100,6 +100,15 @@ def shower_water_height(elapsed):
     return min(1.35, max(0.0, elapsed) * .015)
 
 
+def shower_head_motion(elapsed):
+    phase = max(0.0, elapsed) % 17.0
+    if not 6.0 <= phase < 9.5:
+        return 0.0, 0.0
+    progress = (phase - 6.0) / 3.5
+    envelope = math.sin(math.pi * progress) ** 2
+    return -30 * envelope, 16 * envelope * math.sin(progress * math.tau * 6)
+
+
 def main():
     import gltf
     from panda3d.core import AmbientLight, CardMaker, DirectionalLight, Geom, GeomNode, GeomTriangles, GeomVertexData, GeomVertexFormat, GeomVertexWriter, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
@@ -1054,7 +1063,7 @@ def main():
 
     threading.Thread(target=receive, daemon=True).start()
     start = time.monotonic()
-    nodes = [(root, 'R'), (root, 'Z'), (root, 'P'), (root, 'Sz'), (head_pivot, 'P')]
+    nodes = [(root, 'R'), (root, 'Z'), (root, 'P'), (root, 'Sz'), (head_pivot, 'P'), (head_pivot, 'H')]
     head_node = root.find('**/Head')
     if not head_node.isEmpty():
         nodes.append((head_node, 'H'))
@@ -1506,8 +1515,11 @@ def main():
                 head_pivot.setP(-25 * head_toss + 7 * goth_glance)
             elif mode == 'coffee':
                 head_pivot.setP(5 * coffee_pose(now - mode_start)[1])
+            elif mode == 'shower':
+                head_pivot.setP(shower_head_motion(now - mode_start)[0])
             else:
                 head_pivot.setP(0)
+            head_pivot.setH(shower_head_motion(now - mode_start)[1] if mode == 'shower' else 0)
             if mode == 'ouch' or (outgoing_mode == 'ouch' and blend < 1):
                 pain_marks.show()
                 pain_marks.setColorScale(1, 1, 1, blend if mode == 'ouch' else 1 - blend)
