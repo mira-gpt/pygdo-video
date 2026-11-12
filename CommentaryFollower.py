@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import textwrap
+from collections import deque
 
 from gdo.base.Thread import Thread
 from gdo.video.CommentaryTicker import CommentaryTicker
@@ -32,6 +33,8 @@ class CommentaryFollower(Thread):
         self.path = path
         self.mode = mode
         self.mode_lock = threading.Lock()
+        self.audio_enabled = False
+        self.speech_queue = deque(maxlen=16)
         self.stop_event = threading.Event()
         self.ready = threading.Event()
         self.name = 'video-commentary-follower'
@@ -41,6 +44,19 @@ class CommentaryFollower(Thread):
             self.mode = mode
             if mode not in LIVE_MODES:
                 CommentaryTicker.clear()
+                self.speech_queue.clear()
+
+    def set_audio(self, enabled):
+        with self.mode_lock:
+            self.audio_enabled = bool(enabled)
+            if not self.audio_enabled:
+                self.speech_queue.clear()
+
+    def next_speech(self):
+        with self.mode_lock:
+            if self.audio_enabled and self.mode in LIVE_MODES and self.speech_queue:
+                return self.speech_queue.popleft()
+            return None
 
     def stop(self):
         self.set_mode('off')
@@ -73,6 +89,8 @@ class CommentaryFollower(Thread):
                                         if self.mode in LIVE_MODES and not self.stop_event.is_set():
                                             for part in textwrap.wrap(text, width=300):
                                                 CommentaryTicker.set(part)
+                                            if self.audio_enabled:
+                                                self.speech_queue.extend(textwrap.wrap(text, width=200))
                                 pending, oversized = b'', False
             except OSError:
                 self.stop_event.wait(2)

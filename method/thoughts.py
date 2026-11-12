@@ -9,10 +9,12 @@ class thoughts(Method):
         return 'owner'
 
     def gdo_parameters(self):
-        return [GDT_Bool('enabled').not_null().positional()]
+        return [GDT_Bool('enabled').not_null().positional(),
+                GDT_Bool('audio').not_null().initial('0')]
 
     def gdo_execute(self):
-        args = ('video.ipc_thoughts', ['1' if self.param_value('enabled') else '0'])
+        args = ('video.ipc_thoughts', ['1' if self.param_value('enabled') else '0',
+                                       '1' if self.param_value('audio') else '0'])
         if Application.db().is_in_transaction():
             Application.defer_after_commit(IPC.send_to_dog, *args)
         else:

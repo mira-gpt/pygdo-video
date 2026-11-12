@@ -68,6 +68,7 @@ class module_video(GDO_Module):
             GDT_Duration('video_timer_frequency').not_null().min(10).initial('5m').tooltip('tt_video_timer_frequency'),
             GDT_Path('video_commentary_log').maxlen(2048).tooltip('tt_video_commentary_log'),
             GDT_Bool('video_thoughts_overlay').not_null().initial('0').tooltip('tt_video_thoughts_overlay'),
+            GDT_Bool('video_thoughts_audio').not_null().initial('0').tooltip('tt_video_thoughts_audio'),
         ]
 
     def gdo_user_config(self) -> list[GDT]:
@@ -141,6 +142,20 @@ class module_video(GDO_Module):
             worker.start()
         if worker:
             worker.set_mode(mode)
+            audio = ModuleLoader.instance().get_module('audio')
+            enabled = bool(self.get_config_value('video_thoughts_overlay') and
+                           self.get_config_value('video_thoughts_audio') and
+                           audio and audio.is_enabled())
+            language = audio.get_config_val('audio_microphone_language') if enabled else None
+            if enabled:
+                from gdo.audio.language import VOICES
+                enabled = language in VOICES
+            worker.set_audio(enabled)
+            if enabled:
+                from gdo.audio.PlaybackTasks import PlaybackTasks
+                from gdo.base.IPC import IPC
+                if not PlaybackTasks.tasks and (text := worker.next_speech()):
+                    IPC.send_to_dog('audio.ipc_say', [text, language])
 
     async def on_live_join_welcome(self, user, channel):
         """Greet actual joins only during a live show, with a global cooldown."""

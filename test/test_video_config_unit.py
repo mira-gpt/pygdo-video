@@ -14,7 +14,7 @@ class VideoConfigTest(unittest.TestCase):
             fields = {field._name: field for field in module_video().gdo_module_config()}
         self.assertEqual(set(fields), {'video_mode', 'video_desktop_url', 'video_bg_image_url', 'video_overlay_image_url', 'video_file_url',
                                       'video_webcam_url', 'video_output_device',
-                                  'video_duck_overlay', 'video_mic_overlay', 'video_duck3d_overlay', 'video_duck3d_pythonpath', 'video_output_preview', 'video_preview_w', 'video_preview_h', 'video_live', 'video_timer_frequency', 'video_commentary_log', 'video_thoughts_overlay'})
+                                  'video_duck_overlay', 'video_mic_overlay', 'video_duck3d_overlay', 'video_duck3d_pythonpath', 'video_output_preview', 'video_preview_w', 'video_preview_h', 'video_live', 'video_timer_frequency', 'video_commentary_log', 'video_thoughts_overlay', 'video_thoughts_audio'})
         self.assertEqual(fields['video_mode'].get_initial(), 'off')
         self.assertIsInstance(fields['video_commentary_log'], GDT_Path)
         self.assertEqual(fields['video_preview_w'].get_initial(), '320')

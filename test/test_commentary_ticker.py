@@ -106,6 +106,46 @@ class CommentaryTickerTest(unittest.TestCase):
             worker.set_mode(mode)
             self.assertEqual(('', None), CommentaryTicker.snapshot())
 
+    def test_speech_is_opt_in_and_cleared_on_mode_change(self):
+        from gdo.video.CommentaryFollower import CommentaryFollower
+        worker = CommentaryFollower('/unused', 'show')
+        worker.set_audio(True)
+        worker.speech_queue.append('hello')
+        self.assertEqual('hello', worker.next_speech())
+        worker.speech_queue.append('old')
+        worker.set_mode('off')
+        worker.set_mode('show')
+        self.assertIsNone(worker.next_speech())
+        worker.speech_queue.append('old')
+        worker.set_audio(False)
+        self.assertIsNone(worker.next_speech())
+
+    def test_new_follower_commentary_is_queued_for_speech_only_when_enabled(self):
+        from gdo.video.CommentaryFollower import CommentaryFollower
+        event = {'type': 'response_item', 'payload': {'type': 'message', 'role': 'assistant', 'phase': 'commentary', 'content': [{'type': 'output_text', 'text': 'Hello show'}]}}
+        observed = threading.Event()
+        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as log:
+            worker = CommentaryFollower(log.name, 'show')
+            with patch('gdo.base.Thread.Thread.run'), patch.object(CommentaryTicker, 'set', side_effect=lambda text: observed.set()):
+                worker.start()
+                try:
+                    self.assertTrue(worker.ready.wait(2))
+                    log.write(json.dumps(event) + '\n')
+                    log.flush()
+                    self.assertTrue(observed.wait(2))
+                    self.assertIsNone(worker.next_speech())
+                    observed.clear()
+                    worker.set_audio(True)
+                    log.write(json.dumps(event) + '\n')
+                    log.flush()
+                    self.assertTrue(observed.wait(2))
+                    # The ticker callback runs immediately before the speech enqueue.
+                    with worker.mode_lock:
+                        self.assertEqual(['Hello show'], list(worker.speech_queue))
+                finally:
+                    worker.stop()
+                    worker.join(timeout=2)
+
     def test_follower_skips_history_and_reads_only_new_live_commentary(self):
         from gdo.video.CommentaryFollower import CommentaryFollower
         observed = threading.Event()
@@ -160,6 +200,19 @@ class CommentaryTickerTest(unittest.TestCase):
         from gdo.video.method.thoughts import thoughts
         with patch('gdo.base.Application.Application.get_mode', return_value=None):
             method = thoughts()
+        method.param_value = MagicMock(side_effect=lambda name: name == 'enabled')
+        method.reply = MagicMock()
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch('gdo.base.Application.Application.db', return_value=db), \
+             patch('gdo.video.method.thoughts.IPC.send_to_dog') as send:
+            method.gdo_execute()
+        send.assert_called_once_with('video.ipc_thoughts', ['1', '0'])
+
+    def test_thoughts_command_queues_opt_in_audio(self):
+        from gdo.video.method.thoughts import thoughts
+        with patch('gdo.base.Application.Application.get_mode', return_value=None):
+            method = thoughts()
         method.param_value = MagicMock(return_value=True)
         method.reply = MagicMock()
         db = MagicMock()
@@ -167,7 +220,7 @@ class CommentaryTickerTest(unittest.TestCase):
         with patch('gdo.base.Application.Application.db', return_value=db), \
              patch('gdo.video.method.thoughts.IPC.send_to_dog') as send:
             method.gdo_execute()
-        send.assert_called_once_with('video.ipc_thoughts', ['1'])
+        send.assert_called_once_with('video.ipc_thoughts', ['1', '1'])
 
     def test_only_lock_owner_starts_follower(self):
         import asyncio
@@ -175,6 +228,7 @@ class CommentaryTickerTest(unittest.TestCase):
         from gdo.video.module_video import module_video
         module = module_video()
         module.get_config_val = MagicMock(return_value='/tmp/fixture.jsonl')
+        module.get_config_value = MagicMock(return_value=False)
         loader = MagicMock()
         loader.get_module.return_value.get_config_val.return_value = 'show'
         worker = MagicMock()

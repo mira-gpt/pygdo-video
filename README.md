@@ -445,6 +445,12 @@ Close the preview window to stop it. Desktop capture may show private content.
 The independently controlled `$video.thoughts 1` panel shows audience-facing
 Codex commentary on the left; `$video.thoughts 0` hides it. The name is playful:
 it does not display private reasoning. The panel remains visible between updates.
+Use `$video.thoughts 1 --audio=1` to also read new updates aloud; audio defaults
+to off, and `$video.thoughts 1 --audio=0` disables it. The enabled Audio module
+and its configured output are required. Speech uses `audio_microphone_language`;
+this chooses the voice language but does not translate the text. The pending
+speech queue is bounded to 16 chunks and is cleared when audio is disabled or
+the live mode is left. A sentence already playing may finish.
 Set `video_commentary_log` to the intended local session JSONL file; an empty
 value disables the follower. The Dog process must have permission to read it.
 Dog starts a follower thread for that path, starting at the end and accepting
