@@ -143,6 +143,8 @@ class CommentaryTickerTest(unittest.TestCase):
         self.assertEqual('ein Link ein Link', speech_filter('ftp://example.org/a file:///private/a', 'ein Link'))
         self.assertEqual('bold and italic; 3 * 4; lone *',
                          speech_filter('**bold** and *italic*; 3 * 4; lone *', 'a link'))
+        self.assertEqual(['Hallo freu'], list(speech_sentences(speech_filter('Hallo :)', 'ein Link', 'freu'))))
+        self.assertEqual(['Hi smile'], list(speech_sentences(speech_filter('Hi :)', 'a link', 'smile'))))
 
     def test_speech_url_phrase_is_independent_of_ticker(self):
         from gdo.video.CommentaryFollower import CommentaryFollower, speech_filter

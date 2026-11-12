@@ -20,15 +20,16 @@ SPEECH_BOLD = re.compile(r'(?<!\*)\*\*([^\s*](?:[^*]*?[^\s*])?)\*\*(?!\*)')
 SPEECH_ITALIC = re.compile(r'(?<!\*)\*([^\s*](?:[^*]*?[^\s*])?)\*(?!\*)')
 
 
-def speech_filter(text, url_phrase):
-    """Remove Markdown emphasis and replace web addresses before splitting."""
+def speech_filter(text, url_phrase, smile_phrase='smile'):
+    """Prepare commentary for speech without changing the visible text."""
     def replace_url(match):
         url = match.group(0)
         suffix = url[len(url.rstrip('.,!?;:')):]
         return url_phrase + suffix
     text = SPEECH_BOLD.sub(r'\1', text)
     text = SPEECH_ITALIC.sub(r'\1', text)
-    return SPEECH_URL.sub(replace_url, text)
+    text = SPEECH_URL.sub(replace_url, text)
+    return re.sub(r'\s*:\)\s*', lambda _: f' {smile_phrase} ', text)
 
 
 def speech_sentences(text):
@@ -67,6 +68,7 @@ class CommentaryFollower(Thread):
         self.mode_lock = threading.Lock()
         self.audio_enabled = False
         self.audio_url_phrase = 'a link'
+        self.audio_smile_phrase = 'smile'
         self.speech_queue = deque(maxlen=16)
         self.stop_event = threading.Event()
         self.ready = threading.Event()
@@ -79,10 +81,11 @@ class CommentaryFollower(Thread):
                 CommentaryTicker.clear()
                 self.speech_queue.clear()
 
-    def set_audio(self, enabled, url_phrase='a link'):
+    def set_audio(self, enabled, url_phrase='a link', smile_phrase='smile'):
         with self.mode_lock:
             self.audio_enabled = bool(enabled)
             self.audio_url_phrase = url_phrase
+            self.audio_smile_phrase = smile_phrase
             if not self.audio_enabled:
                 self.speech_queue.clear()
 
@@ -124,7 +127,7 @@ class CommentaryFollower(Thread):
                                             for part in textwrap.wrap(text, width=300):
                                                 CommentaryTicker.set(part)
                                             if self.audio_enabled:
-                                                self.speech_queue.extend(speech_sentences(speech_filter(text, self.audio_url_phrase)))
+                                                self.speech_queue.extend(speech_sentences(speech_filter(text, self.audio_url_phrase, self.audio_smile_phrase)))
                                 pending, oversized = b'', False
             except OSError:
                 self.stop_event.wait(2)
