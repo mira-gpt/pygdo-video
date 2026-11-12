@@ -24,10 +24,23 @@ local X11 desktop and publishes a PNG under `gdo/mira/public`, returning its
 URL. The whole desktop may contain passwords or other private information;
 check the screen before using this command. The returned image is public.
 
-The upper-left live-mode indicator shows `off`, `work`, `show`, or `discuss`.
+The upper-left live-mode indicator shows `off`, `work`, `show`, `discuss`, or `cohost`.
 It is black normally and red when the existing microphone meter reports
 nonzero input. It does not start microphone capture; black can also mean the
 meter is unavailable, not necessarily that the microphone is muted.
+
+`$video.record 1` explicitly starts a private local Matroska recording in
+the audio session user's `~/Videos/Mira/`; `$video.record 0` stops and finalizes it, and
+`$video.record` reports status. It currently requires a running screensharing
+overlay and a configured local X11 display; use it through the running Dog
+client. It captures the full desktop,
+including overlays and any private windows, and mixes the desktop session's
+default system-output monitor and default microphone. If both audio session
+users are explicitly configured, they must match. The output path is reported at start. While the encoder is
+running, the live indicator alternates every two seconds with `● REC`.
+Starting a recording does not start YouTube or a virtual camera. Review the
+screen and obtain participant consent before recording. A crash or forced stop
+may leave an incomplete file; use VLC to check the saved recording.
 
 # Video (For ALs)
 

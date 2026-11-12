@@ -80,8 +80,10 @@ class module_video(GDO_Module):
     def gdo_init(self):
         from gdo.video.YouTubeSender import YouTubeSender
         from gdo.video.VideoTimer import VideoTimer
+        from gdo.video.Recording import Recording
         self.youtube_sender = YouTubeSender()
         self.video_timer = VideoTimer()
+        self.recorder = Recording()
         Connector.register(Video, is_text=False)
 
     def gdo_subscribe_events(self):
@@ -312,6 +314,7 @@ class module_video(GDO_Module):
             raise ValueError('Video mode is off')
         if mode == 'screensharing':
             worker = DesktopOverlay(screensharing=True)
+            worker.recording_active = lambda: bool(getattr(self, 'recorder', None) and self.recorder.active())
             worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
             try:
@@ -332,6 +335,7 @@ class module_video(GDO_Module):
                 or self.get_config_value('video_duck_overlay')):
             raise ValueError('Video file, webcam and duck layers are not implemented yet')
         worker = VideoConnector()
+        worker.recording_active = lambda: bool(getattr(self, 'recorder', None) and self.recorder.active())
         worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
         worker.start(
             self.get_config_val('video_desktop_url'), self.get_config_val('video_bg_image_url'),

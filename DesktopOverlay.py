@@ -30,6 +30,7 @@ class DesktopOverlay:
         self.liveshow_enabled = False
         self.virtual_output = None
         self.live_mode = 'off'
+        self.recording_active = lambda: False
         self.thoughts_enabled = False
         self._indicator_stop = threading.Event()
 
@@ -68,7 +69,8 @@ class DesktopOverlay:
                 with self.lock:
                     if not self.is_running():
                         return
-                    self._send_payload({'effect': 'live_indicator', 'mode': state[0], 'active': state[1]})
+                    self._send_payload({'effect': 'live_indicator', 'mode': state[0], 'active': state[1],
+                                        'recording': self.recording_active()})
                     if self.thoughts_enabled:
                         from gdo.video.CommentaryTicker import CommentaryTicker
                         text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'cohost') else ('', None)

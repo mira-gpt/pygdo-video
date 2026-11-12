@@ -19,6 +19,7 @@ from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango, PangoCairo
 from LayerStack import LayerStack, PERSISTENT_LAYERS
 from DrawingProtocol import validate_line
 from MediaTransition import media_transition
+from LiveIndicator import indicator_text
 from CRTOff import crt_state
 from TranscriptFade import transcript_alpha
 from MicWarning import MicWarning
@@ -75,11 +76,12 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
                 context.set_font_size(16)
                 context.move_to(10, 25)
-                context.text_path(layer['mode'])
+                label = indicator_text(layer['mode'], layer.get('recording', False), time.monotonic())
+                context.text_path(label)
                 context.set_source_rgb(1, 1, 1)
                 context.set_line_width(2)
                 context.stroke_preserve()
-                context.set_source_rgb(*( (0.86, 0, 0) if layer['active'] else (0, 0, 0) ))
+                context.set_source_rgb(*( (0.86, 0, 0) if layer['active'] or label == '● REC' else (0, 0, 0) ))
                 context.fill()
                 context.restore()
                 continue
@@ -378,7 +380,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                 elif request.get('effect') == 'liveshow' and isinstance(request.get('enabled'), bool):
                     show_state['liveshow'] = request['enabled']
                 elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'cohost') and isinstance(request.get('active'), bool):
-                    layers.put('live_indicator', {'mode': request['mode'], 'active': request['active']}, z=8000)
+                    layers.put('live_indicator', {'mode': request['mode'], 'active': request['active'],
+                                                  'recording': request.get('recording') is True}, z=8000)
                 elif request.get('effect') == 'thoughts':
                     if request.get('remove') is True:
                         layers.remove('thoughts')

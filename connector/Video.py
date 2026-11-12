@@ -28,4 +28,11 @@ class Video(Connector):
 
     async def gdo_disconnect(self, quit_message):
         from gdo.video.module_video import module_video
-        await asyncio.to_thread(module_video.instance().connector.stop)
+        module = module_video.instance()
+        try:
+            await asyncio.to_thread(module.recorder.stop)
+        except (OSError, RuntimeError) as error:
+            Logger.warning(f'Video recording could not be finalized: {error}')
+            if module.recorder.active():
+                return
+        await asyncio.to_thread(module.connector.stop)

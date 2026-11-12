@@ -33,6 +33,7 @@ class VideoConnector:
         self.duck3d_pythonpath = None
         self.liveshow_enabled = False
         self.live_mode = 'off'
+        self.recording_active = lambda: False
 
     @staticmethod
     def virtual_camera_allowed():
@@ -278,7 +279,7 @@ class VideoConnector:
             if thoughts:
                 thoughts.live_mode = mode
         if self.is_running():
-            self.put_effect('live_indicator', LiveIndicator(mode), z=8000)
+            self.put_effect('live_indicator', LiveIndicator(mode, self.recording_active), z=8000)
 
     def duck(self, enabled):
         from gdo.video.DuckLayer import DuckLayer

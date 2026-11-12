@@ -1,10 +1,16 @@
 """Small live-mode indicator; never starts microphone capture."""
 from PIL import ImageDraw, ImageFont
+import time
+
+
+def indicator_text(mode, recording, now):
+    return '● REC' if recording and int(now / 2) % 2 else mode
 
 
 class LiveIndicator:
-    def __init__(self, mode='off'):
+    def __init__(self, mode='off', recording_active=None):
         self.mode = mode
+        self.recording_active = recording_active or (lambda: False)
         try:
             self.font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 16)
         except OSError:
@@ -17,6 +23,9 @@ class LiveIndicator:
         except (ImportError, RuntimeError):
             status, level = 'unknown', 0
         color = (220, 0, 0) if status == 'on' and level > 0 else (0, 0, 0)
-        ImageDraw.Draw(frame).text((10, 10), self.mode, font=self.font, fill=color,
+        text = indicator_text(self.mode, self.recording_active(), time.monotonic())
+        if text == '● REC':
+            color = (220, 0, 0)
+        ImageDraw.Draw(frame).text((10, 10), text, font=self.font, fill=color,
                                    stroke_width=1, stroke_fill=(255, 255, 255))
         return True
