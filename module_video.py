@@ -90,6 +90,7 @@ class module_video(GDO_Module):
         from gdo.base.Application import Application
         Application.EVENTS.add_timer_async(1, self.video_timer_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.add_timer_async(2, self.commentary_tick, Application.EVENTS.FOREVER)
+        Application.EVENTS.add_timer_async(.25, self.thought_speech_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.add_timer_async(3, self.codex_activity_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
@@ -149,6 +150,7 @@ class module_video(GDO_Module):
         mode = mira.get_config_val('mira_livemode') if mira else None
         worker = getattr(self, '_commentary_follower', None)
         if worker and (worker.path != path or not worker.is_alive()):
+            self.cancel_thought_prefetch()
             worker.stop()
             worker.join(timeout=1)
             self._commentary_follower = worker = None
@@ -170,11 +172,43 @@ class module_video(GDO_Module):
             url_phrase = Trans.tiso2(language or 'en', 'mira_audio_some_url') if enabled else 'a link'
             smile_phrase = Trans.tiso2(language or 'en', 'mira_audio_emoji_smile') if enabled else 'smile'
             worker.set_audio(enabled, url_phrase, smile_phrase, language or 'en')
-            if enabled:
-                from gdo.audio.PlaybackTasks import PlaybackTasks
-                from gdo.base.IPC import IPC
-                if not PlaybackTasks.tasks and (text := worker.next_speech()):
-                    IPC.send_to_dog('audio.ipc_say', [text, language])
+            from gdo.video.CommentaryFollower import LIVE_MODES
+            previous_language = getattr(self, '_thought_audio_language', None)
+            if previous_language and previous_language != language:
+                self.cancel_thought_prefetch()
+            self._thought_audio_language = language if enabled else None
+            if enabled and mode in LIVE_MODES:
+                self.queue_thought_speech(worker, language)
+            else:
+                self.cancel_thought_prefetch()
+
+    async def thought_speech_tick(self):
+        from gdo.video.CommentaryFollower import LIVE_MODES
+        worker = getattr(self, '_commentary_follower', None)
+        language = getattr(self, '_thought_audio_language', None)
+        if worker and worker.audio_enabled and worker.mode in LIVE_MODES and language:
+            self.queue_thought_speech(worker, language)
+
+    def cancel_thought_prefetch(self):
+        tasks = [task for task in getattr(self, '_thought_speech_tasks', []) if not task.done()]
+        for task in tasks:
+            task.cancel()
+        self._thought_speech_tasks = []
+
+    def queue_thought_speech(self, worker, language):
+        from gdo.audio.PlaybackTasks import PlaybackTasks
+        from gdo.audio.SpeechPlayback import SpeechPlayback
+        from gdo.audio.method.ipc_say import ipc_say
+        tasks = [task for task in getattr(self, '_thought_speech_tasks', []) if not task.done()]
+        self._thought_speech_tasks = tasks
+        if len(tasks) >= 2 or any(not task.done() and task not in tasks for task in PlaybackTasks.tasks):
+            return
+        if tasks and not SpeechPlayback.is_playing():
+            return
+        if text := worker.next_speech():
+            previous = tasks[-1] if tasks else None
+            speech = ipc_say().input('text', text).input('lang', language)
+            tasks.append(PlaybackTasks.start(speech.play_prefetched(previous)))
 
     async def on_live_join_welcome(self, user, channel):
         """Greet actual joins only during a live show, with a global cooldown."""
@@ -221,6 +255,9 @@ class module_video(GDO_Module):
 
     async def on_mira_livemode_changed(self, module, field):
         mode = field.get_val()
+        from gdo.video.CommentaryFollower import LIVE_MODES
+        if mode not in LIVE_MODES:
+            self.cancel_thought_prefetch()
         if worker := getattr(self, '_commentary_follower', None):
             worker.set_mode(mode)
         self.connector.liveshow(mode == 'show')
