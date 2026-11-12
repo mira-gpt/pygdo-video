@@ -20,4 +20,4 @@ video_liveshow_status_off = "Live-Modus ist aus. Das bestätigt nicht, dass eine
 video_liveshow_status = "Miras Live-Modus: %s. Das bestätigt keine laufende oder beendete Übertragung."
 video_liveshow_invalid = "Bitte einen Live-Modus wählen: off, work, show oder discuss."
 mira_audio_some_url = "ein Link"
-mira_audio_emoji_smile = "freu"
+mira_audio_emoji_smile = "freu!"
