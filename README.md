@@ -453,9 +453,10 @@ Speech strips paired Markdown emphasis markers, preserves standalone asterisks,
 and substitutes a localized phrase for URL schemes and
 bare-domain URLs; the visible ticker remains unchanged. The pending speech queue is
 bounded to 16 chunks and is cleared when audio is disabled or
-the live mode is left. New speech is split at `.`, `?` and `!`; long sentences
-are split into smaller chunks. This simple punctuation rule can also split
-decimals. A sentence already playing may finish.
+the live mode is left. Consecutive sentences are grouped into speech chunks of
+up to 200 characters; longer sentences are split. Sentence boundaries use `.`,
+`?` and `!`, so this simple rule can also split decimals. A chunk already
+playing may finish.
 Set `video_commentary_log` to the intended local session JSONL file; an empty
 value disables the follower. The Dog process must have permission to read it.
 Dog starts a follower thread for that path, starting at the end and accepting

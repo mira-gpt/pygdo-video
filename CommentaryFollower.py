@@ -32,9 +32,16 @@ def speech_filter(text, url_phrase):
 
 
 def speech_sentences(text):
-    """Queue punctuation-delimited sentences in bounded speech-sized chunks."""
+    """Group sentences into bounded speech-sized chunks."""
+    chunk = ''
     for sentence in re.findall(r'[^.!?]+[.!?]+|[^.!?]+$', text):
-        yield from textwrap.wrap(sentence.strip(), width=200)
+        for part in textwrap.wrap(sentence.strip(), width=200):
+            if chunk and len(chunk) + 1 + len(part) > 200:
+                yield chunk
+                chunk = ''
+            chunk = f'{chunk} {part}' if chunk else part
+    if chunk:
+        yield chunk
 
 
 def commentary(line):

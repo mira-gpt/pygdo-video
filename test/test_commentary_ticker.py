@@ -122,18 +122,21 @@ class CommentaryTickerTest(unittest.TestCase):
 
     def test_speech_splits_sentences_and_bounds_long_ones(self):
         from gdo.video.CommentaryFollower import speech_sentences
-        self.assertEqual(['Hello!', 'How are you?', 'Fine.', 'Next'],
+        self.assertEqual(['Hello! How are you? Fine. Next'],
                          list(speech_sentences('Hello! How are you? Fine.Next')))
         parts = list(speech_sentences('a' * 450 + '.'))
         self.assertTrue(all(len(part) <= 200 for part in parts))
         self.assertEqual('a' * 450 + '.', ''.join(parts))
+        parts = list(speech_sentences('ä' * 99 + '. ' + 'ö' * 99 + '. End!'))
+        self.assertEqual([('ä' * 99) + '.', ('ö' * 99) + '. End!'], parts)
+        self.assertTrue(all(len(part) <= 200 for part in parts))
 
     def test_speech_filter_strips_emphasis_and_hides_urls_before_splitting(self):
         from gdo.video.CommentaryFollower import speech_filter, speech_sentences
         text = '**Look** https://example.com/a?token=secret! Then www.example.org. And example.net/path.'
         filtered = speech_filter(text, 'ein Link')
         self.assertEqual('Look ein Link! Then ein Link. And ein Link.', filtered)
-        self.assertEqual(['Look ein Link!', 'Then ein Link.', 'And ein Link.'], list(speech_sentences(filtered)))
+        self.assertEqual(['Look ein Link! Then ein Link. And ein Link.'], list(speech_sentences(filtered)))
         self.assertEqual('ein Link ein Link', speech_filter('ftp://example.org/a file:///private/a', 'ein Link'))
         self.assertEqual('bold and italic; 3 * 4; lone *',
                          speech_filter('**bold** and *italic*; 3 * 4; lone *', 'a link'))
