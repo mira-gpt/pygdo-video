@@ -11,7 +11,7 @@ class ipc_duckanim(Method):
         return ''
 
     def gdo_parameters(self):
-        return [GDT_Enum('key').choices({key: key.title() for key in ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'lol')}).not_null().positional()]
+        return [GDT_Enum('key').choices({key: key.title() for key in ('idle', 'quacking', 'sad', 'high', 'music', 'tipsy', 'drunk', 'embarrassed', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower', 'lol')}).not_null().positional()]
 
     def gdo_execute(self):
         if Application.IS_DOG:

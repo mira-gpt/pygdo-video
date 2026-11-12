@@ -12,6 +12,13 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_shower_water_falls_and_recycles(self):
+        from gdo.video.Duck3DWorker import shower_drop
+        x, first, _ = shower_drop(0, 0)
+        self.assertEqual(x, shower_drop(0, .5)[0])
+        self.assertLess(shower_drop(0, .5)[1], first)
+        self.assertAlmostEqual(first, shower_drop(0, 1 / .75)[1])
+
     def test_coffee_has_a_sigh_and_a_sustained_wakeful_spell(self):
         from gdo.video.Duck3DWorker import coffee_pose
         self.assertEqual((.3, 0.0), coffee_pose(1))
@@ -69,6 +76,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='tired')
             source.update(mode='zzz')
             source.update(mode='coffee')
+            source.update(mode='shower')
             source.update(mode='cast')
             source.update(mode='zombie')
             source.update(mode='pirate')

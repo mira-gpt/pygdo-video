@@ -89,6 +89,12 @@ def transition_weight(elapsed, duration=TRANSITION_SECONDS):
     return amount * amount * (3.0 - 2.0 * amount)
 
 
+def shower_drop(index, elapsed):
+    """Deterministic falling water, recycled without creating nodes per frame."""
+    phase = (elapsed * (0.75 + (index % 4) * .08) + index * .173) % 1.0
+    return -.35 + (index % 8) * .10, 2.04 - phase * 1.25, phase
+
+
 def main():
     import gltf
     from panda3d.core import AmbientLight, CardMaker, DirectionalLight, Geom, GeomNode, GeomTriangles, GeomVertexData, GeomVertexFormat, GeomVertexWriter, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
@@ -896,6 +902,41 @@ def main():
         (cup_lines.moveTo if i == 0 else cup_lines.drawTo)(x, -.01, z)
     coffee.attachNewNode(cup_lines.create())
     coffee.hide()
+    shower = root.attachNewNode('shower')
+    shower.setBillboardPointEye()
+    shower.setLightOff()
+    shower_lines = LineSegs('shower head and pipe')
+    shower_lines.setThickness(5)
+    shower_lines.setColor(.63, .69, .73, 1)
+    shower_lines.moveTo(.72, 0, 2.23)
+    shower_lines.drawTo(.72, 0, 2.15)
+    shower_lines.drawTo(.23, 0, 2.15)
+    shower_lines.drawTo(.15, 0, 2.07)
+    shower_lines.moveTo(-.03, 0, 2.05)
+    shower_lines.drawTo(.33, 0, 2.05)
+    shower.attachNewNode(shower_lines.create())
+    drops = []
+    for index in range(24):
+        water = LineSegs('shower drop')
+        water.setThickness(2)
+        water.setColor(.50, .82, 1, .8)
+        water.moveTo(0, 0, 0)
+        water.drawTo(0, 0, -.10)
+        drop = shower.attachNewNode(water.create())
+        drop.setTransparency(TransparencyAttrib.MAlpha)
+        drops.append(drop)
+    splashes = []
+    for index in range(8):
+        splash = LineSegs('shower splash')
+        splash.setThickness(2)
+        splash.setColor(.72, .92, 1, .8)
+        for point in range(13):
+            angle = 2 * math.pi * point / 12
+            (splash.moveTo if point == 0 else splash.drawTo)(.10 * math.cos(angle), 0, .035 * math.sin(angle))
+        node = shower.attachNewNode(splash.create())
+        node.setTransparency(TransparencyAttrib.MAlpha)
+        splashes.append(node)
+    shower.hide()
     # Flat, camera-facing drink props in the same style as the other costumes.
     drinks = []
     for name, outline, frame, color in (
@@ -969,7 +1010,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -1226,6 +1267,20 @@ def main():
                 coffee.show()
             else:
                 coffee.hide()
+            if mode == 'shower':
+                shower.show()
+                root.setR(1.5 * math.sin(t * 1.1))
+                for index, drop in enumerate(drops):
+                    x, z, phase = shower_drop(index, now - mode_start)
+                    drop.setPos(x, -.9, z)
+                    drop.setColorScale(1, 1, 1, .45 + .45 * (1 - phase))
+                for index, splash in enumerate(splashes):
+                    phase = ((now - mode_start) * 1.1 + index / 8) % 1
+                    splash.setPos(-.35 + index * .10, -.92, .79 + .035 * (index % 3))
+                    splash.setScale(.2 + phase)
+                    splash.setColorScale(1, 1, 1, .8 * (1 - phase))
+            else:
+                shower.hide()
             if mode == 'sorry':
                 sorry_brows.show()
                 root.setP(10 + 1.5 * math.sin(t * 1.2))
