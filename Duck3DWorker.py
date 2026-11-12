@@ -95,6 +95,11 @@ def shower_drop(index, elapsed):
     return -.35 + (index % 8) * .10, 2.04 - phase * 1.25, phase
 
 
+def shower_water_height(elapsed):
+    """Fill gradually and stop below the duck's head."""
+    return min(1.35, max(0.0, elapsed) * .015)
+
+
 def main():
     import gltf
     from panda3d.core import AmbientLight, CardMaker, DirectionalLight, Geom, GeomNode, GeomTriangles, GeomVertexData, GeomVertexFormat, GeomVertexWriter, LineSegs, NodePath, OrthographicLens, TextNode, TransparencyAttrib, Vec4, loadPrcFileData
@@ -915,6 +920,20 @@ def main():
     shower_lines.moveTo(-.03, 0, 2.05)
     shower_lines.drawTo(.33, 0, 2.05)
     shower.attachNewNode(shower_lines.create())
+    water_card = CardMaker('rising shower water')
+    water_card.setFrame(-1.05, 1.05, 0, 1)
+    water_level = shower.attachNewNode(water_card.generate())
+    water_level.setPos(0, -1.1, -.20)
+    water_level.setColor(.16, .60, .87, .42)
+    water_level.setTransparency(TransparencyAttrib.MAlpha)
+    water_surface_lines = LineSegs('shower water surface')
+    water_surface_lines.setThickness(2)
+    water_surface_lines.setColor(.75, .93, 1, .85)
+    for point in range(33):
+        x = -1.05 + 2.1 * point / 32
+        (water_surface_lines.moveTo if point == 0 else water_surface_lines.drawTo)(x, 0, .015 * math.sin(point * .9))
+    water_surface = shower.attachNewNode(water_surface_lines.create())
+    water_surface.setTransparency(TransparencyAttrib.MAlpha)
     drops = []
     for index in range(24):
         water = LineSegs('shower drop')
@@ -1270,6 +1289,9 @@ def main():
             if mode == 'shower':
                 shower.show()
                 root.setR(1.5 * math.sin(t * 1.1))
+                height = shower_water_height(now - mode_start)
+                water_level.setSz(height)
+                water_surface.setPos(0, -1.11, -.20 + height + .01 * math.sin(t * 2))
                 for index, drop in enumerate(drops):
                     x, z, phase = shower_drop(index, now - mode_start)
                     drop.setPos(x, -.9, z)
@@ -1493,8 +1515,12 @@ def main():
                 pain_marks.hide()
             left_wing = root.find('**/Wing L')
             if not left_wing.isEmpty():
-                left_wing.setR(-(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
-            if mode == 'hello':
+                left_wing.setR(-28 - 15 * math.sin((now - mode_start) * 4) if mode == 'shower' else -(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
+            if mode == 'shower':
+                scrub = math.sin((now - mode_start) * 4)
+                wing_base.setR(28 + 15 * scrub)
+                wing_tip.setR(18 * scrub)
+            elif mode == 'hello':
                 wave = math.sin((time.monotonic() - mode_start) * 18)
                 wing_base.setR(50 + 30 * wave)
                 wing_tip.setR(30 * wave)

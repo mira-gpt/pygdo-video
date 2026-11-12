@@ -19,6 +19,12 @@ class GothMotionTest(unittest.TestCase):
         self.assertLess(shower_drop(0, .5)[1], first)
         self.assertAlmostEqual(first, shower_drop(0, 1 / .75)[1])
 
+    def test_shower_water_rises_slowly_and_has_a_limit(self):
+        from gdo.video.Duck3DWorker import shower_water_height
+        self.assertEqual(0, shower_water_height(0))
+        self.assertAlmostEqual(.45, shower_water_height(30))
+        self.assertEqual(1.35, shower_water_height(1000))
+
     def test_coffee_has_a_sigh_and_a_sustained_wakeful_spell(self):
         from gdo.video.Duck3DWorker import coffee_pose
         self.assertEqual((.3, 0.0), coffee_pose(1))
