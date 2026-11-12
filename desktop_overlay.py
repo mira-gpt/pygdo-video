@@ -76,7 +76,7 @@ def main(image_path, screensharing=False, window_suffix=''):
                 context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
                 context.set_font_size(16)
                 context.move_to(10, 25)
-                label = indicator_text(layer['mode'], layer.get('recording', False), time.monotonic())
+                label = indicator_text(layer['mode'], layer.get('recording', False), time.monotonic(), layer.get('label'))
                 context.text_path(label)
                 context.set_source_rgb(1, 1, 1)
                 context.set_line_width(2)
@@ -380,7 +380,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                 elif request.get('effect') == 'liveshow' and isinstance(request.get('enabled'), bool):
                     show_state['liveshow'] = request['enabled']
                 elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'cohost') and isinstance(request.get('active'), bool):
-                    layers.put('live_indicator', {'mode': request['mode'], 'active': request['active'],
+                    label = request.get('label')
+                    layers.put('live_indicator', {'mode': request['mode'], 'label': label if isinstance(label, str) else None, 'active': request['active'],
                                                   'recording': request.get('recording') is True}, z=8000)
                 elif request.get('effect') == 'thoughts':
                     if request.get('remove') is True:

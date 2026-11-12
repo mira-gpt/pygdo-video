@@ -97,6 +97,8 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('mira_current_song_changed', self.on_current_song_changed)
         Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
         Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
+        Application.EVENTS.subscribe('module_mira_agent_name_changed', self.on_indicator_name_changed)
+        Application.EVENTS.subscribe('module_audio_audio_operator_changed', self.on_indicator_name_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
 
     async def video_timer_tick(self):
@@ -222,7 +224,30 @@ class module_video(GDO_Module):
         if worker := getattr(self, '_commentary_follower', None):
             worker.set_mode(mode)
         self.connector.liveshow(mode == 'show')
-        self.connector.live_indicator(mode)
+        self.connector.live_indicator(mode, self.indicator_name(mode))
+
+    async def on_indicator_name_changed(self, module, field):
+        self.sync_liveshow()
+
+    @staticmethod
+    def indicator_name(mode):
+        from gdo.base.ModuleLoader import ModuleLoader
+        try:
+            loader = ModuleLoader.instance()
+        except AttributeError:
+            return None
+        if mode == 'cohost':
+            mira = loader.get_module('mira')
+            name = mira.cfg_agent_name() if mira else None
+        elif mode == 'show':
+            audio = loader.get_module('audio')
+            operator = audio.cfg_audio_operator() if audio else None
+            name = operator.get_name() if operator else None
+        else:
+            name = None
+        if not isinstance(name, str):
+            return None
+        return ''.join(c for c in name if c.isprintable())[:64].strip() or None
 
     def sync_liveshow(self):
         from gdo.base.ModuleLoader import ModuleLoader
@@ -231,7 +256,8 @@ class module_video(GDO_Module):
         except AttributeError:
             mira = None
         self.connector.liveshow(mira.cfg_mira_livemode() == 'show' if mira else False)
-        self.connector.live_indicator(mira.cfg_mira_livemode() if mira else 'off')
+        mode = mira.cfg_mira_livemode() if mira else 'off'
+        self.connector.live_indicator(mode, self.indicator_name(mode))
 
     def restore_overlays(self):
         from gdo.base.Logger import Logger

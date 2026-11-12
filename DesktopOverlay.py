@@ -30,6 +30,7 @@ class DesktopOverlay:
         self.liveshow_enabled = False
         self.virtual_output = None
         self.live_mode = 'off'
+        self.live_label = None
         self.recording_active = lambda: False
         self.thoughts_enabled = False
         self._indicator_stop = threading.Event()
@@ -52,10 +53,11 @@ class DesktopOverlay:
             if self.is_running():
                 self._send_payload({'effect': 'liveshow', 'enabled': self.liveshow_enabled})
 
-    def live_indicator(self, mode):
+    def live_indicator(self, mode, label=None):
         if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
             raise ValueError('Invalid live mode')
         self.live_mode = mode
+        self.live_label = label
         if mode not in ('work', 'show', 'discuss', 'cohost'):
             from gdo.video.CommentaryTicker import CommentaryTicker
             CommentaryTicker.clear()
@@ -69,7 +71,7 @@ class DesktopOverlay:
                 with self.lock:
                     if not self.is_running():
                         return
-                    self._send_payload({'effect': 'live_indicator', 'mode': state[0], 'active': state[1],
+                    self._send_payload({'effect': 'live_indicator', 'mode': state[0], 'label': self.live_label, 'active': state[1],
                                         'recording': self.recording_active()})
                     if self.thoughts_enabled:
                         from gdo.video.CommentaryTicker import CommentaryTicker

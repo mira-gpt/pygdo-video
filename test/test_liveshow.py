@@ -169,9 +169,23 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         field = GDT_MiraLiveMode().val('show')
         await module.on_mira_livemode_changed(None, field)
         module.connector.liveshow.assert_called_once_with(True)
-        module.connector.live_indicator.assert_called_once_with('show')
+        module.connector.live_indicator.assert_called_once_with('show', None)
         module.connector.start.assert_not_called()
         module.connector.microphone_meter.assert_not_called()
+
+    def test_indicator_names_follow_mode(self):
+        mira = MagicMock()
+        mira.cfg_agent_name.return_value = 'Simion'
+        audio = MagicMock()
+        audio.cfg_audio_operator.return_value.get_name.return_value = 'Shippi'
+        loader = MagicMock()
+        loader.get_module.side_effect = lambda name: {'mira': mira, 'audio': audio}.get(name)
+        with patch('gdo.base.ModuleLoader.ModuleLoader.instance', return_value=loader):
+            self.assertEqual('Shippi', module_video.indicator_name('show'))
+            self.assertEqual('Simion', module_video.indicator_name('cohost'))
+            self.assertIsNone(module_video.indicator_name('work'))
+            audio.cfg_audio_operator.return_value = None
+            self.assertIsNone(module_video.indicator_name('show'))
 
     def test_composite_frame_turns_red(self):
         frame = Image.new('RGB', (640, 360))

@@ -13,6 +13,8 @@ from gdo.video.Recording import Recording
 class RecordingTest(unittest.TestCase):
     def test_indicator_alternates_only_while_recording(self):
         self.assertEqual('cohost', indicator_text('cohost', False, 3))
+        self.assertEqual('Mira', indicator_text('cohost', False, 3, 'Mira'))
+        self.assertEqual('● REC', indicator_text('show', True, 2, 'Gizmore'))
         self.assertEqual('cohost', indicator_text('cohost', True, 0))
         self.assertEqual('● REC', indicator_text('cohost', True, 2))
         self.assertEqual('cohost', indicator_text('cohost', True, 4))

@@ -263,7 +263,7 @@ class VideoConnector:
             if mic:
                 mic.liveshow = self.liveshow_enabled
 
-    def live_indicator(self, mode):
+    def live_indicator(self, mode, label=None):
         from gdo.video.LiveIndicator import LiveIndicator
         if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
             raise ValueError('Invalid live mode')
@@ -279,7 +279,7 @@ class VideoConnector:
             if thoughts:
                 thoughts.live_mode = mode
         if self.is_running():
-            self.put_effect('live_indicator', LiveIndicator(mode, self.recording_active), z=8000)
+            self.put_effect('live_indicator', LiveIndicator(mode, self.recording_active, label), z=8000)
 
     def duck(self, enabled):
         from gdo.video.DuckLayer import DuckLayer
