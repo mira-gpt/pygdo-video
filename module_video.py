@@ -153,7 +153,7 @@ class module_video(GDO_Module):
             from gdo.base.Trans import Trans
             url_phrase = Trans.tiso2(language or 'en', 'mira_audio_some_url') if enabled else 'a link'
             smile_phrase = Trans.tiso2(language or 'en', 'mira_audio_emoji_smile') if enabled else 'smile'
-            worker.set_audio(enabled, url_phrase, smile_phrase)
+            worker.set_audio(enabled, url_phrase, smile_phrase, language or 'en')
             if enabled:
                 from gdo.audio.PlaybackTasks import PlaybackTasks
                 from gdo.base.IPC import IPC

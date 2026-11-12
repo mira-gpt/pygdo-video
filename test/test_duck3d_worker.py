@@ -12,6 +12,22 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_coffee_has_a_sigh_and_a_sustained_wakeful_spell(self):
+        from gdo.video.Duck3DWorker import coffee_pose
+        self.assertEqual((.3, 0.0), coffee_pose(1))
+        self.assertGreater(coffee_pose(6.25)[1], .9)
+        self.assertEqual(1.0, coffee_pose(13)[0])
+        self.assertEqual(1.0, coffee_pose(20)[0])
+        self.assertEqual(.3, coffee_pose(23)[0])
+
+    def test_coffee_sip_is_followed_by_two_smacks(self):
+        from gdo.video.Duck3DWorker import coffee_sip
+        self.assertEqual((0.0, 0), coffee_sip(3))
+        self.assertEqual((1.0, 0), coffee_sip(9.5))
+        self.assertEqual((0.0, 4), coffee_sip(11.2))
+        self.assertEqual((0.0, 0), coffee_sip(11.3))
+        self.assertEqual((0.0, 4), coffee_sip(11.45))
+
     def test_sleep_smacks_are_occasional(self):
         from gdo.video.Duck3DWorker import sleep_mouth_frame
         self.assertEqual(0, sleep_mouth_frame(1))
@@ -52,6 +68,7 @@ class Duck3DWorkerTest(unittest.TestCase):
             source.update(mode='nerd')
             source.update(mode='tired')
             source.update(mode='zzz')
+            source.update(mode='coffee')
             source.update(mode='cast')
             source.update(mode='zombie')
             source.update(mode='pirate')

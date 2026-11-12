@@ -20,7 +20,7 @@ SPEECH_BOLD = re.compile(r'(?<!\*)\*\*([^\s*](?:[^*]*?[^\s*])?)\*\*(?!\*)')
 SPEECH_ITALIC = re.compile(r'(?<!\*)\*([^\s*](?:[^*]*?[^\s*])?)\*(?!\*)')
 
 
-def speech_filter(text, url_phrase, smile_phrase='smile'):
+def speech_filter(text, url_phrase, smile_phrase='smile', language='en'):
     """Prepare commentary for speech without changing the visible text."""
     def replace_url(match):
         url = match.group(0)
@@ -30,6 +30,8 @@ def speech_filter(text, url_phrase, smile_phrase='smile'):
     text = SPEECH_ITALIC.sub(r'\1', text)
     text = SPEECH_URL.sub(replace_url, text)
     text = re.sub(r'\bpygdo\b', 'PyGDO', text)
+    if language == 'de':
+        text = re.sub(r'\bdog\b', 'Dock', text, flags=re.IGNORECASE)
     return re.sub(r'\s*:\)\s*', lambda _: f' {smile_phrase} ', text)
 
 
@@ -70,6 +72,7 @@ class CommentaryFollower(Thread):
         self.audio_enabled = False
         self.audio_url_phrase = 'a link'
         self.audio_smile_phrase = 'smile'
+        self.audio_language = 'en'
         self.speech_queue = deque(maxlen=16)
         self.stop_event = threading.Event()
         self.ready = threading.Event()
@@ -82,11 +85,12 @@ class CommentaryFollower(Thread):
                 CommentaryTicker.clear()
                 self.speech_queue.clear()
 
-    def set_audio(self, enabled, url_phrase='a link', smile_phrase='smile'):
+    def set_audio(self, enabled, url_phrase='a link', smile_phrase='smile', language='en'):
         with self.mode_lock:
             self.audio_enabled = bool(enabled)
             self.audio_url_phrase = url_phrase
             self.audio_smile_phrase = smile_phrase
+            self.audio_language = language
             if not self.audio_enabled:
                 self.speech_queue.clear()
 
@@ -128,7 +132,7 @@ class CommentaryFollower(Thread):
                                             for part in textwrap.wrap(text, width=300):
                                                 CommentaryTicker.set(part)
                                             if self.audio_enabled:
-                                                self.speech_queue.extend(speech_sentences(speech_filter(text, self.audio_url_phrase, self.audio_smile_phrase)))
+                                                self.speech_queue.extend(speech_sentences(speech_filter(text, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
                                 pending, oversized = b'', False
             except OSError:
                 self.stop_event.wait(2)

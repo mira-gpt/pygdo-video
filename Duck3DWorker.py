@@ -36,6 +36,29 @@ def sleep_mouth_frame(elapsed):
     return 4 if 7.0 <= phase < 7.13 or 7.3 <= phase < 7.43 else 0
 
 
+def coffee_pose(elapsed):
+    """A brief sighing nod and a longer, occasional alert spell."""
+    phase = elapsed % 26.0
+    awake = max(0.0, min(1.0, (phase - 11.0) / .7, (22.0 - phase) / .7))
+    nod = math.sin(math.pi * (phase - 5.0) / 2.5) if 5.0 <= phase < 7.5 else 0.0
+    return .3 + .7 * awake, nod
+
+
+def coffee_sip(elapsed):
+    """Lift the cup occasionally, then make two quiet beak smacks."""
+    phase = elapsed % 26.0
+    if 8.0 <= phase < 9.0:
+        lift = (phase - 8.0)
+    elif 9.0 <= phase < 10.0:
+        lift = 1.0
+    elif 10.0 <= phase < 11.0:
+        lift = 11.0 - phase
+    else:
+        lift = 0.0
+    smack = 4 if 11.1 <= phase < 11.25 or 11.4 <= phase < 11.55 else 0
+    return lift, smack
+
+
 def goth_hair_motion(elapsed):
     """Snap the fringe aside, then let it fall back slowly."""
     phase = elapsed % 9.0
@@ -858,6 +881,21 @@ def main():
     for index in range(3):
         copy = mug.copyTo(root)
         mugs.append((copy, copy.find('**/beer fill'), copy.find('**/beer foam')))
+    coffee = root.attachNewNode('coffee cup')
+    coffee.setBillboardPointEye()
+    coffee.setLightOff()
+    coffee.setPos(.48, -1.0, .68)
+    cup_card = CardMaker('coffee cup body')
+    cup_card.setFrame(-.17, .17, 0, .24)
+    cup_body = coffee.attachNewNode(cup_card.generate())
+    cup_body.setColor(.93, .88, .78, 1)
+    cup_lines = LineSegs('coffee cup rim and handle')
+    cup_lines.setThickness(3)
+    cup_lines.setColor(.29, .17, .10, 1)
+    for i, (x, z) in enumerate(((-.17, .24), (.17, .24), (.17, .06), (.12, 0), (-.12, 0), (-.17, .06), (-.17, .24), (.17, .20), (.25, .20), (.25, .08), (.17, .08))):
+        (cup_lines.moveTo if i == 0 else cup_lines.drawTo)(x, -.01, z)
+    coffee.attachNewNode(cup_lines.create())
+    coffee.hide()
     # Flat, camera-facing drink props in the same style as the other costumes.
     drinks = []
     for name, outline, frame, color in (
@@ -931,7 +969,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                     if isinstance(request.get('speaking'), bool):
@@ -1179,6 +1217,15 @@ def main():
             elif mode == 'zzz':
                 root.setR(2 * math.sin(t * .45))
                 root.setP(8 + 1.5 * math.sin(t * .5))
+            elif mode == 'coffee':
+                root.setR(1.2 * math.sin(t * .45))
+                root.setP(5 + 2 * coffee_pose(now - mode_start)[1])
+            if mode == 'coffee':
+                sip, _ = coffee_sip(now - mode_start)
+                coffee.setPos(.48 - .25 * sip, -1.0, .68 + .30 * sip)
+                coffee.show()
+            else:
+                coffee.hide()
             if mode == 'sorry':
                 sorry_brows.show()
                 root.setP(10 + 1.5 * math.sin(t * 1.2))
@@ -1380,6 +1427,8 @@ def main():
                 head_pivot.setP(-38 * pulse)
             elif mode == 'goth':
                 head_pivot.setP(-25 * head_toss + 7 * goth_glance)
+            elif mode == 'coffee':
+                head_pivot.setP(5 * coffee_pose(now - mode_start)[1])
             else:
                 head_pivot.setP(0)
             if mode == 'ouch' or (outgoing_mode == 'ouch' and blend < 1):
@@ -1408,7 +1457,7 @@ def main():
             for eye in ('Eye white', 'Eye white.001', 'Pupil', 'Pupil.001'):
                 node = root.find('**/' + eye)
                 if not node.isEmpty():
-                    node.setSz(.3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja', 'hah') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1 - .35 * goth_glance if mode == 'goth' else 1)
+                    node.setSz(coffee_pose(now - mode_start)[0] if mode == 'coffee' else .3 + .08 * math.sin(t * .6) if mode == 'tired' else 1.65 if mode == 'trip' and eye.startswith('Pupil') else 1 if mode == 'trip' else .05 if happy_closed else 1.35 if mode in ('shrug', 'plz') else .12 if (t + 2) % 4.2 < .12 else .25 if mode == 'cry' else .42 if mode in ('sad', 'high', 'hippi', 'ninja', 'hah') else .75 if mode == 'sorry' else .7 - .28 * scowl if mode == 'angry' else 1 - .35 * goth_glance if mode == 'goth' else 1)
                     if eye.startswith('Eye white'):
                         if mode in ('high', 'hippi', 'drunk'):
                             node.setColorScale(1, .35 if mode in ('high', 'hippi') else .55, .35 if mode in ('high', 'hippi') else .55, 1)
@@ -1427,7 +1476,7 @@ def main():
             level = envelope[index] if speaking and 0 <= index < len(envelope) else 0
             # The existing animation opens its beak around frame 7.
             tongue_out = mode == 'xd' or (mode == 'drunk' and now < tongue_until and not speaking)
-            beak.pose('Duck rigAction', sleep_mouth_frame(now - mode_start) if mode == 'zzz' and not speaking else 7 if not speaking and (tongue_out or (mode == 'tired' and now < yawn_until)) else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
+            beak.pose('Duck rigAction', sleep_mouth_frame(now - mode_start) if mode == 'zzz' and not speaking else coffee_sip(now - mode_start)[1] if mode == 'coffee' and not speaking else 7 if not speaking and (tongue_out or (mode == 'tired' and now < yawn_until)) else int(t * 24) % 32 if speaking and not envelope else round(level * 7))
             if not tongue_joint.isEmpty():
                 tongue_joint.setY(tongue_y - .24 if tongue_out else tongue_y)
             base.graphicsEngine.renderFrame()
