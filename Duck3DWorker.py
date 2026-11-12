@@ -181,10 +181,19 @@ def main():
     chalk_node.setLightOff()
     teacher.hide()
     sleep_letters = []
+    sleep_font_path = Path('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+    sleep_font = base.loader.loadFont(str(sleep_font_path)) if sleep_font_path.is_file() else None
+    if sleep_font and hasattr(sleep_font, 'setOutline'):
+        sleep_font.setOutline((.05, .05, .07, 1), 1.2, .2)
     for index in range(3):
         letter = TextNode(f'sleep Z {index}')
         letter.setText('Z')
         letter.setTextColor(.9, .95, 1, 1)
+        if sleep_font:
+            letter.setFont(sleep_font)
+        else:
+            letter.setShadow(.06, .06)
+            letter.setShadowColor(.05, .05, .07, 1)
         node = root.attachNewNode(letter)
         node.setBillboardPointEye()
         node.setScale(.13 + index * .025)
