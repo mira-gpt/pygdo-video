@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "js_dependency": "^1.33.7"
+    "hls.js": "^1.0.0"
   }
 }

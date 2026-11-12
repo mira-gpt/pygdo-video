@@ -42,6 +42,36 @@ Starting a recording does not start YouTube or a virtual camera. Review the
 screen and obtain participant consent before recording. A crash or forced stop
 may leave an incomplete file; use VLC to check the saved recording.
 
+`video.stream` is a small, explicitly started direct-viewer demo. One encoder
+captures the configured screensharing desktop, its system-output monitor and
+the microphone; viewers share an HLS playlist and segments. It is intended for
+only one or two viewers, not a scalable streaming service. Start and stop are
+owner-only; opening a viewer never starts capture. The capture includes private
+windows and audio: obtain participant consent and check the screen first.
+`video_gdo_stream_key` is optional: when unset, anyone who can reach the viewer
+can watch while the stream is enabled. When set, the viewer uses HTTP Basic
+authentication over HTTPS; never send the password in a URL. The stream is off
+after Dog restarts. HLS-capable clients such as VLC can open the playlist; some
+browsers use the locally installed `hls.js` dependency, while clients such as
+VLC can open the playlist directly. Install the video module's npm dependencies
+before using the browser player. Browser support depends on Media Source
+Extensions or native HLS support.
+`$video.stream_control 1` starts the encoder from the Dog client;
+`$video.stream_control 0` stops it, and `$video.stream_control` reports encoder
+status. Viewers open `/video.stream.html`; the playlist appears only after the
+first segments are ready. The storage directory is under the configured files
+directory and must never be exposed directly by Apache or another static server.
+With a key, TLS and forwarding of the HTTP Authorization header to PyGDO are
+required. HTTP Basic credentials remain visible to the server and are not a
+substitute for a strong password and HTTPS.
+
+The built-in web player sends best-effort `gdo_stream_joined` and
+`gdo_stream_quit` events with an anonymous random viewer ID. A quit is sent on
+pause/page close or after a heartbeat timeout; it can be delayed or lost, and
+is not proof of identity or an audience count. External players such as VLC do
+not emit these player events. At most 16 web-player presences are tracked;
+this is not a hard limit on HTTP viewers or a protection against bandwidth abuse.
+
 # Video (For ALs)
 
 ## Architecture draft

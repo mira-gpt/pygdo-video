@@ -12,6 +12,7 @@ from gdo.base.GDT import GDT
 from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_Path import GDT_Path
+from gdo.core.GDT_Secret import GDT_Secret
 from gdo.core.GDT_String import GDT_String
 from gdo.date.GDT_Duration import GDT_Duration
 from gdo.ui.GDT_Link import GDT_Link
@@ -65,6 +66,7 @@ class module_video(GDO_Module):
             GDT_Width('video_preview_w').not_null().initial('320').min(1).max(8192).tooltip('tt_video_preview_w'),
             GDT_Height('video_preview_h').not_null().initial('180').min(1).max(8192).tooltip('tt_video_preview_h'),
             GDT_Bool('video_live').not_null().initial('0').tooltip('tt_video_live'),
+            GDT_Secret('video_gdo_stream_key').tooltip('tt_video_gdo_stream_key'),
             GDT_Duration('video_timer_frequency').not_null().min(10).initial('5m').tooltip('tt_video_timer_frequency'),
             GDT_Path('video_commentary_log').maxlen(2048).tooltip('tt_video_commentary_log'),
             GDT_Bool('video_thoughts_overlay').not_null().initial('0').tooltip('tt_video_thoughts_overlay'),
@@ -81,9 +83,14 @@ class module_video(GDO_Module):
         from gdo.video.YouTubeSender import YouTubeSender
         from gdo.video.VideoTimer import VideoTimer
         from gdo.video.Recording import Recording
+        from gdo.video.DirectStream import DirectStream
+        from gdo.video.StreamPresence import StreamPresence
+        from gdo.base.Application import Application
         self.youtube_sender = YouTubeSender()
         self.video_timer = VideoTimer()
         self.recorder = Recording()
+        self.direct_stream = DirectStream(Application.files_path('secret_video_stream'), Application.config('core.web_root') or '/')
+        self.stream_presence = StreamPresence(Application.EVENTS.publish)
         Connector.register(Video, is_text=False)
 
     def gdo_subscribe_events(self):
@@ -91,6 +98,7 @@ class module_video(GDO_Module):
         Application.EVENTS.add_timer_async(1, self.video_timer_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.add_timer_async(2, self.commentary_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.add_timer_async(.25, self.thought_speech_tick, Application.EVENTS.FOREVER)
+        Application.EVENTS.add_timer_async(5, self.stream_presence_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.add_timer_async(3, self.codex_activity_tick, Application.EVENTS.FOREVER)
         Application.EVENTS.subscribe('audio_speech_start', self.on_speech_start)
         Application.EVENTS.subscribe('audio_speech_end', self.on_speech_end)
@@ -111,6 +119,11 @@ class module_video(GDO_Module):
                                             self.get_config_value('video_timer_frequency'))
             if message:
                 MicTicker.enqueue(message)
+
+    async def stream_presence_tick(self):
+        from gdo.base.Application import Application
+        if Application.IS_DOG:
+            await self.stream_presence.expire(all_viewers=not self.direct_stream.active())
 
     async def codex_activity_tick(self):
         from gdo.base.Application import Application
