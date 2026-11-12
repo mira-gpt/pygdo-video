@@ -150,7 +150,9 @@ class module_video(GDO_Module):
             if enabled:
                 from gdo.audio.language import VOICES
                 enabled = language in VOICES
-            worker.set_audio(enabled)
+            from gdo.base.Trans import Trans
+            url_phrase = Trans.tiso2(language or 'en', 'mira_audio_some_url') if enabled else 'a link'
+            worker.set_audio(enabled, url_phrase)
             if enabled:
                 from gdo.audio.PlaybackTasks import PlaybackTasks
                 from gdo.base.IPC import IPC

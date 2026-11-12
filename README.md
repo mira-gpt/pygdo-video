@@ -448,9 +448,14 @@ it does not display private reasoning. The panel remains visible between updates
 Use `$video.thoughts 1 --audio=1` to also read new updates aloud; audio defaults
 to off, and `$video.thoughts 1 --audio=0` disables it. The enabled Audio module
 and its configured output are required. Speech uses `audio_microphone_language`;
-this chooses the voice language but does not translate the text. The pending
-speech queue is bounded to 16 chunks and is cleared when audio is disabled or
-the live mode is left. A sentence already playing may finish.
+this chooses the voice language but does not translate the text.
+Speech strips paired Markdown emphasis markers, preserves standalone asterisks,
+and substitutes a localized phrase for URL schemes and
+bare-domain URLs; the visible ticker remains unchanged. The pending speech queue is
+bounded to 16 chunks and is cleared when audio is disabled or
+the live mode is left. New speech is split at `.`, `?` and `!`; long sentences
+are split into smaller chunks. This simple punctuation rule can also split
+decimals. A sentence already playing may finish.
 Set `video_commentary_log` to the intended local session JSONL file; an empty
 value disables the follower. The Dog process must have permission to read it.
 Dog starts a follower thread for that path, starting at the end and accepting

@@ -1,6 +1,7 @@
 """Follow only new assistant commentary in one explicitly configured log."""
 import json
 import os
+import re
 import threading
 import textwrap
 from collections import deque
@@ -10,6 +11,30 @@ from gdo.video.CommentaryTicker import CommentaryTicker
 
 MAX_LINE = 1024 * 1024
 LIVE_MODES = frozenset(('work', 'show', 'discuss', 'cohost'))
+SPEECH_URL = re.compile(
+    r'(?i)(?<![\w@])(?:(?:[a-z][a-z0-9+.-]*://|mailto:)[^\s<>\[\]()]+'
+    r'|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}'
+    r'(?::\d{1,5})?(?:[/?#][^\s<>\[\]()]*)?)'
+)
+SPEECH_BOLD = re.compile(r'(?<!\*)\*\*([^\s*](?:[^*]*?[^\s*])?)\*\*(?!\*)')
+SPEECH_ITALIC = re.compile(r'(?<!\*)\*([^\s*](?:[^*]*?[^\s*])?)\*(?!\*)')
+
+
+def speech_filter(text, url_phrase):
+    """Remove Markdown emphasis and replace web addresses before splitting."""
+    def replace_url(match):
+        url = match.group(0)
+        suffix = url[len(url.rstrip('.,!?;:')):]
+        return url_phrase + suffix
+    text = SPEECH_BOLD.sub(r'\1', text)
+    text = SPEECH_ITALIC.sub(r'\1', text)
+    return SPEECH_URL.sub(replace_url, text)
+
+
+def speech_sentences(text):
+    """Queue punctuation-delimited sentences in bounded speech-sized chunks."""
+    for sentence in re.findall(r'[^.!?]+[.!?]+|[^.!?]+$', text):
+        yield from textwrap.wrap(sentence.strip(), width=200)
 
 
 def commentary(line):
@@ -34,6 +59,7 @@ class CommentaryFollower(Thread):
         self.mode = mode
         self.mode_lock = threading.Lock()
         self.audio_enabled = False
+        self.audio_url_phrase = 'a link'
         self.speech_queue = deque(maxlen=16)
         self.stop_event = threading.Event()
         self.ready = threading.Event()
@@ -46,9 +72,10 @@ class CommentaryFollower(Thread):
                 CommentaryTicker.clear()
                 self.speech_queue.clear()
 
-    def set_audio(self, enabled):
+    def set_audio(self, enabled, url_phrase='a link'):
         with self.mode_lock:
             self.audio_enabled = bool(enabled)
+            self.audio_url_phrase = url_phrase
             if not self.audio_enabled:
                 self.speech_queue.clear()
 
@@ -90,7 +117,7 @@ class CommentaryFollower(Thread):
                                             for part in textwrap.wrap(text, width=300):
                                                 CommentaryTicker.set(part)
                                             if self.audio_enabled:
-                                                self.speech_queue.extend(textwrap.wrap(text, width=200))
+                                                self.speech_queue.extend(speech_sentences(speech_filter(text, self.audio_url_phrase)))
                                 pending, oversized = b'', False
             except OSError:
                 self.stop_event.wait(2)

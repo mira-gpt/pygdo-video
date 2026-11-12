@@ -120,6 +120,33 @@ class CommentaryTickerTest(unittest.TestCase):
         worker.set_audio(False)
         self.assertIsNone(worker.next_speech())
 
+    def test_speech_splits_sentences_and_bounds_long_ones(self):
+        from gdo.video.CommentaryFollower import speech_sentences
+        self.assertEqual(['Hello!', 'How are you?', 'Fine.', 'Next'],
+                         list(speech_sentences('Hello! How are you? Fine.Next')))
+        parts = list(speech_sentences('a' * 450 + '.'))
+        self.assertTrue(all(len(part) <= 200 for part in parts))
+        self.assertEqual('a' * 450 + '.', ''.join(parts))
+
+    def test_speech_filter_strips_emphasis_and_hides_urls_before_splitting(self):
+        from gdo.video.CommentaryFollower import speech_filter, speech_sentences
+        text = '**Look** https://example.com/a?token=secret! Then www.example.org. And example.net/path.'
+        filtered = speech_filter(text, 'ein Link')
+        self.assertEqual('Look ein Link! Then ein Link. And ein Link.', filtered)
+        self.assertEqual(['Look ein Link!', 'Then ein Link.', 'And ein Link.'], list(speech_sentences(filtered)))
+        self.assertEqual('ein Link ein Link', speech_filter('ftp://example.org/a file:///private/a', 'ein Link'))
+        self.assertEqual('bold and italic; 3 * 4; lone *',
+                         speech_filter('**bold** and *italic*; 3 * 4; lone *', 'a link'))
+
+    def test_speech_url_phrase_is_independent_of_ticker(self):
+        from gdo.video.CommentaryFollower import CommentaryFollower, speech_filter
+        worker = CommentaryFollower('/unused', 'show')
+        worker.set_audio(True, 'ein Link')
+        original = '**Hi** https://example.com/'
+        CommentaryTicker.set(original)
+        self.assertEqual(original, CommentaryTicker.snapshot()[0])
+        self.assertEqual('Hi ein Link', speech_filter(original, worker.audio_url_phrase))
+
     def test_new_follower_commentary_is_queued_for_speech_only_when_enabled(self):
         from gdo.video.CommentaryFollower import CommentaryFollower
         event = {'type': 'response_item', 'payload': {'type': 'message', 'role': 'assistant', 'phase': 'commentary', 'content': [{'type': 'output_text', 'text': 'Hello show'}]}}
