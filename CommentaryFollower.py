@@ -29,6 +29,7 @@ def speech_filter(text, url_phrase, smile_phrase='smile'):
     text = SPEECH_BOLD.sub(r'\1', text)
     text = SPEECH_ITALIC.sub(r'\1', text)
     text = SPEECH_URL.sub(replace_url, text)
+    text = re.sub(r'\bpygdo\b', 'PyGDO', text)
     return re.sub(r'\s*:\)\s*', lambda _: f' {smile_phrase} ', text)
 
 

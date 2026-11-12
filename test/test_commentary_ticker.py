@@ -145,6 +145,8 @@ class CommentaryTickerTest(unittest.TestCase):
                          speech_filter('**bold** and *italic*; 3 * 4; lone *', 'a link'))
         self.assertEqual(['Hallo freu'], list(speech_sentences(speech_filter('Hallo :)', 'ein Link', 'freu'))))
         self.assertEqual(['Hi smile'], list(speech_sentences(speech_filter('Hi :)', 'a link', 'smile'))))
+        self.assertEqual('PyGDO und PyGDO-video, nicht xpygdo oder PyGDO',
+                         speech_filter('pygdo und pygdo-video, nicht xpygdo oder PyGDO', 'a link'))
 
     def test_speech_url_phrase_is_independent_of_ticker(self):
         from gdo.video.CommentaryFollower import CommentaryFollower, speech_filter
