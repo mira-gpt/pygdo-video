@@ -1,4 +1,5 @@
 module_video = "Video"
+link_video_stream = "Live stream"
 mt_video_screenshot = "Take screenshot"
 md_video_screenshot = "Capture the desktop and publish the image (admin only)."
 video_screenshot_public = "Screenshot saved publicly: %s"

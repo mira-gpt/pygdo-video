@@ -21,6 +21,19 @@ class DirectStreamTest(unittest.TestCase):
     def setUp(self):
         Application.mode(Mode.render_cli)
 
+    def test_sidebar_stream_status_requires_fresh_playlist(self):
+        from gdo.video.method.stream_status import stream_status
+        with tempfile.TemporaryDirectory() as temporary:
+            playlist = Path(temporary) / 'index.m3u8'
+            playlist.write_text('#EXTM3U\n')
+            with patch('gdo.video.method.stream_status.active_asset', return_value=playlist), \
+                    patch.object(Application, 'header'), patch.object(Application, 'status') as status:
+                self.assertEqual('live', stream_status().gdo_execute().render_txt())
+                status.assert_not_called()
+                os.utime(playlist, (time.time() - 30, time.time() - 30))
+                self.assertEqual('offline', stream_status().gdo_execute().render_txt())
+                status.assert_called_with('404 Not Found')
+
     def test_optional_key_requires_basic_auth_and_tls(self):
         encoded = base64.b64encode('viewer:correct'.encode()).decode()
         self.assertTrue(authorized(None, None, False))
