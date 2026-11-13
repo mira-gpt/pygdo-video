@@ -51,7 +51,9 @@ class record(Method):
                 return self.reply('video_record_started', (str(path),))
             if enabled is False:
                 stopped = await asyncio.to_thread(recorder.stop)
-                return self.reply('video_record_stopped' if stopped else 'video_record_not_running')
+                if stopped:
+                    return self.reply('video_record_stopped_mp4', (str(recorder.path.with_suffix('.mp4')),))
+                return self.reply('video_record_not_running')
             return self.reply('video_record_running' if recorder.active() else 'video_record_not_running')
         except (ImportError, OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
             return self.err('video_error', (str(error),))

@@ -40,6 +40,7 @@ class RecordingTest(unittest.TestCase):
                     return process
                 return original_popen(command, *args, **kwargs)
             with patch.object(recorder, 'pulse_default', side_effect=['speakers', 'microphone']), \
+                    patch.object(recorder, 'remux') as remux, \
                     patch('gdo.video.Recording.subprocess.Popen', side_effect=start_process):
                 path = recorder.start(':0.0', None)
                 self.assertTrue(path.is_file())
@@ -48,6 +49,7 @@ class RecordingTest(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     recorder.start(':0.0', None)
                 self.assertTrue(recorder.stop())
+                remux.assert_called_once()
                 process.stdin.write.assert_called_once_with(b'q\n')
                 self.assertFalse(recorder.active())
                 self.assertFalse(recorder.stop())
@@ -96,6 +98,25 @@ class RecordingTest(unittest.TestCase):
                                      '-of', 'csv=p=0', str(path)], capture_output=True, text=True, check=True)
             self.assertIn('video', result.stdout)
             self.assertIn('audio', result.stdout)
+            mp4 = path.with_suffix('.mp4')
+            self.assertTrue(mp4.is_file())
+            self.assertEqual(0o600, mp4.stat().st_mode & 0o777)
+            result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'stream=codec_name',
+                                     '-of', 'csv=p=0', str(mp4)], capture_output=True, text=True, check=True)
+            self.assertIn('h264', result.stdout)
+            self.assertIn('aac', result.stdout)
+            self.assertTrue(path.is_file())
+
+    def test_remux_failure_preserves_original(self):
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = Recording()
+            recorder.path = Path(directory) / 'recording.mkv'
+            recorder.path.write_bytes(b'original')
+            with self.assertRaisesRegex(RuntimeError, 'original recording retained'):
+                recorder.remux()
+            self.assertEqual(b'original', recorder.path.read_bytes())
+            self.assertFalse(recorder.path.with_suffix('.mp4').exists())
+            self.assertEqual([recorder.path], list(Path(directory).iterdir()))
 
     @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'FFmpeg required')
     def test_encoder_stops_if_control_pipe_closes(self):

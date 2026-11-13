@@ -5,6 +5,7 @@ import pwd
 import re
 import subprocess
 import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +19,7 @@ class Recording:
         self.directory = Path(directory) if directory else None
         self.process = None
         self.path = None
+        self.session_user = None
         self.lock = threading.RLock()
         atexit.register(self.stop)
 
@@ -65,6 +67,7 @@ class Recording:
                 raise RuntimeError('Recording directory must belong to the audio user and be private (mode 700)')
             name = datetime.now().strftime('%Y%m%d_%H%M%S_recording.mkv')
             self.path = directory / name
+            self.session_user = session_user
             reserve = 'import os,sys; fd=os.open(sys.argv[1],os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600); os.close(fd)'
             subprocess.run(audio_session_command(['python3', '-c', reserve, str(self.path)], session_user),
                            check=True, timeout=5)
@@ -101,4 +104,30 @@ class Recording:
                 process.stdin.close()
             if process.returncode:
                 raise RuntimeError(f'Recording encoder exited with status {process.returncode}; file may be incomplete')
+            self.remux()
             return True
+
+    def remux(self):
+        """Create a shareable MP4 without overwriting an existing recording."""
+        target = self.path.with_suffix('.mp4')
+        temporary = target.with_name(f'.{target.stem}.{uuid.uuid4().hex}.partial.mp4')
+        command = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-n',
+                   '-i', str(self.path), '-map', '0:v:0', '-map', '0:a:0',
+                   '-c', 'copy', '-movflags', '+faststart', str(temporary)]
+        # The audio session user owns the private recording directory.
+        publish = ('import os,sys; os.link(sys.argv[1],sys.argv[2]); '
+                   'os.unlink(sys.argv[1])')
+        cleanup = ['python3', '-c', 'import os,sys; os.unlink(sys.argv[1])', str(temporary)]
+        try:
+            subprocess.run(audio_session_command(command, self.session_user), check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, umask=0o077)
+            subprocess.run(audio_session_command(['python3', '-c', publish, str(temporary), str(target)],
+                                                 self.session_user), check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, umask=0o077)
+        except (OSError, subprocess.SubprocessError) as error:
+            try:
+                subprocess.run(audio_session_command(cleanup, self.session_user), check=False,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except OSError:
+                pass
+            raise RuntimeError(f'MP4 conversion failed; original recording retained at {self.path}') from error

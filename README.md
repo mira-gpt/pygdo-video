@@ -32,7 +32,9 @@ meter is unavailable, not necessarily that the microphone is muted.
 `$video.record 1` explicitly starts a private local Matroska recording in
 the audio session user's `~/Videos/Mira/`; `$video.record 0` stops and finalizes it, and
 `$video.record` reports status. It currently requires a running screensharing
-overlay and a configured local X11 display; use it through the running Dog
+overlay. On a successful stop, a separate MP4 is remuxed without re-encoding;
+the original MKV remains private and is retained if conversion fails. It also requires a
+configured local X11 display; use it through the running Dog
 client. It captures the full desktop,
 including overlays and any private windows, and mixes the desktop session's
 default system-output monitor and default microphone. If both audio session
