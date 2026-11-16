@@ -37,11 +37,12 @@ class Recording:
         return value
 
     @staticmethod
-    def command(display, sink, source, session_user, path):
+    def command(display, sink, source, session_user, path, geometry=None):
+        from gdo.video.Monitor import capture_input
         if not re.fullmatch(r':[0-9]+(?:\.[0-9]+)?', display or ''):
             raise ValueError('Configure a local X11 display first')
         command = ['ffmpeg', '-hide_banner', '-loglevel', 'error',
-                   '-f', 'x11grab', '-framerate', '15', '-i', display,
+                   '-f', 'x11grab', '-framerate', '15', *capture_input(display, geometry),
                    '-f', 'pulse', '-i', sink + '.monitor', '-f', 'pulse', '-i', source,
                    '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=longest:normalize=0:weights=0.5 0.5[a]',
                    '-map', '0:v:0', '-map', '[a]', '-c:v', 'libx264', '-preset', 'veryfast',
@@ -49,7 +50,7 @@ class Recording:
         wrapper = Path(__file__).with_name('recording_encoder.py')
         return audio_session_command(['python3', str(wrapper), *command], session_user)
 
-    def start(self, display, session_user):
+    def start(self, display, session_user, geometry=None):
         with self.lock:
             if self.active():
                 raise RuntimeError('Recording is already running')
@@ -71,7 +72,7 @@ class Recording:
             reserve = 'import os,sys; fd=os.open(sys.argv[1],os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600); os.close(fd)'
             subprocess.run(audio_session_command(['python3', '-c', reserve, str(self.path)], session_user),
                            check=True, timeout=5)
-            command = self.command(display, sink, source, session_user, self.path)
+            command = self.command(display, sink, source, session_user, self.path, geometry)
             self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                                             stderr=subprocess.DEVNULL, umask=0o077)
             return self.path

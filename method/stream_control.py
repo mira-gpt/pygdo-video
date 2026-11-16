@@ -42,7 +42,8 @@ class stream_control(Method):
                     raise ValueError('Microphone and output must use the same audio session')
                 if not module.direct_stream.active():
                     await module.stream_presence.expire(all_viewers=True)
-                await asyncio.to_thread(module.direct_stream.start, module.get_config_val('video_desktop_url'), mic_user or output_user)
+                geometry = await asyncio.to_thread(module.monitor_geometry)
+                await asyncio.to_thread(module.direct_stream.start, module.get_config_val('video_desktop_url'), mic_user or output_user, geometry)
                 await asyncio.sleep(1)
                 if not module.direct_stream.active():
                     await asyncio.to_thread(module.direct_stream.stop)

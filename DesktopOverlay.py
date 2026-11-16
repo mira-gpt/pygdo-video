@@ -14,12 +14,13 @@ from gdo.video.DrawingProtocol import validate_line
 
 
 class DesktopOverlay:
-    def __init__(self, screensharing=False, window_suffix=''):
+    def __init__(self, screensharing=False, window_suffix='', geometry=None):
         self.lock = threading.RLock()
         self.process = None
         self.enabled = False
         self.screensharing = screensharing
         self.window_suffix = window_suffix
+        self.geometry = geometry
         self.media_layer = None
         self._mic_stop = None
         self._mic_wake = None
@@ -44,6 +45,7 @@ class DesktopOverlay:
         if not display:
             raise ValueError('Configure an X11 desktop display for virtual camera output')
         output = VideoConnector()
+        output.geometry = self.geometry
         output.start(display, None, False, True, device)
         self.virtual_output = output
 
@@ -107,7 +109,7 @@ class DesktopOverlay:
             script = os.path.join(os.path.dirname(__file__), 'desktop_overlay.py')
             self.process = subprocess.Popen(['/usr/bin/python3', script, image,
                                              'screensharing' if self.screensharing else 'overlay',
-                                             self.window_suffix], stdin=subprocess.PIPE,
+                                             self.window_suffix, *([str(x) for x in self.geometry] if self.geometry else [])], stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             threading.Thread(target=self._read_overlay_events, args=(self.process,), daemon=True,
                              name='video-desktop-events').start()

@@ -88,7 +88,7 @@ class RecordingTest(unittest.TestCase):
                        '-c:v', 'libx264', '-threads', '1', '-pix_fmt', 'yuv420p',
                        '-c:a', 'aac', '-f', 'matroska']
             with patch.object(recorder, 'pulse_default', side_effect=['output', 'mic']), \
-                    patch.object(recorder, 'command', side_effect=lambda *args: command + ['-y', str(args[-1])]):
+                    patch.object(recorder, 'command', side_effect=lambda *args: command + ['-y', str(args[4])]):
                 path = recorder.start(':0.0', None)
                 try:
                     time.sleep(1.5)

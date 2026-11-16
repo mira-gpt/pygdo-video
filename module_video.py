@@ -50,6 +50,7 @@ class module_video(GDO_Module):
                 'virtualwebcam': 'virtualwebcam',
                 'screensharing': 'screensharing',
             }).not_null().initial('off').tooltip('tt_video_mode'),
+            GDT_Enum('video_monitor').choices({'1': '1', '2': '2'}).not_null().initial('2').tooltip('tt_video_monitor'),
             GDT_String('video_desktop_url').maxlen(2048).tooltip('tt_video_desktop_url'),
             GDT_String('video_bg_image_url').maxlen(2048).initial(
                 os.path.join(os.path.dirname(__file__), 'img', 'itmb-logo.png')).tooltip('tt_video_bg_image_url'),
@@ -394,6 +395,11 @@ class module_video(GDO_Module):
         except (AttributeError, RuntimeError, ValueError, OSError):
             pass
 
+    def monitor_geometry(self):
+        from gdo.video.Monitor import monitor_geometry
+        return monitor_geometry(self.get_config_val('video_desktop_url') or os.environ.get('DISPLAY'),
+                                self.get_config_val('video_monitor') or '2')
+
     def start_compositor(self):
         mode = self.get_config_value('video_mode')
         if self.connector.is_running():
@@ -401,7 +407,7 @@ class module_video(GDO_Module):
         if mode == 'off':
             raise ValueError('Video mode is off')
         if mode == 'screensharing':
-            worker = DesktopOverlay(screensharing=True)
+            worker = DesktopOverlay(screensharing=True, geometry=self.monitor_geometry())
             worker.recording_active = lambda: bool(getattr(self, 'recorder', None) and self.recorder.active())
             worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
@@ -423,6 +429,8 @@ class module_video(GDO_Module):
                 or self.get_config_value('video_duck_overlay')):
             raise ValueError('Video file, webcam and duck layers are not implemented yet')
         worker = VideoConnector()
+        if self.get_config_val('video_desktop_url'):
+            worker.geometry = self.monitor_geometry()
         worker.recording_active = lambda: bool(getattr(self, 'recorder', None) and self.recorder.active())
         worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
         worker.start(

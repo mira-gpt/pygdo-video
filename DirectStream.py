@@ -58,13 +58,14 @@ class DirectStream:
             return self.process is not None and self.process.poll() is None
 
     @staticmethod
-    def command(display, sink, source, directory, web_root='/'):
+    def command(display, sink, source, directory, web_root='/', geometry=None):
+        from gdo.video.Monitor import capture_input
         if not re.fullmatch(r':[0-9]+(?:\.[0-9]+)?', display or ''):
             raise ValueError('Configure a local X11 display first')
         if not re.fullmatch(r'/(?:[A-Za-z0-9_-]+/)*', web_root or ''):
             raise ValueError('Invalid web root for direct stream')
         return ['ffmpeg', '-hide_banner', '-loglevel', 'error',
-                '-f', 'x11grab', '-framerate', '10', '-i', display,
+                '-f', 'x11grab', '-framerate', '10', *capture_input(display, geometry),
                 '-f', 'pulse', '-i', sink + '.monitor', '-f', 'pulse', '-i', source,
                 '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=longest:normalize=0:weights=0.5 0.5[a]',
                 '-map', '0:v:0', '-map', '[a]', '-vf', 'scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2',
@@ -75,7 +76,7 @@ class DirectStream:
                 '-hls_base_url', web_root + 'video.stream_asset.html?_asset=',
                 '-hls_segment_filename', str(directory / 'segment_%08d.ts'), str(directory / 'index.m3u8')]
 
-    def start(self, display, session_user):
+    def start(self, display, session_user, geometry=None):
         with self.lock:
             if self.active():
                 raise RuntimeError('Direct stream is already running')
@@ -89,7 +90,7 @@ class DirectStream:
             self.directory.chmod(0o770)
             wrapper = Path(__file__).with_name('recording_encoder.py')
             try:
-                command = self.command(display, sink, source, self.directory, self.web_root)
+                command = self.command(display, sink, source, self.directory, self.web_root, geometry)
                 self.process = subprocess.Popen(audio_session_command(['python3', str(wrapper), *command], session_user),
                                                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                                                 stderr=subprocess.DEVNULL, umask=0o027)

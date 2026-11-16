@@ -391,8 +391,9 @@ system Python with GTK 3, PyGObject and Cairo. `video_overlay_image_url`
 selects a local image (the bundled ITMB logo by default). The initial overlay
 is an always-on-top, click-through window in the upper right; it does not
 capture the screen or open a virtual webcam. Mira and speech overlays are TODO.
-The screensharing effect covers the X11 screen, including a multi-monitor
-desktop where the X11 screen spans multiple monitors; application-window sharing
+The screensharing effect and desktop capture use the selected `video_monitor`
+(1 or 2, in `xrandr --listmonitors` order; default 2). Restart video outputs
+after changing the selection. Application-window sharing
 may omit the overlay. Test the actual sharing application and chosen source.
 
 Composite sources:

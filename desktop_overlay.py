@@ -28,7 +28,7 @@ from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED, commen
 from AwayScreen import AwayScreen, HEADER
 
 
-def main(image_path, screensharing=False, window_suffix=''):
+def main(image_path, screensharing=False, window_suffix='', geometry=None):
     screen = Gdk.Screen.get_default()
     if not screen or not screen.is_composited() or not screen.get_rgba_visual():
         raise RuntimeError('An X11 display with a compositor and RGBA visual is required')
@@ -54,8 +54,9 @@ def main(image_path, screensharing=False, window_suffix=''):
     effect.set_accept_focus(False)
     effect.set_skip_taskbar_hint(True)
     effect.set_skip_pager_hint(True)
-    effect_width = screen.get_width() if screensharing else 640
-    effect_height = screen.get_height() if screensharing else 360
+    monitor_width, monitor_height, monitor_x, monitor_y = geometry or (screen.get_width(), screen.get_height(), 0, 0)
+    effect_width = monitor_width if screensharing else 640
+    effect_height = monitor_height if screensharing else 360
     effect.set_default_size(effect_width, effect_height)
     effect.stick()
     layers = LayerStack()
@@ -460,8 +461,8 @@ def main(image_path, screensharing=False, window_suffix=''):
                 if layers.ordered():
                     already_visible = effect.get_visible()
                     effect.show_all()
-                    effect.move(0 if screensharing else max(0, (screen.get_width() - 640) // 2),
-                                0 if screensharing else max(0, (screen.get_height() - 360) // 2))
+                    effect.move(monitor_x if screensharing else monitor_x + max(0, (monitor_width - 640) // 2),
+                                monitor_y if screensharing else monitor_y + max(0, (monitor_height - 360) // 2))
                     effect.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
                     if not already_visible:
                         GLib.timeout_add(33, tick_effect)
@@ -524,7 +525,7 @@ def main(image_path, screensharing=False, window_suffix=''):
     window.connect('draw', draw)
     effect.connect('draw', draw_effect)
     window.show_all()
-    window.move(max(0, screen.get_width() - 250), 10)
+    window.move(monitor_x + max(0, monitor_width - 250), monitor_y + 10)
     window.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
     GLib.io_add_watch(sys.stdin, GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, command)
     Gtk.main()
@@ -532,4 +533,5 @@ def main(image_path, screensharing=False, window_suffix=''):
 
 if __name__ == '__main__':
     main(sys.argv[1], len(sys.argv) > 2 and sys.argv[2] == 'screensharing',
-         sys.argv[3] if len(sys.argv) > 3 else '')
+         sys.argv[3] if len(sys.argv) > 3 else '',
+         tuple(map(int, sys.argv[4:8])) if len(sys.argv) == 8 else None)

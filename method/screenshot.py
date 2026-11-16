@@ -11,12 +11,13 @@ from gdo.base.Method import Method
 from gdo.video.module_video import module_video
 
 
-def capture_screenshot(display, destination):
+def capture_screenshot(display, destination, geometry=None):
+    from gdo.video.Monitor import capture_input
     if not re.fullmatch(r':[0-9]+(?:\.[0-9]+)?', display or ''):
         raise ValueError('Configure a local X11 display first')
     result = subprocess.run(
         ['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-f', 'x11grab',
-         '-i', display, '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1'],
+         *capture_input(display, geometry), '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1'],
         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15, check=True)
     if not result.stdout.startswith(b'\x89PNG\r\n\x1a\n'):
         raise ValueError('Screenshot capture did not return a PNG')
@@ -38,9 +39,11 @@ class screenshot(Method):
 
     async def gdo_execute(self):
         try:
-            display = module_video.instance().get_config_val('video_desktop_url')
+            module = module_video.instance()
+            display = module.get_config_val('video_desktop_url')
+            geometry = await asyncio.to_thread(module.monitor_geometry)
             destination = Path(Application.file_path('gdo/mira/public'))
-            name = await asyncio.to_thread(capture_screenshot, display, destination)
+            name = await asyncio.to_thread(capture_screenshot, display, destination, geometry)
             scheme = 'https' if str(Application.config('core.force_tls', '0')).lower() in ('1', 'true', 'https') else 'http'
             root = Application.web_root().strip('/')
             prefix = f'/{root}' if root else ''

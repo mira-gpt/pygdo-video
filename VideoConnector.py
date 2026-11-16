@@ -19,6 +19,7 @@ class VideoConnector:
     WIDTH, HEIGHT, FPS = 640, 360, 15
 
     def __init__(self):
+        self.geometry = None
         self.lock = threading.RLock()
         self.worker = None
         self.stop_event = threading.Event()
@@ -64,11 +65,12 @@ class VideoConnector:
             raise ValueError('Output is not a character device')
 
     @classmethod
-    def desktop_command(cls, display):
+    def desktop_command(cls, display, geometry=None):
+        from gdo.video.Monitor import capture_input
         if not re.fullmatch(r':[0-9]+(?:\.[0-9]+)?', display or ''):
             raise ValueError('Desktop must be an X11 display such as :0.0')
         return ['ffmpeg', '-nostdin', '-loglevel', 'error', '-f', 'x11grab',
-                '-framerate', str(cls.FPS), '-i', display, '-vf',
+                '-framerate', str(cls.FPS), *capture_input(display, geometry), '-vf',
                 f'scale={cls.WIDTH}:{cls.HEIGHT}:force_original_aspect_ratio=decrease,'
                 f'pad={cls.WIDTH}:{cls.HEIGHT}:(ow-iw)/2:(oh-ih)/2',
                 '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1']
@@ -96,7 +98,7 @@ class VideoConnector:
             if self.worker and self.worker.is_alive():
                 raise RuntimeError('Video connector is already running')
             if desktop:
-                self.desktop_command(desktop)
+                self.desktop_command(desktop, self.geometry)
             background = Image.new('RGB', (self.WIDTH, self.HEIGHT), 'black')
             if image:
                 with Image.open(self.local_file(image)) as original:
@@ -151,7 +153,7 @@ class VideoConnector:
                         self.stop_event.set()
 
     def _start_capture(self):
-        process = subprocess.Popen(self.desktop_command(self.desktop), stdin=subprocess.DEVNULL,
+        process = subprocess.Popen(self.desktop_command(self.desktop, self.geometry), stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
         self.capture = process
         threading.Thread(target=self._capture_frames, args=(process,), daemon=True).start()

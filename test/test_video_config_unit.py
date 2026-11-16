@@ -5,6 +5,11 @@ from gdo.video.module_video import module_video
 
 
 class VideoConfigTest(unittest.TestCase):
+    def setUp(self):
+        geometry = patch.object(module_video, 'monitor_geometry', return_value=(1920, 1080, 1920, 0))
+        geometry.start()
+        self.addCleanup(geometry.stop)
+
     def test_audio_is_an_optional_friendency(self):
         self.assertIn('audio', module_video().gdo_friendencies())
 
@@ -12,10 +17,11 @@ class VideoConfigTest(unittest.TestCase):
         from gdo.core.GDT_Path import GDT_Path
         with patch('gdo.ui.WithIcon.t', side_effect=lambda key: key):
             fields = {field._name: field for field in module_video().gdo_module_config()}
-        self.assertEqual(set(fields), {'video_mode', 'video_desktop_url', 'video_bg_image_url', 'video_overlay_image_url', 'video_file_url',
+        self.assertEqual(set(fields), {'video_mode', 'video_monitor', 'video_gdo_stream_key', 'video_desktop_url', 'video_bg_image_url', 'video_overlay_image_url', 'video_file_url',
                                       'video_webcam_url', 'video_output_device',
                                   'video_duck_overlay', 'video_mic_overlay', 'video_duck3d_overlay', 'video_duck3d_pythonpath', 'video_output_preview', 'video_preview_w', 'video_preview_h', 'video_live', 'video_timer_frequency', 'video_commentary_log', 'video_thoughts_overlay', 'video_thoughts_audio'})
         self.assertEqual(fields['video_mode'].get_initial(), 'off')
+        self.assertEqual(fields['video_monitor'].get_initial(), '2')
         self.assertIsInstance(fields['video_commentary_log'], GDT_Path)
         self.assertEqual(fields['video_preview_w'].get_initial(), '320')
         self.assertEqual(fields['video_preview_h'].get_initial(), '180')
@@ -29,7 +35,7 @@ class VideoConfigTest(unittest.TestCase):
              patch.object(module, 'restore_overlays'), \
              patch('gdo.video.module_video.DesktopOverlay') as overlay:
             module.start_compositor()
-        overlay.assert_called_once_with(screensharing=True)
+        overlay.assert_called_once_with(screensharing=True, geometry=(1920, 1080, 1920, 0))
         overlay.return_value.start.assert_called_once_with('/image.png')
 
     def test_screensharing_does_not_use_composite_background(self):

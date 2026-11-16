@@ -43,7 +43,8 @@ class record(Method):
                 output_user = audio.get_config_val('audio_output_session_user') or None
                 if mic_user and output_user and mic_user != output_user:
                     raise ValueError('Microphone and output must use the same audio session')
-                path = await asyncio.to_thread(recorder.start, module.get_config_val('video_desktop_url'), mic_user or output_user)
+                geometry = await asyncio.to_thread(module.monitor_geometry)
+                path = await asyncio.to_thread(recorder.start, module.get_config_val('video_desktop_url'), mic_user or output_user, geometry)
                 await asyncio.sleep(1)
                 if not recorder.active():
                     await asyncio.to_thread(recorder.stop)
