@@ -135,8 +135,8 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                 pixbuf = layer.get('frame') or (layer['open'] if layer['speaking'] and int(time.monotonic() * 6) % 2 else layer['closed'])
                 # Move the duck down by 32 physical screen pixels, even when
                 # the overlay is scaled from its 640x360 logical canvas.
-                duck_x = 245 if os.environ.get('MIRA_DUCK_POSITION') == 'center' else 480
-                Gdk.cairo_set_source_pixbuf(context, pixbuf, duck_x, 165 + 32 * 360 / effect_height)
+                duck_x = 245 if os.environ.get('MIRA_DUCK_POSITION') == 'center' else 506
+                Gdk.cairo_set_source_pixbuf(context, pixbuf, duck_x, 187 + 32 * 360 / effect_height)
                 context.paint()
                 caption = layer['text'] if layer['speaking'] else layer.get('caption', '') if time.monotonic() < layer.get('caption_until', 0) else ''
                 if caption:
