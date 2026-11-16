@@ -37,6 +37,11 @@ def music_smooth(previous, target, elapsed):
     return tuple(a + (b - a) * amount for a, b in zip(previous, target))
 
 
+def music_sway(elapsed):
+    """Gentle continuous rocking between detected musical onsets."""
+    return 1.5 * math.sin(elapsed * 1.7), 2.0 * math.sin(elapsed * 1.7)
+
+
 def metal_head_pitch(pulse):
     """Nod harder on audio-level peaks; this is not a tempo detector."""
     return 3 + 30 * max(0.0, min(1.0, pulse))
@@ -1471,8 +1476,9 @@ def main():
             if mode == 'music':
                 music_pose_current = music_smooth(music_pose_current, music_pose(music_pulse, beat), now - music_frame_time)
                 pitch, roll, height, _ = music_pose_current
-                root.setP(pitch)
-                root.setR(roll)
+                sway_pitch, sway_roll = music_sway(now - mode_start)
+                root.setP(pitch + sway_pitch)
+                root.setR(roll + sway_roll)
                 root.setZ(height)
             music_frame_time = now
             for index, note in enumerate(notes):

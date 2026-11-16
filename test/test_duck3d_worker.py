@@ -32,6 +32,14 @@ class GothMotionTest(unittest.TestCase):
         twice = music_smooth(first, target, .1)
         self.assertAlmostEqual(whole[0], twice[0])
 
+    def test_music_sways_smoothly_without_beats(self):
+        from gdo.video.Duck3DWorker import music_sway
+        self.assertEqual((0, 0), music_sway(0))
+        pitch, roll = music_sway(.5)
+        self.assertGreater(pitch, 0)
+        self.assertGreater(roll, 0)
+        self.assertLessEqual(abs(roll), 2)
+
     def test_shower_water_falls_and_recycles(self):
         from gdo.video.Duck3DWorker import shower_drop
         x, first, _ = shower_drop(0, 0)
