@@ -54,6 +54,30 @@ class RecordingTest(unittest.TestCase):
                 self.assertFalse(recorder.active())
                 self.assertFalse(recorder.stop())
 
+    def test_recording_without_microphone_uses_system_audio(self):
+        command = Recording.command(':0.0', 'speakers', None, None, '/tmp/example.mkv')
+        self.assertIn('speakers.monitor', command)
+        self.assertIn('1:a:0', command)
+        self.assertNotIn('-filter_complex', command)
+        with tempfile.TemporaryDirectory() as directory:
+            recorder = Recording(Path(directory) / 'recordings')
+            process = MagicMock()
+            process.poll.return_value = None
+            process.returncode = 0
+            original_popen = subprocess.Popen
+            def start_process(command, *args, **kwargs):
+                if command[0] == 'python3' and 'recording_encoder.py' in command[1]:
+                    return process
+                return original_popen(command, *args, **kwargs)
+            with patch.object(recorder, 'pulse_default', side_effect=['speakers', ValueError('no microphone')]), \
+                    patch.object(recorder, 'remux'), \
+                    patch('gdo.video.Recording.subprocess.Popen', side_effect=start_process) as popen:
+                recorder.start(':0.0', None)
+                encoder = next(call.args[0] for call in popen.call_args_list if 'recording_encoder.py' in call.args[0][1])
+                self.assertIn('1:a:0', encoder)
+                self.assertNotIn('-filter_complex', encoder)
+                recorder.stop()
+
     def test_bad_encoder_exit_is_not_reported_as_saved(self):
         recorder = Recording()
         process = MagicMock()

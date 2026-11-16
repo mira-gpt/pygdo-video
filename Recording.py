@@ -43,9 +43,14 @@ class Recording:
             raise ValueError('Configure a local X11 display first')
         command = ['ffmpeg', '-hide_banner', '-loglevel', 'error',
                    '-f', 'x11grab', '-framerate', '15', *capture_input(display, geometry),
-                   '-f', 'pulse', '-i', sink + '.monitor', '-f', 'pulse', '-i', source,
-                   '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=longest:normalize=0:weights=0.5 0.5[a]',
-                   '-map', '0:v:0', '-map', '[a]', '-c:v', 'libx264', '-preset', 'veryfast',
+                   '-f', 'pulse', '-i', sink + '.monitor']
+        if source:
+            command += ['-f', 'pulse', '-i', source,
+                        '-filter_complex', '[1:a][2:a]amix=inputs=2:duration=longest:normalize=0:weights=0.5 0.5[a]',
+                        '-map', '0:v:0', '-map', '[a]']
+        else:
+            command += ['-map', '0:v:0', '-map', '1:a:0']
+        command += ['-c:v', 'libx264', '-preset', 'veryfast',
                    '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-f', 'matroska', '-y', str(path)]
         wrapper = Path(__file__).with_name('recording_encoder.py')
         return audio_session_command(['python3', str(wrapper), *command], session_user)
@@ -56,7 +61,10 @@ class Recording:
                 raise RuntimeError('Recording is already running')
             self.stop()
             sink = self.pulse_default('sink', session_user)
-            source = self.pulse_default('source', session_user)
+            try:
+                source = self.pulse_default('source', session_user)
+            except ValueError:
+                source = None
             account = pwd.getpwnam(session_user) if session_user else pwd.getpwuid(os.getuid())
             directory = self.directory or Path(account.pw_dir) / 'Videos' / 'Mira'
             subprocess.run(audio_session_command(['mkdir', '-p', '-m', '700', str(directory)], session_user),

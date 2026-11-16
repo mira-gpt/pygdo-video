@@ -35,9 +35,10 @@ the audio session user's `~/Videos/Mira/`; `$video.record 0` stops and finalizes
 overlay. On a successful stop, a separate MP4 is remuxed without re-encoding;
 the original MKV remains private and is retained if conversion fails. It also requires a
 configured local X11 display; use it through the running Dog
-client. It captures the full desktop,
-including overlays and any private windows, and mixes the desktop session's
-default system-output monitor and default microphone. If both audio session
+client. It captures the selected monitor,
+including overlays and any private windows, and records the desktop session's
+default system-output monitor. A suitable default microphone is mixed in when
+available; otherwise recording continues with system audio only. If both audio session
 users are explicitly configured, they must match. The output path is reported at start. While the encoder is
 running, the live indicator alternates every two seconds with `● REC`.
 Starting a recording does not start YouTube or a virtual camera. Review the
