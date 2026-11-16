@@ -25,6 +25,18 @@ def music_bounce(previous, gain):
     return previous + (target - previous) * (.45 if target > previous else .18)
 
 
+def music_pose(pulse, beat):
+    """A soft squash and alternating lean on detected beats."""
+    pulse = max(0.0, min(1.0, pulse))
+    return 6 * pulse, (1 if beat % 2 else -1) * 3 * pulse, .035 * pulse, 1 - .035 * pulse
+
+
+def music_smooth(previous, target, elapsed):
+    """Ease towards a pose at a consistent speed independent of frame rate."""
+    amount = 1 - math.exp(-max(0.0, min(elapsed, .25)) / .3)
+    return tuple(a + (b - a) * amount for a, b in zip(previous, target))
+
+
 def metal_head_pitch(pulse):
     """Nod harder on audio-level peaks; this is not a tempo detector."""
     return 3 + 30 * max(0.0, min(1.0, pulse))
@@ -1031,7 +1043,7 @@ def main():
     base.render.setLight(light_node)
 
     lock = threading.Lock()
-    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0, 'gain': 0.0, 'frequency_hz': None}
+    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0, 'gain': 0.0, 'frequency_hz': None, 'beat': 0, 'music_volume': 0.0}
 
     def receive():
         for line in sys.stdin:
@@ -1041,9 +1053,15 @@ def main():
                     if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
+                        state['beat'] = 0
                     if isinstance(request.get('speaking'), bool):
                         state['speaking'] = request['speaking']
                         state['envelope'] = []
+                    if type(request.get('beat')) is int and 0 <= request['beat'] < 2**53:
+                        state['beat'] = request['beat']
+                    volume = request.get('music_volume')
+                    if isinstance(volume, (int, float)) and math.isfinite(volume):
+                        state['music_volume'] = max(0.0, min(1.0, volume))
                     gain = request.get('gain')
                     if isinstance(gain, (int, float)) and math.isfinite(gain):
                         state['gain'] = max(0.0, min(1.0, gain))
@@ -1117,6 +1135,11 @@ def main():
     heart_speeds = [random.uniform(.20, .35) for _ in hearts]
     dizzy_kind, dizzy_until, dizzy_count, dizzy_offset, mug_count = 'none', 0, 0, 0.0, 0
     music_pulse = 0.0
+    music_pose_current = (0.0, 0.0, 0.0, 1.0)
+    music_frame_time = time.monotonic()
+    last_beat = 0
+    note_started = [0.0] * len(notes)
+    next_note = 0
     skin_override = None
     cheers_drink = 0
     try:
@@ -1126,6 +1149,8 @@ def main():
                 mode_start = state['mode_start']
                 envelope, step_ms, speech_start = state['envelope'], state['step_ms'], state['speech_start']
                 gain, frequency = state['gain'], state['frequency_hz']
+                beat = state['beat']
+                music_volume = state['music_volume']
             if not running:
                 break
             if mode_start != transition_stamp:
@@ -1362,7 +1387,24 @@ def main():
                 root.setR(2 * math.sin(t * 2))
             if mode == 'ninja':
                 root.setP(8 + 2 * math.sin(t * 1.5))
-            music_pulse = music_bounce(music_pulse, gain) if mode in ('music', 'metal') else 0.0
+            if mode == 'music':
+                if beat < last_beat:
+                    last_beat = 0
+                if beat > last_beat:
+                    for _ in range(min(beat - last_beat, len(notes))):
+                        note_started[next_note] = now
+                        next_note = (next_note + 1) % len(notes)
+                    last_beat = beat
+                    music_pulse = music_volume
+                else:
+                    music_pulse *= math.exp(-min(max(now - music_frame_time, 0), .25) / .55)
+            elif mode == 'metal':
+                music_pulse = music_bounce(music_pulse, gain)
+            else:
+                music_pulse = 0.0
+                music_pose_current = (0.0, 0.0, 0.0, 1.0)
+                last_beat = 0
+                note_started = [0.0] * len(notes)
             if mode == 'metal':
                 root.setP(metal_head_pitch(music_pulse))
                 root.setR(2 * music_pulse * math.sin(t * 6))
@@ -1427,13 +1469,18 @@ def main():
             else:
                 halo.hide()
             if mode == 'music':
-                root.setP(3 * math.sin(t * 3.2) + 7 * music_pulse)
-                root.setZ(.055 * music_pulse)
+                music_pose_current = music_smooth(music_pose_current, music_pose(music_pulse, beat), now - music_frame_time)
+                pitch, roll, height, _ = music_pose_current
+                root.setP(pitch)
+                root.setR(roll)
+                root.setZ(height)
+            music_frame_time = now
             for index, note in enumerate(notes):
-                if mode == 'music' and index < music_note_count(gain, len(notes)):
-                    phase = (t * .35 + index / len(notes)) % 1
-                    note.setPos(.65 + .12 * math.sin(t + index), -.4, 1.25 + phase * 1.0)
-                    note.setColorScale(1, .5 + min(frequency or 0, 2000) / 4000, .5, 1)
+                age = now - note_started[index]
+                if mode == 'music' and note_started[index] and 0 <= age < 1.5:
+                    phase = age / 1.5
+                    note.setPos(.65 + .12 * math.sin(age * 2 + index), -.4, 1.25 + phase * 1.0)
+                    note.setColorScale(1, .7, .5, 1)
                     note.show()
                 else:
                     note.hide()
@@ -1488,7 +1535,8 @@ def main():
                     drop.show()
                 else:
                     drop.hide()
-            root.setSz(.88 + .012 * math.sin(t * (7 if mode == 'cry' else .8)) if mode in ('sad', 'cry') else 1)
+            root.setSz(music_pose_current[3] if mode == 'music' else
+                       .88 + .012 * math.sin(t * (7 if mode == 'cry' else .8)) if mode in ('sad', 'cry') else 1)
             for tear in tears:
                 if mode == 'cry':
                     tear.show()

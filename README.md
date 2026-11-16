@@ -215,6 +215,10 @@ when the meter is hidden no border is visible.
   animation change. Both use Dog IPC and require
   the optional 3D dependencies and a working graphics display. A queued reply
   does not confirm that the renderer started or appeared on stream.
+  The `music` animation temporarily reads the configured output session's
+  default speaker monitor to detect low- and high-frequency transients; no
+  samples are saved. It stops monitoring when the animation changes or the
+  duck closes. Detection is approximate, not instrument identification.
   With an audio module that emits speech envelopes, the beak approximately
   follows synthesized audio energy and pauses; this is not phoneme-level lip
   sync. Older audio modules retain the simple speaking animation.

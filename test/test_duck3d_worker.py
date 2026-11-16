@@ -12,6 +12,26 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_music_morph_responds_to_alternating_beats(self):
+        from gdo.video.Duck3DWorker import music_pose
+        self.assertEqual((0, 0, 0, 1), music_pose(0, 1))
+        pitch, roll, height, scale = music_pose(1, 1)
+        self.assertGreater(pitch, 0)
+        self.assertGreater(roll, 0)
+        self.assertGreater(height, 0)
+        self.assertLess(scale, 1)
+        self.assertEqual(-roll, music_pose(1, 2)[1])
+
+    def test_music_pose_eases_gradually_at_consistent_speed(self):
+        from gdo.video.Duck3DWorker import music_pose, music_smooth
+        rest, target = music_pose(0, 0), music_pose(1, 1)
+        first = music_smooth(rest, target, .1)
+        self.assertGreater(first[0], 0)
+        self.assertLess(first[0], target[0])
+        whole = music_smooth(rest, target, .2)
+        twice = music_smooth(first, target, .1)
+        self.assertAlmostEqual(whole[0], twice[0])
+
     def test_shower_water_falls_and_recycles(self):
         from gdo.video.Duck3DWorker import shower_drop
         x, first, _ = shower_drop(0, 0)

@@ -19,6 +19,7 @@ class Duck3DSource:
         self.frame = None
         self.mode = 'idle'
         self.feature_sent = 0.0
+        self.music_beat = None
         if pythonpath:
             env = dict(os.environ if env is None else env)
             env['PYTHONPATH'] = pythonpath + os.pathsep + env.get('PYTHONPATH', '')
@@ -48,6 +49,14 @@ class Duck3DSource:
     def update(self, **state):
         if 'mode' in state and state['mode'] not in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower'):
             raise ValueError('Unknown duck animation')
+        if 'mode' in state and state['mode'] != self.mode:
+            if self.music_beat:
+                self.music_beat.close()
+                self.music_beat = None
+            if state['mode'] == 'music':
+                from gdo.audio.module_audio import module_audio
+                from gdo.video.MusicBeat import MusicBeat
+                self.music_beat = MusicBeat(module_audio.instance().get_config_val('audio_output_session_user') or None)
         try:
             with self.lock:
                 self.process.stdin.write((json.dumps(state) + '\n').encode())
@@ -58,7 +67,11 @@ class Duck3DSource:
 
     def snapshot(self):
         now = time.monotonic()
-        if self.mode in ('music', 'metal') and now - self.feature_sent >= .1:
+        if self.mode == 'music' and self.music_beat and now - self.feature_sent >= .05:
+            beat, volume = self.music_beat.snapshot()
+            self.update(beat=beat, music_volume=volume)
+            self.feature_sent = now
+        elif self.mode == 'metal' and now - self.feature_sent >= .1:
             from gdo.audio.meter import MicrophoneMeter
             features = MicrophoneMeter.features(now)
             self.update(gain=features.gain, frequency_hz=features.frequency_hz)
@@ -77,6 +90,9 @@ class Duck3DSource:
         raise RuntimeError('3D duck renderer did not produce a frame')
 
     def close(self):
+        if self.music_beat:
+            self.music_beat.close()
+            self.music_beat = None
         if self.process.poll() is None:
             try:
                 self.update(stop=True)
