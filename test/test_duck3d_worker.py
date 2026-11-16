@@ -12,6 +12,24 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_christmas_hop_hat_and_snow_recycle(self):
+        from gdo.video.Duck3DWorker import christmas_motion, christmas_snow
+        self.assertEqual(0, christmas_motion(4)[1])
+        self.assertGreater(christmas_motion(5.5)[1], 0)
+        self.assertGreater(christmas_motion(6.0)[2], 0)
+        self.assertEqual(0, christmas_motion(9)[2])
+        _, z0 = christmas_snow(0, 0)
+        _, z1 = christmas_snow(0, 1)
+        self.assertLess(z1, z0)
+        self.assertAlmostEqual(z0, christmas_snow(0, 6.25)[1])
+
+    def test_christmas_bells_wiggle_only_occasionally(self):
+        from gdo.video.Duck3DWorker import christmas_bell_motion
+        self.assertEqual(0, christmas_bell_motion(0, 0))
+        self.assertEqual(0, christmas_bell_motion(6, 0))
+        self.assertGreater(abs(christmas_bell_motion(3.5, 0)), 1)
+        self.assertAlmostEqual(christmas_bell_motion(3.5, 0), christmas_bell_motion(12.5, 0))
+
     def test_music_steps_alternate_and_ignore_fast_subdivisions(self):
         from gdo.video.Duck3DWorker import MusicSteps
         steps = MusicSteps()

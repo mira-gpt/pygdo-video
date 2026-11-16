@@ -42,6 +42,29 @@ def music_sway(elapsed):
     return 1.5 * math.sin(elapsed * 1.7), 2.0 * math.sin(elapsed * 1.7)
 
 
+def christmas_motion(elapsed):
+    """A gentle sway and occasional hop with a slipping, recovering hat."""
+    cycle = elapsed % 12.0
+    hop = math.sin(math.pi * (cycle - 5) / 1.0) if 5 <= cycle < 6 else 0.0
+    slip = max(0.0, min(1.0, (cycle - 5.4) / .4, (8.2 - cycle) / .8))
+    return 3 * math.sin(elapsed * 1.7), .08 * hop, slip
+
+
+def christmas_snow(index, elapsed):
+    phase = (elapsed * .16 + index * .173) % 1.0
+    return -.62 + (index * .37) % 1.8 + .09 * math.sin(elapsed * 1.2 + index), 2.2 - 2.0 * phase
+
+
+def christmas_bell_motion(elapsed, index):
+    """Occasional short, gently faded bell shakes."""
+    phase = (elapsed + index * .45) % 9.0
+    if not 3.0 <= phase < 5.0:
+        return 0.0
+    envelope = math.sin(math.pi * (phase - 3.0) / 2.0)
+    shake = phase - 3.0
+    return envelope * (22 * math.sin(shake * 10 + index * .7) + 8 * math.sin(shake * 17.3))
+
+
 class MusicSteps:
     """A restrained four-step pulse from detected onsets, not a meter classifier."""
     def __init__(self):
@@ -270,6 +293,81 @@ def main():
     chalk_node.setScale(.13)
     chalk_node.setLightOff()
     teacher.hide()
+    christmas = root.attachNewNode('christmas decorations')
+    christmas_hat = christmas.attachNewNode('santa hat')
+    christmas_hat.setPos(0, -.48, 1.82)
+    hat_data = GeomVertexData('santa hat', GeomVertexFormat.getV3(), Geom.UHStatic)
+    hat_vertices = GeomVertexWriter(hat_data, 'vertex')
+    for x, z in ((-.32, 0), (.32, 0), (.14, .43), (.37, .28)):
+        hat_vertices.addData3(x, 0, z)
+    hat_triangles = GeomTriangles(Geom.UHStatic)
+    hat_triangles.addVertices(0, 1, 2)
+    hat_triangles.addVertices(1, 3, 2)
+    hat_shape = Geom(hat_data)
+    hat_shape.addPrimitive(hat_triangles)
+    hat_geom = GeomNode('santa fabric')
+    hat_geom.addGeom(hat_shape)
+    hat_fabric = christmas_hat.attachNewNode(hat_geom)
+    hat_fabric.setColor(.8, .03, .06, 1)
+    hat_fabric.setLightOff()
+    hat_fabric.setTwoSided(True)
+    brim_card = CardMaker('santa white brim')
+    brim_card.setFrame(-.34, .34, -.035, .055)
+    brim = christmas_hat.attachNewNode(brim_card.generate())
+    brim.setColor(1, .98, .92, 1)
+    brim.setLightOff()
+    pom_card = CardMaker('santa pompom')
+    pom_card.setFrame(-.07, .07, -.07, .07)
+    pompom = christmas_hat.attachNewNode(pom_card.generate())
+    pompom.setPos(.37, -.01, .28)
+    pompom.setColor(1, .98, .92, 1)
+    pompom.setLightOff()
+    bells = []
+    for side in (-1, 1):
+        bell = christmas.attachNewNode('christmas bell')
+        bell.setPos(side * .57 + .16, -.82, .86)
+        bell_data = GeomVertexData('bell silhouette', GeomVertexFormat.getV3(), Geom.UHStatic)
+        bell_vertices = GeomVertexWriter(bell_data, 'vertex')
+        for x, z in ((-.035, -.015), (.035, -.015), (.045, -.075), (.075, -.11),
+                     (-.075, -.11), (-.045, -.075)):
+            bell_vertices.addData3(x, 0, z)
+        bell_triangles = GeomTriangles(Geom.UHStatic)
+        for a, b, c in ((0, 1, 2), (0, 2, 5), (5, 2, 3), (5, 3, 4)):
+            bell_triangles.addVertices(a, b, c)
+        bell_shape = Geom(bell_data)
+        bell_shape.addPrimitive(bell_triangles)
+        bell_node = GeomNode('gold bell')
+        bell_node.addGeom(bell_shape)
+        bell_body = bell.attachNewNode(bell_node)
+        bell_body.setColor(1, .70, .06, 1)
+        bell_body.setLightOff()
+        bell_body.setTwoSided(True)
+        details = LineSegs('bell rim loop and clapper')
+        details.setThickness(3)
+        details.setColor(.55, .30, .03, 1)
+        details.moveTo(-.075, -.01, -.11)
+        details.drawTo(.075, -.01, -.11)
+        details.moveTo(-.025, -.01, -.015)
+        details.drawTo(-.025, -.01, .025)
+        details.drawTo(.025, -.01, .025)
+        details.drawTo(.025, -.01, -.015)
+        details.moveTo(0, -.01, -.11)
+        details.drawTo(0, -.01, -.14)
+        bell.attachNewNode(details.create()).setLightOff()
+        bells.append(bell)
+    snowflakes = []
+    for index in range(10):
+        snow = LineSegs('snowflake')
+        snow.setThickness(2)
+        snow.setColor(.9, .97, 1, 1)
+        for x, z in ((.04, 0), (.02, .035), (-.02, .035)):
+            snow.moveTo(-x, 0, -z)
+            snow.drawTo(x, 0, z)
+        flake = christmas.attachNewNode(snow.create())
+        flake.setBillboardPointEye()
+        flake.setLightOff()
+        snowflakes.append(flake)
+    christmas.hide()
     sleep_letters = []
     sleep_font_path = Path('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
     sleep_font = base.loader.loadFont(str(sleep_font_path)) if sleep_font_path.is_file() else None
@@ -1085,7 +1183,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower', 'christmas'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                         state['beat'] = 0
@@ -1395,6 +1493,20 @@ def main():
             pirate.show() if mode == 'pirate' else pirate.hide()
             work.show() if mode == 'work' else work.hide()
             birthday.show() if mode == 'bday' else birthday.hide()
+            christmas.show() if mode == 'christmas' else christmas.hide()
+            if mode == 'christmas':
+                elapsed = now - mode_start
+                sway, hop, slip = christmas_motion(elapsed)
+                root.setR(sway)
+                root.setZ(hop)
+                christmas_hat.setR(5 * math.sin(elapsed * 2) - 26 * slip)
+                christmas_hat.setZ(1.82 - .20 * slip)
+                pompom.setR(12 * math.sin(elapsed * 3))
+                for index, bell in enumerate(bells):
+                    bell.setR(christmas_bell_motion(elapsed, index))
+                for index, flake in enumerate(snowflakes):
+                    x, z = christmas_snow(index, elapsed)
+                    flake.setPos(x, -.9, z)
             for index, (drink, liquid) in enumerate(drinks):
                 if mode == 'cheers' and index == cheers_drink:
                     elapsed = now - mode_start
@@ -1614,7 +1726,7 @@ def main():
                 pain_marks.hide()
             left_wing = root.find('**/Wing L')
             if not left_wing.isEmpty():
-                left_wing.setR(-28 - 15 * math.sin((now - mode_start) * 4) if mode == 'shower' else -(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
+                left_wing.setR(-20 + christmas_bell_motion(now - mode_start, 0) if mode == 'christmas' else -28 - 15 * math.sin((now - mode_start) * 4) if mode == 'shower' else -(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
             if mode == 'shower':
                 scrub = math.sin((now - mode_start) * 4)
                 wing_base.setR(28 + 15 * scrub)
@@ -1623,6 +1735,10 @@ def main():
                 wave = math.sin((time.monotonic() - mode_start) * 18)
                 wing_base.setR(50 + 30 * wave)
                 wing_tip.setR(30 * wave)
+            elif mode == 'christmas':
+                shake = christmas_bell_motion(now - mode_start, 1)
+                wing_base.setR(20 + shake)
+                wing_tip.setR(shake * .6)
             else:
                 wing_base.setR(30 + 25 * math.sin(t * 11) if mode in ('lol', 'plz') or angry_flapping else 55 if mode in ('shrug', 'cheers') else 70 if mode == 'zombie' else -25 if mode in ('sad', 'cry') else 0)
                 wing_tip.setR(0)
