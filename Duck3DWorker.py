@@ -42,6 +42,36 @@ def music_sway(elapsed):
     return 1.5 * math.sin(elapsed * 1.7), 2.0 * math.sin(elapsed * 1.7)
 
 
+class MusicSteps:
+    """A restrained four-step pulse from detected onsets, not a meter classifier."""
+    def __init__(self):
+        self.step = -1
+        self.last = None
+        self.interval = .5
+
+    def onset(self, now):
+        if self.last is not None:
+            elapsed = now - self.last
+            if elapsed < max(.28, self.interval * .62):
+                return
+            if .28 <= elapsed <= 1.2:
+                self.interval += .25 * (elapsed - self.interval)
+            elif elapsed > 2:
+                self.step = -1
+                self.interval = .5
+        self.last = now
+        self.step = (self.step + 1) % 4
+
+    def lift(self, index, now):
+        if self.last is None or index != self.step % 2:
+            return 0.0
+        age = now - self.last
+        duration = min(.32, self.interval * .7)
+        if not 0 <= age < duration:
+            return 0.0
+        return .065 * math.sin(math.pi * age / duration)
+
+
 def metal_head_pitch(pulse):
     """Nod harder on audio-level peaks; this is not a tempo detector."""
     return 3 + 30 * max(0.0, min(1.0, pulse))
@@ -1145,6 +1175,7 @@ def main():
     last_beat = 0
     note_started = [0.0] * len(notes)
     next_note = 0
+    music_steps = MusicSteps()
     skin_override = None
     cheers_drink = 0
     try:
@@ -1396,6 +1427,7 @@ def main():
                 if beat < last_beat:
                     last_beat = 0
                 if beat > last_beat:
+                    music_steps.onset(now)
                     for _ in range(min(beat - last_beat, len(notes))):
                         note_started[next_note] = now
                         next_note = (next_note + 1) % len(notes)
@@ -1410,6 +1442,7 @@ def main():
                 music_pose_current = (0.0, 0.0, 0.0, 1.0)
                 last_beat = 0
                 note_started = [0.0] * len(notes)
+                music_steps = MusicSteps()
             if mode == 'metal':
                 root.setP(metal_head_pitch(music_pulse))
                 root.setR(2 * music_pulse * math.sin(t * 6))
@@ -1598,6 +1631,8 @@ def main():
                 if not foot.isEmpty():
                     if mode == 'ouch':
                         lift = max(0, math.sin((time.monotonic() - mode_start) * 7 + index * math.pi)) * .22
+                    elif mode == 'music':
+                        lift = music_steps.lift(index, now)
                     else:
                         lift = max(0, math.sin(t * 5 + index * math.pi)) * .08 if mode in ('quacking', 'lol') else 0
                     foot.setZ(.16 + lift)

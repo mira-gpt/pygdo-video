@@ -12,6 +12,21 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_music_steps_alternate_and_ignore_fast_subdivisions(self):
+        from gdo.video.Duck3DWorker import MusicSteps
+        steps = MusicSteps()
+        self.assertEqual(0, steps.lift(0, 0))
+        steps.onset(1.0)
+        self.assertGreater(steps.lift(0, 1.1), 0)
+        self.assertEqual(0, steps.lift(1, 1.1))
+        steps.onset(1.15)
+        self.assertEqual(0, steps.step)
+        steps.onset(1.5)
+        self.assertEqual(1, steps.step)
+        self.assertGreater(steps.lift(1, 1.6), 0)
+        self.assertEqual(0, steps.lift(0, 1.6))
+        self.assertEqual(0, steps.lift(1, 2.0))
+
     def test_music_morph_responds_to_alternating_beats(self):
         from gdo.video.Duck3DWorker import music_pose
         self.assertEqual((0, 0, 0, 1), music_pose(0, 1))
