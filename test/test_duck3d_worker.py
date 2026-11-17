@@ -12,6 +12,22 @@ from unittest.mock import MagicMock, patch
 
 
 class GothMotionTest(unittest.TestCase):
+    def test_xmas_is_registered_and_accepted_by_source(self):
+        import threading
+        from gdo.mira.GDT_MiraMood import ANIMATIONS
+        from gdo.video.Duck3DSource import Duck3DSource
+
+        self.assertIn('xmas', ANIMATIONS)
+        self.assertNotIn('christmas', ANIMATIONS)
+        source = Duck3DSource.__new__(Duck3DSource)
+        source.mode = 'idle'
+        source.music_beat = None
+        source.lock = threading.Lock()
+        source.process = MagicMock()
+        source.update(mode='xmas')
+        self.assertEqual('xmas', source.mode)
+        source.process.stdin.write.assert_called_once_with(b'{"mode": "xmas"}\n')
+
     def test_christmas_hop_hat_and_snow_recycle(self):
         from gdo.video.Duck3DWorker import christmas_motion, christmas_snow
         self.assertEqual(0, christmas_motion(4)[1])

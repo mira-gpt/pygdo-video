@@ -1183,7 +1183,7 @@ def main():
             try:
                 request = json.loads(line)
                 with lock:
-                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower', 'christmas'):
+                    if request.get('mode') in ('idle', 'quacking', 'lol', 'shrug', 'sad', 'cry', 'ouch', 'hello', 'rolleye', 'high', 'music', 'tipsy', 'drunk', 'barf', 'embarrassed', 'plz', 'teacher', 'xd', 'sorry', 'nerd', 'cast', 'zombie', 'giveup', 'rich', 'anon', 'king', 'turnaround', 'shiver', 'rambo', 'hippi', 'metal', 'ninja', 'news', 'pirate', 'ghost', 'work', 'bday', 'hah', 'cheers', 'goth', 'angry', 'inlove', 'trip', 'tired', 'zzz', 'coffee', 'shower', 'xmas'):
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                         state['beat'] = 0
@@ -1493,8 +1493,8 @@ def main():
             pirate.show() if mode == 'pirate' else pirate.hide()
             work.show() if mode == 'work' else work.hide()
             birthday.show() if mode == 'bday' else birthday.hide()
-            christmas.show() if mode == 'christmas' else christmas.hide()
-            if mode == 'christmas':
+            christmas.show() if mode == 'xmas' else christmas.hide()
+            if mode == 'xmas':
                 elapsed = now - mode_start
                 sway, hop, slip = christmas_motion(elapsed)
                 root.setR(sway)
@@ -1726,7 +1726,7 @@ def main():
                 pain_marks.hide()
             left_wing = root.find('**/Wing L')
             if not left_wing.isEmpty():
-                left_wing.setR(-20 + christmas_bell_motion(now - mode_start, 0) if mode == 'christmas' else -28 - 15 * math.sin((now - mode_start) * 4) if mode == 'shower' else -(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
+                left_wing.setR(-20 + christmas_bell_motion(now - mode_start, 0) if mode == 'xmas' else -28 - 15 * math.sin((now - mode_start) * 4) if mode == 'shower' else -(30 + 25 * math.sin(t * 11)) if mode in ('lol', 'plz') or angry_flapping else -50 + 8 * math.sin(t * 7) if mode == 'metal' else -35 + 15 * math.sin(t * 3) if mode == 'hippi' else -55 if mode == 'shrug' else -70 if mode == 'zombie' else 25 if mode in ('sad', 'cry') else 0)
             if mode == 'shower':
                 scrub = math.sin((now - mode_start) * 4)
                 wing_base.setR(28 + 15 * scrub)
@@ -1735,7 +1735,7 @@ def main():
                 wave = math.sin((time.monotonic() - mode_start) * 18)
                 wing_base.setR(50 + 30 * wave)
                 wing_tip.setR(30 * wave)
-            elif mode == 'christmas':
+            elif mode == 'xmas':
                 shake = christmas_bell_motion(now - mode_start, 1)
                 wing_base.setR(20 + shake)
                 wing_tip.setR(shake * .6)
