@@ -4,7 +4,7 @@ import unittest
 from gdo.base.Application import Application
 from gdo.base.ModuleLoader import ModuleLoader
 from gdo.video.module_video import module_video
-from gdotest.TestUtil import cli_plug, reinstall_module, cli_gizmore, GDOTestCase, WebPlug, install_module, web_plug
+from gdotest.TestUtil import reinstall_module, GDOTestCase, WebPlug, install_module
 
 
 class module_video_Test(GDOTestCase):
@@ -23,17 +23,6 @@ class module_video_Test(GDOTestCase):
     def test_00_reinstall(self):
         reinstall_module('video')
         self.assertIs(type(module_video.instance()), module_video, "Cannot re-install module video.")
-
-    def test_03_overview_cli(self):
-        giz =  cli_gizmore()
-        out = cli_plug(giz, "$video.overview")
-        self.assertIsNotNone(out, '$video.overview does not work.')
-
-    def test_02_overview_web(self):
-        giz =  cli_gizmore()
-        out = web_plug("video.overview.html")
-        self.assertIsNotNone(out, 'video.overview.html does not work.')
-
 
 if __name__ == '__main__':
     unittest.main()

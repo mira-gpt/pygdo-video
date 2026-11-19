@@ -46,8 +46,6 @@ tt_video_output_device = "Virtual V4L2 output device, for example /dev/video2."
 video_duck_overlay = "Duck overlay"
 tt_video_duck_overlay = "Show Mira's thinking process as a duck assistant speech bubble."
 
-mt_video_overview = "videos"
-md_video_overview = "Overview of video"
 video_error = "Video connector error: %s"
 video_gdo_stream_key = "Direct stream key"
 tt_video_gdo_stream_key = "Optional password for the direct stream. Empty means public access while the stream is running."
