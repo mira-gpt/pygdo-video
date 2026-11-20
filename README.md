@@ -393,8 +393,8 @@ and verify the destination before sending commands to a live instance.
 
 Desktop overlays currently require X11, a compositing window manager, and
 system Python with GTK 3, PyGObject and Cairo. `video_overlay_image_url`
-selects a local image (the bundled ITMB logo by default). The initial overlay
-is an always-on-top, click-through window in the upper right; it does not
+selects a local image (the bundled ITMB logo by default). The logo starts hidden;
+when enabled it is an always-on-top, click-through window in the upper right. It does not
 capture the screen or open a virtual webcam. Mira and speech overlays are TODO.
 The screensharing effect and desktop capture use the selected `video_monitor`
 (1 or 2, in `xrandr --listmonitors` order; default 2). Restart video outputs

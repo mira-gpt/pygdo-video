@@ -32,6 +32,8 @@ class DesktopOverlayTest(unittest.TestCase):
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
+            self.assertTrue(self.wait_for('IsUnMapped'), overlay.status())
+            overlay.set_layer('overlay', True)
             self.assertTrue(self.wait_for('IsViewable'), overlay.status())
             overlay.vintage(True)
             deadline = time.monotonic() + 5
@@ -77,7 +79,7 @@ class DesktopOverlayTest(unittest.TestCase):
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
-            self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            self.assertTrue(self.wait_for('IsUnMapped'), overlay.status())
             overlay.starwars('Screensharing test')
             deadline = time.monotonic() + 5
             result = None
@@ -101,7 +103,7 @@ class DesktopOverlayTest(unittest.TestCase):
         image = os.path.join(os.path.dirname(__file__), '..', 'img', 'itmb-logo.png')
         overlay.start(os.path.abspath(image))
         try:
-            self.assertTrue(self.wait_for('IsViewable'), overlay.status())
+            self.assertTrue(self.wait_for('IsUnMapped'), overlay.status())
             overlay.put_effect('media', ImageLayer(Image.new('RGBA', (20, 20), 'red')))
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline:

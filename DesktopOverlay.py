@@ -113,7 +113,7 @@ class DesktopOverlay:
                                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             threading.Thread(target=self._read_overlay_events, args=(self.process,), daemon=True,
                              name='video-desktop-events').start()
-            self.enabled = True
+            self.enabled = False
             self._indicator_stop.clear()
             threading.Thread(target=self._pump_indicator, daemon=True, name='video-live-indicator').start()
 

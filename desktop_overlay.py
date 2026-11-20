@@ -524,7 +524,7 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
 
     window.connect('draw', draw)
     effect.connect('draw', draw_effect)
-    window.show_all()
+    window.realize()
     window.move(monitor_x + max(0, monitor_width - 250), monitor_y + 10)
     window.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
     GLib.io_add_watch(sys.stdin, GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, command)
