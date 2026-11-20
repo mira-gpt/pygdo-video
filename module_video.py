@@ -67,6 +67,7 @@ class module_video(GDO_Module):
             GDT_Width('video_preview_w').not_null().initial('320').min(1).max(8192).tooltip('tt_video_preview_w'),
             GDT_Height('video_preview_h').not_null().initial('180').min(1).max(8192).tooltip('tt_video_preview_h'),
             GDT_Bool('video_live').not_null().initial('0').tooltip('tt_video_live'),
+            GDT_Bool('video_stream_sidebar').not_null().initial('0').tooltip('tt_video_stream_sidebar'),
             GDT_Secret('video_gdo_stream_key').tooltip('tt_video_gdo_stream_key'),
             GDT_Duration('video_timer_frequency').not_null().min(10).initial('5m').tooltip('tt_video_timer_frequency'),
             GDT_Path('video_commentary_log').maxlen(2048).tooltip('tt_video_commentary_log'),
@@ -448,6 +449,7 @@ class module_video(GDO_Module):
         self.add_css('css/pygdo-video.css')
 
     def gdo_init_sidebar(self, page: 'GDT_Page'):
-        page._left_bar.add_field(
-            GDT_Link().href(self.href('stream')).text('link_video_stream')
-            .attr('data-video-stream-status', self.href('stream_status')))
+        if self.get_config_value('video_stream_sidebar'):
+            page._left_bar.add_field(
+                GDT_Link().href(self.href('stream')).text('link_video_stream')
+                .attr('data-video-stream-status', self.href('stream_status')))
