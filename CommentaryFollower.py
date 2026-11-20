@@ -32,6 +32,7 @@ def speech_filter(text, url_phrase, smile_phrase='smile', language='en'):
     text = re.sub(r'\bpygdo\b', 'PyGDO', text)
     if language == 'de':
         text = re.sub(r'\bdog\b', 'Dock', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s*:D\s*', ' thehehe ', text)
     text = re.sub(r'\s*:\)\s*', lambda _: f' {smile_phrase} ', text)
     return re.sub(r'\s*:\*\s*', ' kisses ', text)
 
