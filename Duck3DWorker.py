@@ -72,10 +72,10 @@ class MusicSteps:
         self.last = None
         self.interval = .5
 
-    def onset(self, now):
+    def onset(self, now, kind='unknown'):
         if self.last is not None:
             elapsed = now - self.last
-            if elapsed < max(.28, self.interval * .62):
+            if elapsed < (.16 if kind in ('bass', 'snare') else max(.28, self.interval * .62)):
                 return
             if .28 <= elapsed <= 1.2:
                 self.interval += .25 * (elapsed - self.interval)
@@ -83,7 +83,12 @@ class MusicSteps:
                 self.step = -1
                 self.interval = .5
         self.last = now
-        self.step = (self.step + 1) % 4
+        if kind == 'bass':
+            self.step = 0
+        elif kind == 'snare':
+            self.step = 1
+        else:
+            self.step = (self.step + 1) % 4
 
     def lift(self, index, now):
         if self.last is None or index != self.step % 2:
@@ -1176,7 +1181,7 @@ def main():
     base.render.setLight(light_node)
 
     lock = threading.Lock()
-    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0, 'gain': 0.0, 'frequency_hz': None, 'beat': 0, 'music_volume': 0.0}
+    state = {'mode': 'idle', 'mode_start': time.monotonic(), 'speaking': False, 'running': True, 'envelope': [], 'step_ms': 50, 'speech_start': 0, 'gain': 0.0, 'frequency_hz': None, 'beat': 0, 'beat_kind': 'unknown', 'music_volume': 0.0}
 
     def receive():
         for line in sys.stdin:
@@ -1187,11 +1192,14 @@ def main():
                         state['mode'] = request['mode']
                         state['mode_start'] = time.monotonic()
                         state['beat'] = 0
+                        state['beat_kind'] = 'unknown'
                     if isinstance(request.get('speaking'), bool):
                         state['speaking'] = request['speaking']
                         state['envelope'] = []
                     if type(request.get('beat')) is int and 0 <= request['beat'] < 2**53:
                         state['beat'] = request['beat']
+                    if request.get('beat_kind') in ('bass', 'snare', 'unknown'):
+                        state['beat_kind'] = request['beat_kind']
                     volume = request.get('music_volume')
                     if isinstance(volume, (int, float)) and math.isfinite(volume):
                         state['music_volume'] = max(0.0, min(1.0, volume))
@@ -1284,6 +1292,7 @@ def main():
                 envelope, step_ms, speech_start = state['envelope'], state['step_ms'], state['speech_start']
                 gain, frequency = state['gain'], state['frequency_hz']
                 beat = state['beat']
+                beat_kind = state['beat_kind']
                 music_volume = state['music_volume']
             if not running:
                 break
@@ -1539,7 +1548,7 @@ def main():
                 if beat < last_beat:
                     last_beat = 0
                 if beat > last_beat:
-                    music_steps.onset(now)
+                    music_steps.onset(now, beat_kind)
                     for _ in range(min(beat - last_beat, len(notes))):
                         note_started[next_note] = now
                         next_note = (next_note + 1) % len(notes)
@@ -1619,7 +1628,7 @@ def main():
             else:
                 halo.hide()
             if mode == 'music':
-                music_pose_current = music_smooth(music_pose_current, music_pose(music_pulse, beat), now - music_frame_time)
+                music_pose_current = music_smooth(music_pose_current, music_pose(music_pulse, music_steps.step), now - music_frame_time)
                 pitch, roll, height, _ = music_pose_current
                 sway_pitch, sway_roll = music_sway(now - mode_start)
                 root.setP(pitch + sway_pitch)

@@ -16,16 +16,33 @@ class MusicBeatTest(unittest.TestCase):
         detector = OnsetDetector()
         self.assertFalse(detector.feed(bytes(640), 0))
         self.assertTrue(detector.feed(tone(80, .7), 1))
+        self.assertEqual('bass', detector.kind)
         self.assertFalse(detector.feed(tone(80, .7), 1.02))
         for i in range(50):
             detector.feed(bytes(640), 1.1 + i * .02)
         self.assertTrue(detector.feed(tone(2200, .7), 2.2))
+        self.assertEqual('snare', detector.kind)
         self.assertEqual(2, detector.count)
 
     def test_low_noise_does_not_trigger(self):
         detector = OnsetDetector()
         for i in range(50):
             self.assertFalse(detector.feed(tone(1000, .001), i * .02))
+
+    def test_source_forwards_classified_beat(self):
+        from gdo.video.Duck3DSource import Duck3DSource
+        import threading
+        source = Duck3DSource.__new__(Duck3DSource)
+        source.lock = threading.Lock()
+        source.frame = None
+        source.mode = 'music'
+        source.feature_sent = 0
+        source.music_beat = MagicMock()
+        source.music_beat.snapshot.return_value = (3, .4, 'snare')
+        source.update = MagicMock()
+        with patch('gdo.video.Duck3DSource.time.monotonic', return_value=10):
+            source.snapshot()
+        source.update.assert_called_once_with(beat=3, music_volume=.4, beat_kind='snare')
 
     def test_volume_is_smoothed_and_tracks_overall_loudness(self):
         quiet, loud = OnsetDetector(), OnsetDetector()

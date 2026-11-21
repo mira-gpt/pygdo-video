@@ -61,6 +61,18 @@ class GothMotionTest(unittest.TestCase):
         self.assertEqual(0, steps.lift(0, 1.6))
         self.assertEqual(0, steps.lift(1, 2.0))
 
+    def test_music_steps_choose_side_and_cycle_unknown(self):
+        from gdo.video.Duck3DWorker import MusicSteps
+        steps = MusicSteps()
+        steps.onset(1, 'bass')
+        self.assertEqual(0, steps.step % 2)
+        steps.onset(1.5, 'snare')
+        self.assertEqual(1, steps.step % 2)
+        steps.onset(2, 'unknown')
+        self.assertEqual(0, steps.step % 2)
+        steps.onset(2.5, 'unknown')
+        self.assertEqual(1, steps.step % 2)
+
     def test_music_morph_responds_to_alternating_beats(self):
         from gdo.video.Duck3DWorker import music_pose
         self.assertEqual((0, 0, 0, 1), music_pose(0, 1))

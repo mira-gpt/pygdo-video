@@ -68,8 +68,8 @@ class Duck3DSource:
     def snapshot(self):
         now = time.monotonic()
         if self.mode == 'music' and self.music_beat and now - self.feature_sent >= .05:
-            beat, volume = self.music_beat.snapshot()
-            self.update(beat=beat, music_volume=volume)
+            beat, volume, kind = self.music_beat.snapshot()
+            self.update(beat=beat, music_volume=volume, beat_kind=kind)
             self.feature_sent = now
         elif self.mode == 'metal' and now - self.feature_sent >= .1:
             from gdo.audio.meter import MicrophoneMeter

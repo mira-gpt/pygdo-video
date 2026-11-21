@@ -16,6 +16,7 @@ class OnsetDetector:
         self.average = [0.0, 0.0]
         self.last = [-1.0, -1.0]
         self.count = 0
+        self.kind = 'unknown'
         self.volume = 0.0
 
     def feed(self, pcm, now):
@@ -44,6 +45,14 @@ class OnsetDetector:
                 self.last[i] = now
         if any(hits):
             self.count += 1
+            # Relative band energy is only a rough timbral cue, not an
+            # instrument classifier. Mixed hits deliberately fall back.
+            if levels[0] > levels[1] * 1.5:
+                self.kind = 'bass'
+            elif levels[1] > levels[0] * 1.5:
+                self.kind = 'snare'
+            else:
+                self.kind = 'unknown'
             return True
         return False
 
@@ -104,7 +113,7 @@ class MusicBeat:
 
     def snapshot(self):
         with self.lock:
-            return self.detector.count, min(1.0, self.detector.volume / .12)
+            return self.detector.count, min(1.0, self.detector.volume / .12), self.detector.kind
 
     def close(self):
         self.closed.set()
