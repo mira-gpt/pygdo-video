@@ -8,6 +8,9 @@ from pathlib import Path
 
 from gdo.base.Application import Application
 from gdo.base.Method import Method
+from gdo.base.Message import Message
+from gdo.base.Render import Mode
+from gdo.date.GDT_Duration import GDT_Duration
 from gdo.video.module_video import module_video
 
 
@@ -37,8 +40,27 @@ class screenshot(Method):
     def gdo_user_permission(self):
         return 'admin'
 
+    def gdo_parameters(self):
+        return [GDT_Duration('delay').not_null().initial('0s').min(0).max(60)
+                .tooltip('tt_video_screenshot_delay')]
+
+    def gdo_transactional(self):
+        return False
+
     async def gdo_execute(self):
         try:
+            delay = self.param_value('delay') or 0
+            if delay and Application.IS_DOG and self._env_mode != Mode.render_cli:
+                trigger = self._env_channel.get_trigger() if self._env_channel else self._env_server.get_trigger()
+                message = Message(f'{trigger}video.screenshot', self._env_mode).env_copy(self)
+
+                async def enqueue():
+                    Application.MESSAGES.put(message)
+
+                Application.EVENTS.add_timer_async(delay, enqueue)
+                return self.reply('video_screenshot_scheduled', (str(delay),))
+            if delay:
+                await asyncio.sleep(delay)
             module = module_video.instance()
             display = module.get_config_val('video_desktop_url')
             geometry = await asyncio.to_thread(module.monitor_geometry)

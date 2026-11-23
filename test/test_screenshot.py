@@ -34,6 +34,7 @@ class ScreenshotTest(unittest.IsolatedAsyncioTestCase):
     async def test_response_only_after_capture(self):
         command = screenshot()
         command.reply = MagicMock(return_value='done')
+        command.param_value = MagicMock(return_value=0)
         video = MagicMock()
         video.get_config_val.return_value = ':0.0'
         with patch('gdo.video.method.screenshot.module_video.instance', return_value=video), \
@@ -44,3 +45,26 @@ class ScreenshotTest(unittest.IsolatedAsyncioTestCase):
              patch.object(Application, 'config', return_value='1'):
             self.assertEqual('done', await command.gdo_execute())
         command.reply.assert_called_once_with('video_screenshot_public', ('https://example.org/gdo/mira/public/cheese-test.png',))
+
+    async def test_delay_schedules_capture_without_blocking_dog(self):
+        command = screenshot()
+        command._env_mode = Mode.render_irc
+        command._env_channel = None
+        command._env_server = MagicMock()
+        command._env_server.get_trigger.return_value = '$'
+        command.param_value = MagicMock(return_value=5)
+        command.reply = MagicMock(return_value='scheduled')
+        queued_message = MagicMock()
+        with patch.object(Application, 'IS_DOG', True), \
+             patch.object(Application, 'EVENTS', create=True) as events, \
+             patch.object(Application, 'MESSAGES', create=True) as messages, \
+             patch('gdo.video.method.screenshot.Message') as message_type, \
+             patch('gdo.video.method.screenshot.capture_screenshot') as capture:
+            message_type.return_value.env_copy.return_value = queued_message
+            self.assertEqual('scheduled', await command.gdo_execute())
+            message_type.assert_called_once_with('$video.screenshot', Mode.render_irc)
+            capture.assert_not_called()
+            delay, callback = events.add_timer_async.call_args.args
+            self.assertEqual(5, delay)
+            await callback()
+            messages.put.assert_called_once_with(queued_message)

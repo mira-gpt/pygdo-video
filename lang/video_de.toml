@@ -1,4 +1,6 @@
 mt_video_duckmoods = "Entenstimmungen"
+video_screenshot_scheduled = "Öffentlicher Screenshot in %s Sekunden geplant."
+tt_video_screenshot_delay = "Verzögerung vor dem öffentlichen Screenshot (Standard 0s, höchstens 60s)."
 video_mic_no_gain = "Mikro aus - Bitte Bescheid geben"
 video_mic_ticker_queued = "Mikrofon-Laufschrift für Dog eingereiht."
 mt_video_mic_ticker = "Mikrofon-Laufschrift einreihen"
