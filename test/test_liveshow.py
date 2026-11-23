@@ -176,15 +176,14 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
     def test_indicator_names_follow_mode(self):
         mira = MagicMock()
         mira.cfg_agent_name.return_value = 'Simion'
-        audio = MagicMock()
-        audio.cfg_audio_operator.return_value.get_name.return_value = 'Shippi'
+        mira.get_config_value.return_value.get_name.return_value = 'Shippi'
         loader = MagicMock()
-        loader.get_module.side_effect = lambda name: {'mira': mira, 'audio': audio}.get(name)
+        loader.get_module.side_effect = lambda name: {'mira': mira}.get(name)
         with patch('gdo.base.ModuleLoader.ModuleLoader.instance', return_value=loader):
             self.assertEqual('Shippi', module_video.indicator_name('show'))
             self.assertEqual('Simion', module_video.indicator_name('cohost'))
-            self.assertIsNone(module_video.indicator_name('work'))
-            audio.cfg_audio_operator.return_value = None
+            self.assertEqual('Shippi', module_video.indicator_name('work'))
+            mira.get_config_value.return_value = None
             self.assertIsNone(module_video.indicator_name('show'))
 
     def test_composite_frame_turns_red(self):

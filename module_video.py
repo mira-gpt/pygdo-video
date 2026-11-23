@@ -109,7 +109,7 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('module_mira_mira_mood_changed', self.on_mira_mood_changed)
         Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
         Application.EVENTS.subscribe('module_mira_agent_name_changed', self.on_indicator_name_changed)
-        Application.EVENTS.subscribe('module_audio_audio_operator_changed', self.on_indicator_name_changed)
+        Application.EVENTS.subscribe('module_mira_mira_show_host_changed', self.on_indicator_name_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
 
     async def video_timer_tick(self):
@@ -288,15 +288,12 @@ class module_video(GDO_Module):
             loader = ModuleLoader.instance()
         except AttributeError:
             return None
+        mira = loader.get_module('mira')
         if mode == 'cohost':
-            mira = loader.get_module('mira')
             name = mira.cfg_agent_name() if mira else None
-        elif mode == 'show':
-            audio = loader.get_module('audio')
-            operator = audio.cfg_audio_operator() if audio else None
-            name = operator.get_name() if operator else None
         else:
-            name = None
+            host = mira.get_config_value('mira_show_host') if mira else None
+            name = host.get_name() if host else None
         if not isinstance(name, str):
             return None
         return ''.join(c for c in name if c.isprintable())[:64].strip() or None
