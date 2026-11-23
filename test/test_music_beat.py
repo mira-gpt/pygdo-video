@@ -29,6 +29,15 @@ class MusicBeatTest(unittest.TestCase):
         for i in range(50):
             self.assertFalse(detector.feed(tone(1000, .001), i * .02))
 
+    def test_three_fast_bass_transients_are_detected(self):
+        detector = OnsetDetector()
+        for hit in range(3):
+            self.assertTrue(detector.feed(tone(80, .7), 1 + hit * .12))
+            self.assertEqual('bass', detector.kind)
+            for offset in (.02, .04, .06, .08, .10):
+                detector.feed(bytes(640), 1 + hit * .12 + offset)
+        self.assertEqual(3, detector.count)
+
     def test_source_forwards_classified_beat(self):
         from gdo.video.Duck3DSource import Duck3DSource
         import threading

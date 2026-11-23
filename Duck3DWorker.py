@@ -71,17 +71,21 @@ class MusicSteps:
         self.step = -1
         self.last = None
         self.interval = .5
+        self.tap_duration = .32
 
     def onset(self, now, kind='unknown'):
         if self.last is not None:
             elapsed = now - self.last
-            if elapsed < (.16 if kind in ('bass', 'snare') else max(.28, self.interval * .62)):
+            if elapsed < (.095 if kind in ('bass', 'snare') else max(.28, self.interval * .62)):
                 return
             if .28 <= elapsed <= 1.2:
                 self.interval += .25 * (elapsed - self.interval)
             elif elapsed > 2:
                 self.step = -1
                 self.interval = .5
+            self.tap_duration = min(.32, self.interval * .7)
+            if elapsed < .28:
+                self.tap_duration = min(self.tap_duration, max(.07, elapsed * .8))
         self.last = now
         if kind == 'bass':
             self.step = 0
@@ -94,7 +98,7 @@ class MusicSteps:
         if self.last is None or index != self.step % 2:
             return 0.0
         age = now - self.last
-        duration = min(.32, self.interval * .7)
+        duration = self.tap_duration
         if not 0 <= age < duration:
             return 0.0
         return .065 * math.sin(math.pi * age / duration)

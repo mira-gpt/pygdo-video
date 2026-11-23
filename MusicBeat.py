@@ -39,7 +39,7 @@ class OnsetDetector:
         hits = []
         for i, level in enumerate(levels):
             threshold = max(.012, self.average[i] * 1.8)
-            hits.append(level > threshold and now - self.last[i] >= .16)
+            hits.append(level > threshold and now - self.last[i] >= .095)
             self.average[i] += .08 * (level - self.average[i])
             if hits[-1]:
                 self.last[i] = now
