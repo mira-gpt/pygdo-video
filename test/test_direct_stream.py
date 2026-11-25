@@ -73,12 +73,36 @@ class DirectStreamTest(unittest.TestCase):
         self.assertIn('speaker.monitor', command)
         self.assertIn('mic', command)
         self.assertIn('amix=inputs=2', command[command.index('-filter_complex') + 1])
+        self.assertEqual('pad=ceil(iw/2)*2:ceil(ih/2)*2', command[command.index('-vf') + 1])
+        self.assertEqual('4M', command[command.index('-b:v') + 1])
         self.assertIn('/video.stream_asset.html?_asset=', command)
         self.assertIn('/demo/video.stream_asset.html?_asset=', DirectStream.command(':0', 'speaker', 'mic', Path('/tmp/example'), '/demo/'))
         with self.assertRaises(ValueError):
             DirectStream.command('http://example', 'speaker', 'mic', Path('/tmp/example'))
         with self.assertRaises(ValueError):
             DirectStream.command(':0', 'speaker', 'mic', Path('/tmp/example'), '//other-host/')
+
+    def test_stream_controls_are_admin_only_and_queue_to_dog(self):
+        from gdo.video.method.stream import stream
+        method = stream()
+        method._env_user = MagicMock()
+        method._env_user.is_admin.return_value = True
+        form = MagicMock()
+        method.gdo_create_form(form)
+        self.assertEqual(2, len(form.actions().add_fields.call_args.args))
+        with patch('gdo.video.method.stream.IPC.send_to_dog') as send:
+            method.enable_stream()
+            send.assert_called_once_with('video.stream_control', ['1'])
+            send.reset_mock()
+            method.disable_stream()
+            send.assert_called_once_with('video.stream_control', ['0'])
+        method._env_user.is_admin.return_value = False
+        form = MagicMock()
+        method.gdo_create_form(form)
+        form.add_field.assert_not_called()
+        with patch.object(method, 'err', return_value=None), patch('gdo.video.method.stream.IPC.send_to_dog') as send:
+            method.enable_stream()
+            send.assert_not_called()
 
     def test_assets_require_active_exact_run_and_safe_name(self):
         with tempfile.TemporaryDirectory() as temporary:
