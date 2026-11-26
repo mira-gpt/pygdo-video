@@ -50,6 +50,10 @@ tt_video_duck_overlay = "Show Mira's thinking process as a duck assistant speech
 
 video_error = "Video connector error: %s"
 video_gdo_stream_key = "Direct stream key"
+live_stream_needs_auth = "Require login to watch the live stream"
+tt_live_stream_needs_auth = "Require an authenticated web session to watch the direct stream."
+live_stream_watch_permission = "Live stream watch permission"
+tt_live_stream_watch_permission = "Optional permission required to watch the direct stream. Empty allows public access unless a stream key is set."
 tt_video_gdo_stream_key = "Optional password for the direct stream. Empty means public access while the stream is running."
 mt_video_stream = "Live stream"
 md_video_stream = "Watch the direct live stream."

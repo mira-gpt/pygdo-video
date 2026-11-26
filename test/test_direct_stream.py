@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 from gdo.base.Application import Application
 from gdo.base.Render import Mode
 from gdo.core.GDT_Secret import GDT_Secret
+from gdo.core.GDT_Permission import GDT_Permission
 from gdo.video.DirectStream import DirectStream, active_asset, process_start
 from gdo.video.Recording import Recording
 from gdo.video.StreamAuth import authorized
@@ -46,6 +47,8 @@ class DirectStreamTest(unittest.TestCase):
     def test_key_challenges_only_over_tls(self):
         from gdo.video.StreamAuth import require_stream_access
         with patch('gdo.video.StreamAuth.stream_key', return_value='correct'), \
+             patch('gdo.video.StreamAuth.needs_login', return_value=False), \
+             patch('gdo.video.StreamAuth.watch_permission_id', return_value=None), \
              patch.object(Application, 'get_client_header', return_value=None), \
              patch.object(Application, 'header') as header, \
              patch.object(Application, 'status') as status, \
@@ -54,6 +57,8 @@ class DirectStreamTest(unittest.TestCase):
             status.assert_called_with('401 Unauthorized')
             self.assertTrue(any(call.args[0] == 'WWW-Authenticate' for call in header.call_args_list))
         with patch('gdo.video.StreamAuth.stream_key', return_value='correct'), \
+             patch('gdo.video.StreamAuth.needs_login', return_value=False), \
+             patch('gdo.video.StreamAuth.watch_permission_id', return_value=None), \
              patch.object(Application, 'get_client_header', return_value=None), \
              patch.object(Application, 'header') as header, \
              patch.object(Application, 'status') as status, \
@@ -63,10 +68,56 @@ class DirectStreamTest(unittest.TestCase):
             self.assertFalse(any(call.args[0] == 'WWW-Authenticate' for call in header.call_args_list))
 
     def test_key_is_optional_secret(self):
-        fields = {field.get_name(): field for field in module_video().gdo_module_config()}
+        with patch('gdo.core.GDT_Permission.GDO_Permission.table', return_value=MagicMock()):
+            fields = {field.get_name(): field for field in module_video().gdo_module_config()}
         key = fields['video_gdo_stream_key']
         self.assertIsInstance(key, GDT_Secret)
         self.assertFalse(key._not_null)
+        self.assertIsInstance(fields['live_stream_watch_permission'], GDT_Permission)
+        self.assertFalse(fields['live_stream_watch_permission']._not_null)
+        self.assertEqual('0', fields['live_stream_needs_auth'].get_initial())
+
+    def test_session_and_permission_guards_compose_with_stream_key(self):
+        from gdo.video.StreamAuth import require_stream_access
+        user = MagicMock()
+        permission = MagicMock()
+        permission.get_name.return_value = 'streamer'
+        with patch('gdo.video.StreamAuth.needs_login', return_value=True), \
+             patch('gdo.video.StreamAuth.watch_permission_id', return_value='7'), \
+             patch('gdo.video.StreamAuth.GDO_User.current', return_value=user), \
+             patch('gdo.video.StreamAuth.GDO_Permission.table') as table, \
+             patch('gdo.video.StreamAuth.stream_key', return_value='correct'), \
+             patch.object(Application, 'get_client_header', return_value=None), \
+             patch.object(Application, 'is_tls', return_value=True), \
+             patch.object(Application, 'header'), patch.object(Application, 'status') as status:
+            table.return_value.get_by_id.return_value = permission
+            user.is_authenticated.return_value = False
+            self.assertFalse(require_stream_access())
+            status.assert_called_with('403 Forbidden')
+            user.is_authenticated.return_value = True
+            user.has_permission.return_value = False
+            self.assertFalse(require_stream_access())
+            status.assert_called_with('403 Forbidden')
+            user.has_permission.return_value = True
+            self.assertFalse(require_stream_access())
+            status.assert_called_with('401 Unauthorized')
+            with patch.object(Application, 'get_client_header', return_value='Basic ' + base64.b64encode(b'viewer:correct').decode()):
+                self.assertTrue(require_stream_access())
+            table.return_value.get_by_id.return_value = None
+            self.assertFalse(require_stream_access())
+            status.assert_called_with('403 Forbidden')
+
+    def test_unconfigured_stream_remains_public(self):
+        from gdo.video.StreamAuth import require_stream_access
+        with patch('gdo.video.StreamAuth.needs_login', return_value=False), \
+             patch('gdo.video.StreamAuth.watch_permission_id', return_value=None), \
+             patch('gdo.video.StreamAuth.GDO_User.current') as current, \
+             patch('gdo.video.StreamAuth.stream_key', return_value=None), \
+             patch.object(Application, 'get_client_header', return_value=None), \
+             patch.object(Application, 'is_tls', return_value=False), \
+             patch.object(Application, 'header'):
+            self.assertTrue(require_stream_access())
+            current.assert_not_called()
 
     def test_command_captures_both_audio_sources_once(self):
         command = DirectStream.command(':0.0', 'speaker', 'mic', Path('/tmp/example'))

@@ -51,8 +51,13 @@ the microphone; viewers share an HLS playlist and segments. It is intended for
 only one or two viewers, not a scalable streaming service. Start and stop are
 owner-only; opening a viewer never starts capture. The capture includes private
 windows and audio: obtain participant consent and check the screen first.
-`video_gdo_stream_key` is optional: when unset, anyone who can reach the viewer
-can watch while the stream is enabled. When set, the viewer uses HTTP Basic
+`live_stream_needs_auth` optionally requires an authenticated web session.
+`live_stream_watch_permission` optionally restricts the player, playlist,
+segments and viewer-presence endpoint to users with the selected Dog permission.
+Leave it unset to allow public access subject to the stream key. When configured,
+viewers need an authenticated web session with that permission; external HLS
+players must also provide that session. Invalid configured permissions deny access.
+`video_gdo_stream_key` is optional: when set, the viewer also uses HTTP Basic
 authentication over HTTPS; never send the password in a URL. The stream is off
 after Dog restarts. HLS-capable clients such as VLC can open the playlist; some
 browsers use the locally installed `hls.js` dependency, while clients such as

@@ -42,7 +42,7 @@ class stream(MethodForm):
 
     def gdo_execute(self):
         if not require_stream_access():
-            return GDT_HTML().text('Stream access requires HTTPS and the configured password.')
+            return GDT_HTML().text('Stream access denied. Check your account permissions and stream credentials.')
         return super().gdo_execute()
 
     def render_page(self):

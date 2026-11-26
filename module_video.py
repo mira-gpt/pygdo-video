@@ -12,6 +12,7 @@ from gdo.base.GDT import GDT
 from gdo.core.GDT_Bool import GDT_Bool
 from gdo.core.GDT_Enum import GDT_Enum
 from gdo.core.GDT_Path import GDT_Path
+from gdo.core.GDT_Permission import GDT_Permission
 from gdo.core.GDT_Secret import GDT_Secret
 from gdo.core.GDT_String import GDT_String
 from gdo.date.GDT_Duration import GDT_Duration
@@ -69,6 +70,8 @@ class module_video(GDO_Module):
             GDT_Height('video_preview_h').not_null().initial('180').min(1).max(8192).tooltip('tt_video_preview_h'),
             GDT_Bool('video_live').not_null().initial('0').tooltip('tt_video_live'),
             GDT_Bool('video_stream_sidebar').not_null().initial('0').tooltip('tt_video_stream_sidebar'),
+            GDT_Bool('live_stream_needs_auth').not_null().initial('0').tooltip('tt_live_stream_needs_auth'),
+            GDT_Permission('live_stream_watch_permission').tooltip('tt_live_stream_watch_permission'),
             GDT_Secret('video_gdo_stream_key').tooltip('tt_video_gdo_stream_key'),
             GDT_Duration('video_timer_frequency').not_null().min(10).initial('5m').tooltip('tt_video_timer_frequency'),
             GDT_Path('video_commentary_log').maxlen(2048).tooltip('tt_video_commentary_log'),
