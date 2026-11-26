@@ -34,8 +34,9 @@ the audio session user's `~/Videos/Mira/`; `$video.record 0` stops and finalizes
 `$video.record` reports status. It currently requires a running screensharing
 overlay. On a successful stop, a separate MP4 is remuxed without re-encoding;
 the original MKV remains private and is retained if conversion fails. It also requires a
-configured local X11 display; use it through the running Dog
-client. It captures the selected monitor,
+configured local X11 display. Other clients queue the action to the running
+Dog; a queued response does not confirm it succeeded, and the outcome is logged
+by Dog. It captures the selected monitor,
 including overlays and any private windows, and records the desktop session's
 default system-output monitor. A suitable default microphone is mixed in when
 available; otherwise recording continues with system audio only. If both audio session

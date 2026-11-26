@@ -4,9 +4,19 @@ import os
 import subprocess
 
 from gdo.base.Application import Application
+from gdo.base.IPC import IPC
 from gdo.base.Method import Method
 from gdo.core.GDT_Bool import GDT_Bool
 from gdo.video.module_video import module_video
+
+
+def is_running_dog_process():
+    from gdo.core.method.launch import launch
+    try:
+        with open(launch.lock_path(), encoding='ascii') as lock:
+            return Application.IS_DOG and int(lock.read().strip()) == os.getpid()
+    except (OSError, ValueError):
+        return False
 
 
 class record(Method):
@@ -20,14 +30,15 @@ class record(Method):
         return [GDT_Bool('enabled').positional()]
 
     async def gdo_execute(self):
-        from gdo.core.method.launch import launch
-        try:
-            with open(launch.lock_path(), encoding='ascii') as lock:
-                is_running_dog = int(lock.read().strip()) == os.getpid()
-        except (OSError, ValueError):
-            is_running_dog = False
-        if not Application.IS_DOG or not is_running_dog:
-            return self.err('video_error', ('Use this command through the running Dog client.',))
+        if not is_running_dog_process():
+            enabled = self.param_value('enabled')
+            action = 'start' if enabled is True else 'stop' if enabled is False else 'status'
+            args = ('video.ipc_record', [action])
+            if Application.db().is_in_transaction():
+                Application.defer_after_commit(IPC.send_to_dog, *args)
+            else:
+                IPC.send_to_dog(*args)
+            return self.reply('video_record_queued', (action,))
         module = module_video.instance()
         recorder = module.recorder
         enabled = self.param_value('enabled')
