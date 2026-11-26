@@ -6,6 +6,15 @@ from gdo.video.MicTicker import MicTicker, TickerScroll, ticker_finished, ticker
 
 
 class MicTickerTest(unittest.TestCase):
+    def test_repeat_is_contiguous_and_capacity_is_atomic(self):
+        MicTicker.enqueue('repeat', repeats=2)
+        MicTicker.enqueue('next')
+        self.assertEqual(['repeat', 'repeat', 'next'], list(MicTicker._queue))
+        MicTicker._queue = deque(['other'] * (MicTicker.MAX_PENDING - 1))
+        with self.assertRaises(ValueError):
+            MicTicker.enqueue('repeat', repeats=2)
+        self.assertEqual(MicTicker.MAX_PENDING - 1, len(MicTicker._queue))
+
     def setUp(self):
         MicTicker._queue = deque()
         MicTicker._current = None

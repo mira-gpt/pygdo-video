@@ -12,13 +12,15 @@ class MicTicker:
     MAX_PENDING = 64
 
     @classmethod
-    def enqueue(cls, text):
+    def enqueue(cls, text, repeats=1):
         if not isinstance(text, str) or not text.strip() or len(text) > 300 or any(c in text for c in '\r\n\x00'):
             raise ValueError('Invalid ticker text')
+        if not isinstance(repeats, int) or isinstance(repeats, bool) or not 1 <= repeats <= 2:
+            raise ValueError('Invalid ticker repeat count')
         with cls._lock:
-            if len(cls._queue) >= cls.MAX_PENDING:
+            if len(cls._queue) + repeats > cls.MAX_PENDING:
                 raise ValueError('Ticker queue is full')
-            cls._queue.append(text)
+            cls._queue.extend([text] * repeats)
 
     @classmethod
     def snapshot(cls, now=None):

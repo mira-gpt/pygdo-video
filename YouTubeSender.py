@@ -1,6 +1,7 @@
 """Lifecycle for the local, private YouTube HLS sender."""
 import atexit
 import subprocess
+import shutil
 import sys
 import threading
 from pathlib import Path
@@ -19,6 +20,19 @@ class YouTubeSender:
                 return 'stopped'
             result = self.process.poll()
             return 'running' if result is None else f'exited ({result})'
+
+    def preflight(self):
+        from gdo.video.youtube_hls_sender import validate_url
+        if self.status() == 'running':
+            raise RuntimeError('YouTube sender is already running')
+        if not self.script.is_file() or not shutil.which('ffmpeg'):
+            raise RuntimeError('YouTube sender or ffmpeg is unavailable')
+        secret = Path('/home/mira/data/youtube-streaming.nf0')
+        if secret.stat().st_mode & 0o077:
+            raise RuntimeError('YouTube URL file must be private')
+        url = next((line.split(':', 1)[1].strip() for line in secret.read_text(encoding='utf8').splitlines()
+                    if line.lower().startswith('url:')), '')
+        validate_url(url)
 
     def start(self):
         with self.lock:

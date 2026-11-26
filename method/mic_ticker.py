@@ -6,10 +6,12 @@ from gdo.core.GDT_RestOfText import GDT_RestOfText
 from gdo.video.StarWarsIPC import encode_text
 
 
-def queue_ticker(text):
+def queue_ticker(text, repeats=1):
     if not isinstance(text, str) or not text.strip() or len(text) > 300 or any(c in text for c in '\r\n\x00'):
         raise ValueError('Ticker text must be a single line of at most 300 characters')
-    args = ('video.ipc_mic_ticker', [encode_text(text)])
+    if not isinstance(repeats, int) or isinstance(repeats, bool) or not 1 <= repeats <= 2:
+        raise ValueError('Invalid ticker repeat count')
+    args = ('video.ipc_mic_ticker', [encode_text(text), str(repeats)])
     if Application.db().is_in_transaction():
         Application.defer_after_commit(IPC.send_to_dog, *args)
     else:

@@ -47,6 +47,7 @@ class DesktopOverlay:
         output = VideoConnector()
         output.geometry = self.geometry
         output.start(display, None, False, True, device)
+        output.youtube_device = device
         self.virtual_output = output
 
     def liveshow(self, enabled):

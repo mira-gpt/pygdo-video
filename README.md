@@ -172,6 +172,14 @@ with preview enabled is useful when no camera output is desired.
 
 ## Methods
 
+`$video.youtube start` checks the configured private YouTube URL and FFmpeg,
+then starts the desktop overlay and virtual-camera output when needed before
+starting the YouTube sender. The sender currently requires `/dev/video2`, the
+configured X11 desktop display, and its configured desktop and microphone
+audio sources. It does not create the loopback device or configure YouTube
+Studio. The sender has a one-hour limit. `status` reports local process status,
+not whether YouTube is receiving video; check Studio separately.
+
 `$duck.welcome <nickname>` waves and speaks one of three greetings in the
 channel language (currently German or English). Automatic join greetings are
 off by default and require a per-channel opt-in. In the desired channel, staff

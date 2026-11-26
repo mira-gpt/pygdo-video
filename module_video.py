@@ -403,8 +403,9 @@ class module_video(GDO_Module):
         return monitor_geometry(self.get_config_val('video_desktop_url') or os.environ.get('DISPLAY'),
                                 self.get_config_val('video_monitor') or '2')
 
-    def start_compositor(self):
-        mode = self.get_config_value('video_mode')
+    def start_compositor(self, mode_override=None, live_override=None):
+        mode = mode_override if mode_override is not None else self.get_config_value('video_mode')
+        live = live_override if live_override is not None else self.get_config_value('video_live')
         if self.connector.is_running():
             raise RuntimeError('Video worker is already running; stop it before switching modes')
         if mode == 'off':
@@ -415,7 +416,7 @@ class module_video(GDO_Module):
             worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
             try:
-                if (self.get_config_value('video_live') in (True, 1, '1') and
+                if (live in (True, 1, '1') and
                         VideoConnector.virtual_camera_allowed()):
                     worker.start_virtual_output(self.get_config_val('video_desktop_url'),
                                                 self.get_config_val('video_output_device'))
@@ -439,7 +440,7 @@ class module_video(GDO_Module):
         worker.start(
             self.get_config_val('video_desktop_url'), self.get_config_val('video_bg_image_url'),
             self.get_config_value('video_output_preview'),
-            self.get_config_value('video_live') and VideoConnector.virtual_camera_allowed(),
+            live and VideoConnector.virtual_camera_allowed(),
             self.get_config_val('video_output_device'), self.get_config_value('video_preview_w'),
             self.get_config_value('video_preview_h'))
         self.connector = worker

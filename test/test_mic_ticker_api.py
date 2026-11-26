@@ -16,6 +16,16 @@ class MicTickerApiTest(unittest.TestCase):
         name, args = send.call_args.args
         self.assertEqual('video.ipc_mic_ticker', name)
         self.assertEqual('Hello', decode_text(args[0]))
+        self.assertEqual('1', args[1])
+
+    def test_repeat_count_is_sent_once_with_the_text(self):
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+                patch('gdo.video.method.mic_ticker.IPC.send_to_dog') as send:
+            queue_ticker('Hello', repeats=2)
+        send.assert_called_once()
+        self.assertEqual('2', send.call_args.args[1][1])
 
     def test_defers_in_transaction(self):
         db = MagicMock()
