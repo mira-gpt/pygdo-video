@@ -451,5 +451,5 @@ class module_video(GDO_Module):
     def gdo_init_sidebar(self, page: 'GDT_Page'):
         if self.get_config_value('video_stream_sidebar'):
             page._left_bar.add_field(
-                GDT_Link().href(self.href('stream')).text('link_video_stream')
+                GDT_Link().href(self.href('stream')).text('link_video_stream').icon('tv')
                 .attr('data-video-stream-status', self.href('stream_status')))
