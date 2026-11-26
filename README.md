@@ -346,6 +346,28 @@ coordinates onto the scaled desktop frame. Screensharing support is TODO.
   Rectangle selection is TODO.
   `$video.asciiart 5s --flash` alternates the filtered and original image;
   this flickers and may affect viewers sensitive to flashing.
+
+  **Cinema / ASCII replay proposal (not implemented):** The desktop renderer
+  already constructs rows of ASCII characters before drawing each frame. A
+  future live path could publish those rows, dimensions, and timestamps into a
+  bounded local buffer, replacing old frames when the consumer falls behind.
+  Video owns frame generation; an optional Mira-side consumer would feed
+  selected, time-ordered frames into the agent session. A buffer by itself does
+  not provide continuous agent perception: session delivery, sampling rate,
+  backpressure and context limits still need design and testing.
+
+  `$video.al.encode /absolute/movie.mp4 /absolute/movie.mp4.ibdes` is an
+  owner-only Bash command that precomputes one 80×45 ASCII frame per second
+  for MP4 files up to four hours. It creates a private (0600) file without
+  replacing an existing path. Its experimental text format starts with a
+  `$video.meta` JSON line, followed by `$video` JSON lines containing `ms`
+  and `rows`. It contains no audio. Playback is not implemented and must
+  account for seeking, pauses, rate changes and synchronization
+  to the media clock. A proposed private `cinema` mode could start the effect
+  and deliver frames to the chosen session, but does not exist yet. Explicitly
+  control capture, storage, access, streaming, recording and cross-channel
+  forwarding; a mode name alone is not a privacy guarantee. Account for media
+  rights, file size and retention before storing or sharing replay data.
 - `$starwars <text>` (also `$video.starwars`) queues a timed, upward-scrolling text effect in the
   active composite or desktop-overlay mode. A new invocation replaces the
   previous text. Nested GDO commands can supply the text, for example
