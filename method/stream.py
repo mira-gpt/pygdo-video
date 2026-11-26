@@ -53,7 +53,7 @@ class stream(MethodForm):
         player_js = escape(module_video.instance().www_path('node_modules/hls.js/dist/hls.min.js'), quote=True)
         player = GDT_HTML().html(
             '<h1>Live stream</h1><video id="gdo-live-stream" controls autoplay playsinline '
-            'style="max-width:100%"></video>'
+            'style="display:block;width:100%;height:auto;max-height:max(1px,calc(100vh - 18rem));object-fit:contain"></video>'
             f'<p><a href="{playlist}">Open the HLS stream</a> in an HLS-capable player such as VLC.</p>'
             f'<script src="{player_js}"></script>'
             '<script>(() => {'

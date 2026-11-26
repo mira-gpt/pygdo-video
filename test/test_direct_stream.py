@@ -164,6 +164,7 @@ class DirectStreamTest(unittest.TestCase):
             result = stream().gdo_execute().render_html()
         module.www_path.assert_called_once_with('node_modules/hls.js/dist/hls.min.js')
         self.assertIn('Hls.isSupported()', result)
+        self.assertIn('width:100%;height:auto;max-height:max(1px,calc(100vh - 18rem));object-fit:contain', result)
         self.assertIn('"playing"', result)
         self.assertIn('"heartbeat"', result)
         self.assertIn('"pagehide"', result)
