@@ -6,8 +6,6 @@ from gdo.base.Application import Application
 from gdo.base.Render import Mode
 from gdo.video.method.duckevent import duckevent
 from gdo.video.method.duckanim import duckanim
-from gdo.video.method.shrug import shrug
-from gdo.video.method.cry import cry
 from gdo.video.method.ipc_duckevent import ipc_duckevent
 from gdo.video.StarWarsIPC import decode_text
 from gdo.video.module_video import module_video
@@ -302,48 +300,6 @@ class DuckEventTest(unittest.IsolatedAsyncioTestCase):
         video.finish_duck_event.assert_called_once_with(video.duck_event.return_value)
         speech.input.assert_any_call('text', 'Please!')
         speech.play.assert_awaited_once()
-
-    def test_shrug_queues_temporary_event(self):
-        method = shrug()
-        method.param_val = MagicMock(return_value=None)
-        method.reply = MagicMock()
-        db = MagicMock()
-        db.is_in_transaction.return_value = False
-        with patch.object(Application, 'db', return_value=db), \
-                patch('gdo.video.method.shrug.IPC.send_to_dog') as send:
-            method.gdo_execute()
-        send.assert_called_once_with('video.ipc_duckevent', ['shrug'])
-
-    def test_shrug_speech_preserves_text_and_language(self):
-        method = shrug()
-        method.param_val = MagicMock(side_effect=lambda key: {'text': 'Oh nein, ein Test!', 'lang': 'de'}[key])
-        method.reply = MagicMock()
-        db = MagicMock()
-        db.is_in_transaction.return_value = False
-        with patch.object(Application, 'db', return_value=db), \
-                patch('gdo.video.method.shrug.IPC.send_to_dog') as send:
-            method.gdo_execute()
-        name, args = send.call_args.args
-        self.assertEqual(name, 'video.ipc_duckshrug')
-        self.assertEqual(decode_text(args[0]), 'Oh nein, ein Test!')
-        self.assertEqual(args[1], 'de')
-
-    def test_cry_optional_text_routes_correctly(self):
-        method = cry()
-        method.reply = MagicMock()
-        db = MagicMock()
-        db.is_in_transaction.return_value = False
-        with patch.object(Application, 'db', return_value=db), \
-                patch('gdo.video.method.shrug.IPC.send_to_dog') as send:
-            method.param_val = MagicMock(return_value=None)
-            method.gdo_execute()
-            send.assert_called_with('video.ipc_duckevent', ['cry'])
-            method.param_val = MagicMock(side_effect=lambda key: {'text': 'Oh nein!', 'lang': 'de'}[key])
-            method.gdo_execute()
-            name, args = send.call_args.args
-            self.assertEqual(name, 'video.ipc_duckcry')
-            self.assertEqual(decode_text(args[0]), 'Oh nein!')
-            self.assertEqual(args[1], 'de')
 
     async def test_replacement_cancels_old_timer_and_restores_latest_mood(self):
         module = module_video()

@@ -237,8 +237,7 @@ when the meter is hidden no border is visible.
     `teacher`, `xd`, `sorry`, `nerd`, `zombie`, `giveup`.
   - Temporary by default: `lol`, `cry`, `ouch`, `hello`, `rolleye`, `barf`, `cast`.
 
-  Persistent animations require the Mira module. `$duck.lol` remains a
-  temporary event.
+  Persistent animations require the Mira module.
   `zzz` closes the eyes, floats Zs above the duck and occasionally moves the
   beak as if sleepily smacking; it does not play a sound.
 - `$duck.event <key>` plays `idle`, `quacking`, `lol`, or `shrug` for two seconds, then
@@ -253,20 +252,8 @@ when the meter is hidden no border is visible.
   then restores the current base mood using the same smooth transition.
 - `$duck.anim rolleye [--lang=de|en] [text]` briefly rolls the eyes, optionally
   speaking the provided text, then returns to the current base mood.
-- `$duck.shrug [--lang=de|en] [text]` plays the surprise animation; optional
-  text is spoken using the user's language by default, and the saved mood is
-  restored after speech. Without text it is a two-second silent event.
-- `$duck.cry [--lang=de|en] [text]` cries with optional speech and sets the
-  persistent base mood to `sad`. Without text, the crying event lasts two seconds.
-- `$duck.lol <text>` selects `LOL`, speaks the text using the configured Audio
-  voice, and returns to the current saved `mira_mood` when playback finishes or
-  fails (or `idle` if Mira is not installed). If the previous base was `sad`,
-  it changes the saved base to `idle`. It uses the user's language by default
-  (then channel, server, or English when unset);
-  pass `--lang=en` or `--lang=de` to override.
-  Audio with the `speech_language` helper (currently on Audio's
-  `feature/pcm-io` branch) and the live 3D duck must be enabled. The request is
-  queued, not proof of audible playback or visible animation.
+- Use `$duck.anim shrug`, `$duck.anim cry`, `$duck.anim lol`, or `$duck.anim high`
+  for those animations, optionally supplying speech and a language.
 - `$video.layer <desktop|bg_image> <1|0>` enables or disables a composite
   layer while running; disabling desktop releases its capture process.
 - `$video.layer overlay <1|0>` shows or hides the desktop image overlay.

@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 
 class module_video(GDO_Module):
+    gdo_compact_text_help = True
     connector = VideoConnector()
 
     def gdo_friendencies(self) -> list:

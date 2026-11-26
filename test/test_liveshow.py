@@ -9,8 +9,6 @@ from gdo.video.MicrophoneLevel import MicrophoneLevel
 from gdo.video.VideoConnector import VideoConnector
 from gdo.video.method.ipc_liveshow import ipc_liveshow
 from gdo.video.method.liveshow import liveshow
-from gdo.video.method.duckhigh import duckhigh
-from gdo.video.method.ipc_duckhigh import ipc_duckhigh
 from gdo.video.StarWarsIPC import encode_text, decode_text
 from gdo.video.module_video import module_video
 
@@ -75,57 +73,6 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
             method.gdo_execute()
             method.err.assert_called_once_with('video_liveshow_invalid')
             self.assertEqual(5, send.call_count)
-
-    def test_duck_high_sets_persistent_mood(self):
-        method = duckhigh()
-        method.param_val = MagicMock(return_value=None)
-        method.reply = MagicMock()
-        db = MagicMock()
-        db.is_in_transaction.return_value = False
-        with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.duckhigh.IPC.send_to_dog') as send:
-            method.gdo_execute()
-        send.assert_called_once_with('mira.ipc_mood', ['high'])
-
-    def test_duck_high_sends_all_speech(self):
-        method = duckhigh()
-        method.param_val = MagicMock(side_effect=lambda key: {'text': 'Hello whole sentence', 'lang': 'en'}[key])
-        method.reply = MagicMock()
-        db = MagicMock()
-        db.is_in_transaction.return_value = False
-        with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.duckhigh.speech_language', return_value='en'), \
-                patch('gdo.video.method.duckhigh.IPC.send_to_dog') as send:
-            method.gdo_execute()
-        name, payload = send.call_args.args
-        self.assertEqual('video.ipc_duckhigh', name)
-        self.assertEqual('Hello whole sentence', decode_text(payload[0]))
-        self.assertEqual('en', payload[1])
-
-    async def test_duck_high_saves_mood_then_speaks(self):
-        handler = ipc_duckhigh()
-        handler.param_val = MagicMock(side_effect=lambda key: {'payload': encode_text('Hello world'), 'lang': 'en'}[key])
-        handler.empty = MagicMock()
-        mira = MagicMock()
-        mira.save_config_val = AsyncMock()
-        speech = MagicMock()
-        speech.input.return_value = speech
-        speech.play = AsyncMock()
-        with patch.object(Application, 'IS_DOG', True), \
-                patch('gdo.video.method.ipc_duckhigh.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))), \
-                patch('gdo.audio.method.ipc_say.ipc_say', return_value=speech):
-            await handler.play()
-        mira.save_config_val.assert_awaited_once_with('mira_mood', 'high', force=True)
-        speech.input.assert_any_call('text', 'Hello world')
-        speech.input.assert_any_call('lang', 'en')
-        speech.play.assert_awaited_once()
-
-    async def test_duck_high_ipc_schedules_playback(self):
-        handler = ipc_duckhigh()
-        handler.empty = MagicMock()
-        with patch.object(Application, 'IS_DOG', True), \
-                patch('gdo.video.method.ipc_duckhigh.PlaybackTasks.start') as start:
-            await handler.gdo_execute()
-        self.assertEqual(1, start.call_count)
-        start.call_args.args[0].close()
 
     async def test_dog_persists_mode(self):
         handler = ipc_liveshow()
