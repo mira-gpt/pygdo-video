@@ -10,7 +10,7 @@ from gdo.base.Thread import Thread
 from gdo.video.CommentaryTicker import CommentaryTicker
 
 MAX_LINE = 1024 * 1024
-LIVE_MODES = frozenset(('work', 'show', 'discuss', 'cohost'))
+LIVE_MODES = frozenset(('work', 'show', 'discuss', 'recording'))
 SPEECH_URL = re.compile(
     r'(?i)(?<![\w@])(?:(?:[a-z][a-z0-9+.-]*://|mailto:)[^\s<>\[\]()]+'
     r'|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}'

@@ -31,8 +31,8 @@ class OverlayRestoreTest(unittest.IsolatedAsyncioTestCase):
         module.connector.microphone_meter.assert_called_once_with(True)
         module.connector.duck3d.assert_not_called()
 
-    def test_cohost_indicator_is_accepted(self):
+    def test_recording_indicator_is_accepted(self):
         from gdo.video.DesktopOverlay import DesktopOverlay
         overlay = DesktopOverlay()
-        overlay.live_indicator('cohost')
-        self.assertEqual('cohost', overlay.live_mode)
+        overlay.live_indicator('recording')
+        self.assertEqual('recording', overlay.live_mode)

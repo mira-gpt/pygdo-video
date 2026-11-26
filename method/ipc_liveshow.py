@@ -26,6 +26,9 @@ class ipc_liveshow(Method):
                 enabled = mode == 'show'
                 previous = mira.cfg_mira_livemode() == 'show'
                 await mira.save_config_val('mira_livemode', mode, force=True)
+                if mode == 'recording':
+                    # Context only: do not change capture, layers or broadcast notices.
+                    return self.empty()
                 for event in ('video.ipc_duck3d', 'video.ipc_mic'):
                     try:
                         await IPC.execute_dog_event(event, ['1' if enabled else '0'])

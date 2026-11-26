@@ -12,12 +12,12 @@ from gdo.video.Recording import Recording
 
 class RecordingTest(unittest.TestCase):
     def test_indicator_alternates_only_while_recording(self):
-        self.assertEqual('cohost', indicator_text('cohost', False, 3))
-        self.assertEqual('Mira', indicator_text('cohost', False, 3, 'Mira'))
+        self.assertEqual('recording', indicator_text('recording', False, 3))
+        self.assertEqual('Mira', indicator_text('recording', False, 3, 'Mira'))
         self.assertEqual('● REC', indicator_text('show', True, 2, 'Gizmore'))
-        self.assertEqual('cohost', indicator_text('cohost', True, 0))
-        self.assertEqual('● REC', indicator_text('cohost', True, 2))
-        self.assertEqual('cohost', indicator_text('cohost', True, 4))
+        self.assertEqual('recording', indicator_text('recording', True, 0))
+        self.assertEqual('● REC', indicator_text('recording', True, 2))
+        self.assertEqual('recording', indicator_text('recording', True, 4))
 
     def test_command_captures_two_audio_sources_without_network(self):
         command = Recording.command(':0.0', 'speakers', 'microphone', None, '/tmp/example.mkv')

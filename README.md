@@ -24,7 +24,7 @@ local X11 desktop and publishes a PNG under `gdo/mira/public`, returning its
 URL. The whole desktop may contain passwords or other private information;
 check the screen before using this command. The returned image is public.
 
-The upper-left live-mode indicator shows `off`, `work`, `show`, `discuss`, or `cohost`.
+The upper-left live-mode indicator shows `off`, `work`, `show`, `discuss`, or `recording`.
 It is black normally and red when the existing microphone meter reports
 nonzero input. It does not start microphone capture; black can also mean the
 meter is unavailable, not necessarily that the microphone is muted.
@@ -528,7 +528,7 @@ Set `video_commentary_log` to the intended local session JSONL file; an empty
 value disables the follower. The Dog process must have permission to read it.
 Dog starts a follower thread for that path, starting at the end and accepting
 only new assistant commentary and final answers. Rotation or truncation reopens at the new end.
-Updates are discarded outside work/show/discuss/cohost, and the overlay clears
+Updates are discarded outside work/show/discuss/recording, and the overlay clears
 on leaving those modes. A bounded FIFO advances when a message has finished
 rendering; if more than 64 messages are pending, the oldest pending message is
 discarded. The next message slides in faster from the right, separated by `||`.

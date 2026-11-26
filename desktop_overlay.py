@@ -380,7 +380,7 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                             layers.put('drawing', drawing)
                 elif request.get('effect') == 'liveshow' and isinstance(request.get('enabled'), bool):
                     show_state['liveshow'] = request['enabled']
-                elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'cohost') and isinstance(request.get('active'), bool):
+                elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'recording') and isinstance(request.get('active'), bool):
                     label = request.get('label')
                     layers.put('live_indicator', {'mode': request['mode'], 'label': label if isinstance(label, str) else None, 'active': request['active'],
                                                   'recording': request.get('recording') is True}, z=8000)

@@ -267,7 +267,7 @@ class VideoConnector:
 
     def live_indicator(self, mode, label=None):
         from gdo.video.LiveIndicator import LiveIndicator
-        if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
+        if mode not in ('off', 'work', 'show', 'discuss', 'recording'):
             raise ValueError('Invalid live mode')
         self.live_mode = mode
         if mode == 'off':

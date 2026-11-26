@@ -111,7 +111,7 @@ class CommentaryTickerTest(unittest.TestCase):
 
     def test_mode_switch_clears_commentary(self):
         from gdo.video.CommentaryFollower import CommentaryFollower
-        worker = CommentaryFollower('/unused', 'cohost')
+        worker = CommentaryFollower('/unused', 'recording')
         for mode in ('off', 'unknown', None):
             CommentaryTicker.set('old')
             worker.set_mode(mode)
@@ -211,7 +211,7 @@ class CommentaryTickerTest(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as log:
             log.write(json.dumps(event) + '\n')
             log.flush()
-            worker = CommentaryFollower(log.name, 'cohost')
+            worker = CommentaryFollower(log.name, 'recording')
             with patch('gdo.base.Thread.Thread.run'), patch.object(CommentaryTicker, 'set', side_effect=lambda text: observed.set()) as publish:
                 worker.start()
                 try:
@@ -234,7 +234,7 @@ class CommentaryTickerTest(unittest.TestCase):
             off = Image.new('RGB', (640, 360))
             live = Image.new('RGB', (640, 360))
             ThoughtsLayer(live_mode='off').draw(off)
-            ThoughtsLayer(live_mode='cohost').draw(live)
+            ThoughtsLayer(live_mode='recording').draw(live)
         self.assertNotEqual(off.tobytes(), live.tobytes())
         self.assertNotEqual((0, 0, 0), live.getpixel((12, 326)))
 

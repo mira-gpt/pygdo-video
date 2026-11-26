@@ -64,15 +64,29 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         db = MagicMock()
         db.is_in_transaction.return_value = False
         with patch.object(Application, 'db', return_value=db), patch('gdo.video.method.liveshow.IPC.send_to_dog') as send:
-            for mode in ('off', 'work', 'show', 'discuss', '1'):
+            for mode in ('off', 'work', 'show', 'discuss', 'recording', '1'):
                 method.param_val = MagicMock(return_value=mode)
                 method.gdo_execute()
-            self.assertEqual(['off', 'work', 'show', 'discuss', 'show'],
+            self.assertEqual(['off', 'work', 'show', 'discuss', 'recording', 'show'],
                              [call.args[1][0] for call in send.call_args_list])
             method.param_val = MagicMock(return_value='bad')
             method.gdo_execute()
             method.err.assert_called_once_with('video_liveshow_invalid')
-            self.assertEqual(5, send.call_count)
+            self.assertEqual(6, send.call_count)
+
+    async def test_recording_mode_does_not_change_layers_or_announce(self):
+        handler = ipc_liveshow()
+        handler.param_val = MagicMock(return_value='recording')
+        handler.empty = MagicMock()
+        mira = MagicMock()
+        mira.cfg_mira_livemode.return_value = 'show'
+        mira.save_config_val = AsyncMock()
+        with patch.object(Application, 'IS_DOG', True), \
+                patch('gdo.video.method.ipc_liveshow.ModuleLoader.instance', return_value=MagicMock(get_module=MagicMock(return_value=mira))), \
+                patch('gdo.video.method.ipc_liveshow.IPC.execute_dog_event', new_callable=AsyncMock) as send:
+            await handler.gdo_execute()
+        mira.save_config_val.assert_awaited_once_with('mira_livemode', 'recording', force=True)
+        send.assert_not_awaited()
 
     async def test_dog_persists_mode(self):
         handler = ipc_liveshow()
@@ -128,7 +142,7 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         loader.get_module.side_effect = lambda name: {'mira': mira}.get(name)
         with patch('gdo.base.ModuleLoader.ModuleLoader.instance', return_value=loader):
             self.assertEqual('Shippi', module_video.indicator_name('show'))
-            self.assertEqual('Simion', module_video.indicator_name('cohost'))
+            self.assertEqual('Shippi', module_video.indicator_name('recording'))
             self.assertEqual('Shippi', module_video.indicator_name('work'))
             mira.get_config_value.return_value = None
             self.assertIsNone(module_video.indicator_name('show'))

@@ -24,7 +24,7 @@ class ThoughtsLayer:
         available = max(0, right - 20)
         if not available:
             return True
-        text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'cohost') else ('', None)
+        text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'recording') else ('', None)
         text = text or 'Mira: ...'
         now = time.monotonic()
         if text != self.text:

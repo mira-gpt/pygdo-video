@@ -58,11 +58,11 @@ class DesktopOverlay:
                 self._send_payload({'effect': 'liveshow', 'enabled': self.liveshow_enabled})
 
     def live_indicator(self, mode, label=None):
-        if mode not in ('off', 'work', 'show', 'discuss', 'cohost'):
+        if mode not in ('off', 'work', 'show', 'discuss', 'recording'):
             raise ValueError('Invalid live mode')
         self.live_mode = mode
         self.live_label = label
-        if mode not in ('work', 'show', 'discuss', 'cohost'):
+        if mode not in ('work', 'show', 'discuss', 'recording'):
             from gdo.video.CommentaryTicker import CommentaryTicker
             CommentaryTicker.clear()
 
@@ -79,7 +79,7 @@ class DesktopOverlay:
                                         'recording': self.recording_active()})
                     if self.thoughts_enabled:
                         from gdo.video.CommentaryTicker import CommentaryTicker
-                        text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'cohost') else ('', None)
+                        text, sequence = CommentaryTicker.snapshot() if self.live_mode in ('work', 'show', 'discuss', 'recording') else ('', None)
                         next_text = CommentaryTicker.peek() if sequence is not None else ''
                         pending = CommentaryTicker.pending_count() if sequence is not None else 0
                         from gdo.video.CodexActivity import CodexActivity

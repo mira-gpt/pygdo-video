@@ -294,11 +294,8 @@ class module_video(GDO_Module):
         except AttributeError:
             return None
         mira = loader.get_module('mira')
-        if mode == 'cohost':
-            name = mira.cfg_agent_name() if mira else None
-        else:
-            host = mira.get_config_value('mira_show_host') if mira else None
-            name = host.get_name() if host else None
+        host = mira.get_config_value('mira_show_host') if mira else None
+        name = host.get_name() if host else None
         if not isinstance(name, str):
             return None
         return ''.join(c for c in name if c.isprintable())[:64].strip() or None
