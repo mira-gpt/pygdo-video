@@ -32,7 +32,7 @@ class VideoLayer(ImageLayer):
             self.process = subprocess.Popen([
                 'ffmpeg', '-nostdin', '-loglevel', 'error', '-re',
                 '-protocol_whitelist', 'file,pipe', '-format_whitelist', 'mov,matroska,webm,avi,gif',
-                '-i', self.path, '-t', '300', '-an', '-vf',
+                '-stream_loop', '-1', '-i', self.path, '-an', '-vf',
                 'fps=10,scale=320:180:force_original_aspect_ratio=decrease,format=rgba,'
                 'pad=320:180:(ow-iw)/2:(oh-ih)/2:color=black@0',
                 '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1'],

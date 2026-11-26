@@ -28,6 +28,11 @@ class ipc_media(Method):
                     return self.empty()
                 kwargs = {name: self.param_val(name) for name in ('width', 'height', 'x', 'y')}
                 kwargs['transition'] = self.param_val('transition') or 'fade'
+                from gdo.video.DesktopOverlay import DesktopOverlay
+                if isinstance(module_video.instance().connector, DesktopOverlay):
+                    await asyncio.to_thread(module_video.instance().connector.show_web_media,
+                                            self.param_val('url'), **kwargs)
+                    return self.empty()
                 layer = await asyncio.to_thread(load_media, self.param_val('url'), **kwargs)
                 try:
                     await asyncio.to_thread(module_video.instance().connector.put_effect, 'media', layer)

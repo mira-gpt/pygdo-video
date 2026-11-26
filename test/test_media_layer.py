@@ -74,6 +74,22 @@ class MediaLayerTest(unittest.TestCase):
             finally:
                 layer.close()
 
+    def test_video_loops_until_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'video.mp4'
+            self.make_video(path)
+            layer = load_media(path.as_uri())
+            try:
+                layer.start()
+                deadline = time.monotonic() + 6
+                while layer.generation < 23 and not layer.finished and time.monotonic() < deadline:
+                    time.sleep(.05)
+                self.assertGreaterEqual(layer.generation, 23)
+                self.assertFalse(layer.finished)
+            finally:
+                layer.close()
+            self.assertFalse(os.path.exists(layer.path))
+
     @unittest.skipUnless(os.environ.get('PYGDO_VIDEO_GUI_TEST') == '1', 'requires an X11 desktop')
     def test_real_video_is_sent_to_desktop_overlay_and_stops(self):
         with tempfile.TemporaryDirectory() as directory:

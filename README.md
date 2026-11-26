@@ -290,7 +290,10 @@ when the meter is hidden no border is visible.
   and `--y` accepting CSS `px` or `%`. Defaults are `25%` × `25%`, at `2%`,
   `2%` from the top left. The image preserves its proportions within that box;
   file, HTTP and HTTPS URLs are supported (images up to 4 MiB, videos up to
-  32 MiB). Video plays once without sound, for at most 5 minutes. New media replaces
+  32 MiB). In desktop screensharing mode, URLs open in a draggable, isolated
+  WebKit window; recognized video URLs show controls and start only when clicked,
+  then loop. WebKit2 4.1 is required. Other output modes use the silent video
+  compositor, where video loops until removed or replaced. New media replaces
   the `media` layer; `$video.media off` removes it. Loading is queued for Dog;
   only show media and URLs appropriate for the audience.
 - `$video.magnify <1|0> [--zoom=2] [--radius=90]` toggles a mouse-following

@@ -22,6 +22,7 @@ class DesktopOverlay:
         self.window_suffix = window_suffix
         self.geometry = geometry
         self.media_layer = None
+        self.web_media = None
         self._mic_stop = None
         self._mic_wake = None
         self.duck_enabled = False
@@ -153,6 +154,7 @@ class DesktopOverlay:
 
     def stop(self):
         self._indicator_stop.set()
+        self._stop_web_media()
         virtual, self.virtual_output = self.virtual_output, None
         if virtual:
             virtual.stop()
@@ -231,6 +233,7 @@ class DesktopOverlay:
         from gdo.video.MediaLayer import VideoLayer
         if key != 'media' or not isinstance(layer, ImageLayer) or z is not None:
             raise ValueError('Desktop overlay currently accepts only the media layer')
+        self._stop_web_media()
         layer.begin_transition()
         if isinstance(layer, VideoLayer):
             layer.start()
@@ -427,6 +430,7 @@ class DesktopOverlay:
     def remove_effect(self, key):
         if key != 'media':
             raise ValueError('Desktop overlay currently supports removing only the media layer')
+        self._stop_web_media()
         with self.lock:
             if not self.is_running():
                 raise RuntimeError('Desktop overlay is not running')
@@ -440,6 +444,8 @@ class DesktopOverlay:
             media.close()
 
     def close_effects(self, key):
+        if key in ('all', 'media', 'presentation'):
+            self._stop_web_media()
         source = None
         if key == 'presentation':
             self._indicator_stop.set()
@@ -467,6 +473,39 @@ class DesktopOverlay:
             media.close()
         if source:
             source.close()
+
+    def _stop_web_media(self):
+        with self.lock:
+            process, self.web_media = self.web_media, None
+        if process and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+
+    def show_web_media(self, url, width, height, x, y, transition):
+        from gdo.ui.GDT_CSSLength import GDT_CSSLength
+        from gdo.video.WebMedia import validate_url
+        validate_url(url)
+        if transition not in ('fade', 'throw'):
+            raise ValueError('Invalid media transition')
+        if not self.is_running():
+            raise RuntimeError('Desktop overlay is not running')
+        mw, mh, mx, my = self.geometry or (640, 360, 0, 0)
+        w = round(GDT_CSSLength.resolve(width, mw))
+        h = round(GDT_CSSLength.resolve(height, mh))
+        px = mx + round(GDT_CSSLength.resolve(x, mw))
+        py = my + round(GDT_CSSLength.resolve(y, mh))
+        if not (0 < w <= mw * 4 and 0 < h <= mh * 4):
+            raise ValueError('Media size is outside supported bounds')
+        self.remove_effect('media')
+        script = os.path.join(os.path.dirname(__file__), 'web_media_window.py')
+        with self.lock:
+            self.web_media = subprocess.Popen(['/usr/bin/python3', script, url, str(px), str(py),
+                                               str(w), str(h), transition],
+                                              stdin=subprocess.DEVNULL)
 
     def status(self):
         if self.is_running():
