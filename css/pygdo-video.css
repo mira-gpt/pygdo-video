@@ -1,2 +1,19 @@
 /* AUTO GENERATED */
-.gdt-link.video-stream-live { color: #168b36; }
+.gdt-link.video-stream-live {
+    animation: video-stream-live-blink 1.2s steps(1, end) infinite;
+}
+
+.gdt-link.video-stream-live::after {
+    content: ' !!';
+    color: #f33;
+    font-weight: bold;
+}
+
+@keyframes video-stream-live-blink {
+    0%, 100% { color: inherit; }
+    50% { color: gold; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gdt-link.video-stream-live { animation: none; }
+}
