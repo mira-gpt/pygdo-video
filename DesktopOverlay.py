@@ -134,6 +134,9 @@ class DesktopOverlay:
                     sequence = event.get('sequence')
                     if type(sequence) is int:
                         CommentaryTicker.finish(sequence)
+                elif isinstance(event, dict) and event.get('event') == 'ascii_error':
+                    from gdo.base.Logger import Logger
+                    Logger.warning('Desktop ASCII capture failed: %s' % event.get('error', 'unknown error'))
             except (ValueError, TypeError):
                 continue
 
@@ -232,6 +235,14 @@ class DesktopOverlay:
     def put_effect(self, key, layer, z=None):
         from gdo.video.ImageLayer import ImageLayer
         from gdo.video.MediaLayer import VideoLayer
+        from gdo.video.AsciiArt import AsciiArt
+        if key == 'asciiart' and isinstance(layer, AsciiArt) and z is None:
+            with self.lock:
+                if not self.is_running():
+                    raise RuntimeError('Desktop overlay is not running')
+                self._send_payload({'effect': 'asciiart', 'duration': max(0, layer.deadline - time.monotonic()),
+                                    'flash': layer.flash, 'fast': layer.fast})
+            return
         if key != 'media' or not isinstance(layer, ImageLayer) or z is not None:
             raise ValueError('Desktop overlay currently accepts only the media layer')
         self._stop_web_media()

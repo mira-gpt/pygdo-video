@@ -1,4 +1,5 @@
 import unittest
+import json
 from unittest.mock import MagicMock, patch
 
 from PIL import Image
@@ -6,6 +7,7 @@ from PIL import Image
 from gdo.base.Application import Application
 from gdo.base.Render import Mode
 from gdo.video.AsciiArt import AsciiArt
+from gdo.video.DesktopOverlay import DesktopOverlay
 from gdo.video.method.asciiart import asciiart
 from gdo.video.method.ipc_asciiart import ipc_asciiart
 
@@ -31,7 +33,7 @@ class AsciiArtTest(unittest.TestCase):
         with patch.object(Application, 'db', return_value=db), \
              patch('gdo.video.method.asciiart.IPC.send_to_dog') as send:
             self.assertEqual('queued', command.gdo_execute())
-        send.assert_called_once_with('video.ipc_asciiart', ['5.0s', '0'])
+        send.assert_called_once_with('video.ipc_asciiart', ['5.0s', '0', '0'])
         handler = ipc_asciiart()
         handler.param_value = MagicMock(side_effect=lambda name: 5.0 if name == 'duration' else False)
         handler.empty = MagicMock()
@@ -50,3 +52,31 @@ class AsciiArtTest(unittest.TestCase):
         self.assertTrue(effect.draw(original, now=0.6))
         self.assertNotEqual(filtered.tobytes(), original.tobytes())
         self.assertEqual(original.getpixel((0, 0)), (255, 255, 255))
+
+    def test_desktop_overlay_sends_ascii_effect(self):
+        overlay = DesktopOverlay(geometry=(800, 600, 800, 0))
+        overlay.process = MagicMock()
+        overlay.process.poll.return_value = None
+        overlay.put_effect('asciiart', AsciiArt(5, flash=True, fast=True))
+        payload = json.loads(overlay.process.stdin.write.call_args.args[0])
+        self.assertEqual(payload['effect'], 'asciiart')
+        self.assertTrue(payload['flash'])
+        self.assertTrue(payload['fast'])
+        self.assertGreater(payload['duration'], 0)
+        self.assertLessEqual(payload['duration'], 5)
+
+    def test_desktop_overlay_rejects_ascii_when_stopped(self):
+        overlay = DesktopOverlay()
+        with self.assertRaisesRegex(RuntimeError, 'not running'):
+            overlay.put_effect('asciiart', AsciiArt(5))
+
+    def test_command_forwards_fast_option(self):
+        command = asciiart()
+        command.param_value = MagicMock(side_effect=lambda name: {'duration': 4.0, 'flash': False, 'fast': True}[name])
+        command.reply = MagicMock(return_value='queued')
+        db = MagicMock()
+        db.is_in_transaction.return_value = False
+        with patch.object(Application, 'db', return_value=db), \
+             patch('gdo.video.method.asciiart.IPC.send_to_dog') as send:
+            command.gdo_execute()
+        send.assert_called_once_with('video.ipc_asciiart', ['4.0s', '0', '1'])

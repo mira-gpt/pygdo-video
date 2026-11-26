@@ -335,7 +335,15 @@ coordinates onto the scaled desktop frame. Screensharing support is TODO.
 - `$video.asciiart [duration]` applies a timed full-frame ASCII filter to the
   virtual-webcam composite (default 5 seconds, maximum 5 minutes). Configure
   the desktop source if the desktop itself should be transformed. The command
-  queues the effect for Dog. Screensharing and rectangle selection are TODO.
+  queues the effect for Dog. In desktop-overlay mode it captures the selected
+  monitor by reconstructing XComposite window pixmaps while excluding the
+  ASCII window. The resulting frames are shown continuously in a click-through
+  fullscreen window. This experimental reconstruction can differ from the
+  real desktop, particularly for shadows, wallpaper and fullscreen apps that
+  bypass compositing; it requires system Python Xlib and Pillow. The captured
+  desktop can contain sensitive content. Use `--fast=1` for more frequent
+  updates; performance depends on the number and size of windows.
+  Rectangle selection is TODO.
   `$video.asciiart 5s --flash` alternates the filtered and original image;
   this flickers and may affect viewers sensitive to flashing.
 - `$starwars <text>` (also `$video.starwars`) queues a timed, upward-scrolling text effect in the

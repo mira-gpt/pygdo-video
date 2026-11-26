@@ -12,12 +12,14 @@ class asciiart(Method):
     def gdo_parameters(self):
         return [GDT_Duration('duration').not_null().initial('5s').min(0.1).max(300)
                 .positional().tooltip('tt_video_asciiart_duration'),
-                GDT_Bool('flash').not_null().initial('0').tooltip('tt_video_asciiart_flash')]
+                GDT_Bool('flash').not_null().initial('0').tooltip('tt_video_asciiart_flash'),
+                GDT_Bool('fast').not_null().initial('0').tooltip('tt_video_asciiart_fast')]
 
     def gdo_execute(self):
         duration = self.param_value('duration')
         flash = self.param_value('flash')
-        args = ('video.ipc_asciiart', [f'{duration}s', '1' if flash else '0'])
+        fast = self.param_value('fast')
+        args = ('video.ipc_asciiart', [f'{duration}s', '1' if flash else '0', '1' if fast else '0'])
         try:
             if Application.db().is_in_transaction():
                 Application.defer_after_commit(IPC.send_to_dog, *args)

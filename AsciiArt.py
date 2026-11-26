@@ -7,12 +7,13 @@ from PIL import Image, ImageDraw, ImageFont
 class AsciiArt:
     CHARACTERS = ' .:-=+*#%@'
 
-    def __init__(self, duration, now=None, flash=False):
+    def __init__(self, duration, now=None, flash=False, fast=False):
         if not 0 < duration <= 300:
             raise ValueError('Duration must be greater than zero and at most 5 minutes')
         self.started = time.monotonic() if now is None else now
         self.deadline = self.started + duration
         self.flash = flash
+        self.fast = fast
         try:
             self.font = ImageFont.truetype('DejaVuSansMono.ttf', 10)
         except OSError:

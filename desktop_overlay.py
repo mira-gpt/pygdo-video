@@ -7,6 +7,7 @@ import math
 import os
 import random
 import textwrap
+import threading
 import time
 
 import cairo
@@ -15,7 +16,8 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 gi.require_version('Pango', '1.0')
 gi.require_version('PangoCairo', '1.0')
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango, PangoCairo
+gi.require_version('GdkX11', '3.0')
+from gi.repository import Gdk, GdkPixbuf, GdkX11, GLib, Gtk, Pango, PangoCairo
 from LayerStack import LayerStack, PERSISTENT_LAYERS
 from DrawingProtocol import validate_line
 from MediaTransition import media_transition
@@ -26,6 +28,7 @@ from MicWarning import MicWarning
 from MicTicker import TickerScroll
 from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED, commentary_speed
 from AwayScreen import AwayScreen, HEADER
+from XCompositeDesktop import XCompositeDesktop
 
 
 def main(image_path, screensharing=False, window_suffix='', geometry=None):
@@ -61,6 +64,95 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
     effect.stick()
     layers = LayerStack()
     show_state = {'liveshow': False, 'ticker_ack': None, 'ticker_scroll': TickerScroll(), 'thoughts_scroll': TickerScroll(COMMENTARY_SPEED), 'thoughts_ack': None}
+    ascii_state = {'window': None, 'generation': 0, 'stop': None}
+
+    def stop_ascii():
+        ascii_state['generation'] += 1
+        if ascii_state['stop']:
+            ascii_state['stop'].set()
+            ascii_state['stop'] = None
+        old = ascii_state['window']
+        ascii_state['window'] = None
+        if old:
+            old.destroy()
+
+    def start_ascii(duration, flash, fast):
+        stop_ascii()
+        generation = ascii_state['generation']
+        started = time.monotonic()
+        ascii_window = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
+        ascii_window.set_title('Mira ASCII Effect' + window_suffix)
+        ascii_window.set_app_paintable(True)
+        ascii_window.set_double_buffered(True)
+        ascii_window.set_decorated(False)
+        ascii_window.set_keep_above(True)
+        ascii_window.set_accept_focus(False)
+        ascii_window.set_skip_taskbar_hint(True)
+        ascii_window.set_skip_pager_hint(True)
+        ascii_window.set_default_size(monitor_width, monitor_height)
+        ascii_window.move(monitor_x, monitor_y)
+        ascii_state['window'] = ascii_window
+        stop_event = threading.Event()
+        ascii_state['stop'] = stop_event
+        frame = {'lines': None}
+
+        def draw_ascii(widget, context):
+            context.set_source_rgb(0, 0, 0)
+            context.paint()
+            context.set_source_rgb(.86, .94, .86)
+            context.select_font_face('monospace', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+            context.set_font_size(12)
+            for row, line in enumerate(frame['lines'] or []):
+                context.move_to(0, 12 + row * 14)
+                context.show_text(line)
+            return False
+
+        ascii_window.connect('draw', draw_ascii)
+        ascii_window.realize()
+        # An XFWM frame around a managed window still intercepts input even
+        # when the child has an empty input shape. Avoid the frame entirely.
+        ascii_window.get_window().set_override_redirect(True)
+        ascii_window.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
+        xid = GdkX11.X11Window.get_xid(ascii_window.get_window())
+
+        def publish(lines):
+            if generation != ascii_state['generation']:
+                return False
+            frame['lines'] = lines
+            if flash and int((time.monotonic() - started) * 2) % 2:
+                ascii_window.hide()
+            else:
+                if not ascii_window.get_visible():
+                    ascii_window.show_all()
+                    ascii_window.move(monitor_x, monitor_y)
+                ascii_window.queue_draw()
+            return False
+
+        def finish():
+            if generation == ascii_state['generation']:
+                stop_ascii()
+            return False
+
+        def capture():
+            capture_source = None
+            try:
+                capture_source = XCompositeDesktop((monitor_width, monitor_height, monitor_x, monitor_y), xid)
+                cols, rows = max(1, monitor_width // 8), max(1, monitor_height // 14)
+                chars = ' .:-=+*#%@'
+                while not stop_event.is_set() and time.monotonic() - started < duration:
+                    pixels = capture_source.capture().convert('L').resize((cols, rows)).tobytes()
+                    lines = [''.join(chars[value * (len(chars) - 1) // 255]
+                                     for value in pixels[y * cols:(y + 1) * cols]) for y in range(rows)]
+                    GLib.idle_add(publish, lines)
+                    stop_event.wait(.12 if fast else .5)
+            except Exception as exc:
+                print(json.dumps({'event': 'ascii_error', 'error': str(exc)}), flush=True)
+            finally:
+                if capture_source:
+                    capture_source.close()
+                GLib.idle_add(finish)
+
+        threading.Thread(target=capture, daemon=True, name='ascii-composite-capture').start()
 
     def draw_effect(widget, context):
         context.set_operator(cairo.OPERATOR_SOURCE)
@@ -363,7 +455,9 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
             try:
                 request = json.loads(line)
                 text = request.get('text', '')
-                if request.get('effect') == 'starwars' and isinstance(text, str) and text.strip() and len(text) <= 4096:
+                if request.get('effect') == 'asciiart' and type(request.get('duration')) in (int, float) and 0 < request['duration'] <= 300 and isinstance(request.get('flash'), bool):
+                    start_ascii(request['duration'], request['flash'], request.get('fast') is True)
+                elif request.get('effect') == 'starwars' and isinstance(text, str) and text.strip() and len(text) <= 4096:
                     lines = [part for item in text.splitlines() for part in (textwrap.wrap(item, 36) or [''])]
                     layers.put('starwars', {'lines': lines, 'start': time.monotonic()})
                 elif request.get('effect') == 'zap' and isinstance(request.get('duration'), (int, float)) and .05 <= request['duration'] <= 30:
@@ -464,6 +558,8 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                         duck['frame'] = loader.get_pixbuf().scale_simple(150, 150, GdkPixbuf.InterpType.BILINEAR)
                 elif request.get('effect') == 'close':
                     key = request.get('key')
+                    if key in ('all', 'presentation', 'asciiart'):
+                        stop_ascii()
                     if key == 'all':
                         layers.clear()
                     elif key == 'presentation':

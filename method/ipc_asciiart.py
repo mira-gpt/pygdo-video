@@ -14,14 +14,16 @@ class ipc_asciiart(Method):
 
     def gdo_parameters(self):
         return [GDT_Duration('duration').not_null().min(0.1).max(300).positional(),
-                GDT_Bool('flash').not_null().positional()]
+                GDT_Bool('flash').not_null().positional(),
+                GDT_Bool('fast').not_null().initial('0').positional()]
 
     def gdo_execute(self):
         if not Application.IS_DOG:
             return self.empty()
         try:
             module_video.instance().connector.put_effect(
-                'asciiart', AsciiArt(self.param_value('duration'), flash=self.param_value('flash')))
+                'asciiart', AsciiArt(self.param_value('duration'), flash=self.param_value('flash'),
+                                     fast=self.param_value('fast')))
         except (ValueError, RuntimeError, OSError, AttributeError) as exc:
             Logger.warning(f'Video ASCII art IPC failed: {exc}')
         return self.empty()
