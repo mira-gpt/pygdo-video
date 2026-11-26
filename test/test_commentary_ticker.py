@@ -152,6 +152,11 @@ class CommentaryTickerTest(unittest.TestCase):
         self.assertEqual('Look ein Link! Then ein Link. And ein Link.', filtered)
         self.assertEqual(['Look ein Link! Then ein Link. And ein Link.'], list(speech_sentences(filtered)))
         self.assertEqual('ein Link ein Link', speech_filter('ftp://example.org/a file:///private/a', 'ein Link'))
+        self.assertEqual('See a link, then a link.',
+                         speech_filter('See /home/gizmore/test, then /tmp/log.txt.', 'a link'))
+        self.assertEqual('Open [file](a link) and a link.',
+                         speech_filter('Open [file](/home/gizmore/a.py:12) and https://example.org/a.', 'a link'))
+        self.assertEqual('Ratios 3/4 and a/b remain.', speech_filter('Ratios 3/4 and a/b remain.', 'a link'))
         self.assertEqual('bold and italic; 3 * 4; lone *',
                          speech_filter('**bold** and *italic*; 3 * 4; lone *', 'a link'))
         self.assertEqual(['Hallo freu'], list(speech_sentences(speech_filter('Hallo :)', 'ein Link', 'freu'))))

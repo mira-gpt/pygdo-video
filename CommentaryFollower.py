@@ -18,6 +18,7 @@ SPEECH_URL = re.compile(
 )
 SPEECH_BOLD = re.compile(r'(?<!\*)\*\*([^\s*](?:[^*]*?[^\s*])?)\*\*(?!\*)')
 SPEECH_ITALIC = re.compile(r'(?<!\*)\*([^\s*](?:[^*]*?[^\s*])?)\*(?!\*)')
+SPEECH_PATH = re.compile(r'(?<![\w/])/(?!/)[\w.~+-]+(?:/[\w.~+-]+)*/?(?::\d+)?')
 
 
 def speech_filter(text, url_phrase, smile_phrase='smile', language='en'):
@@ -28,6 +29,7 @@ def speech_filter(text, url_phrase, smile_phrase='smile', language='en'):
         return url_phrase + suffix
     text = SPEECH_BOLD.sub(r'\1', text)
     text = SPEECH_ITALIC.sub(r'\1', text)
+    text = SPEECH_PATH.sub(replace_url, text)
     text = SPEECH_URL.sub(replace_url, text)
     text = re.sub(r'\bpygdo\b', 'PyGDO', text)
     if language == 'de':
