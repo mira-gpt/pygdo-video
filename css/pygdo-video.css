@@ -1,6 +1,6 @@
 /* AUTO GENERATED */
 .gdt-link.video-stream-live {
-    animation: video-stream-live-blink 1.2s steps(1, end) infinite;
+    animation: video-stream-live-blink 3.14s steps(1, end) infinite;
 }
 
 .gdt-link.video-stream-live::after {

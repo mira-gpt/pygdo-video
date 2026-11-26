@@ -34,6 +34,7 @@ class VideoSidebarTest(unittest.TestCase):
         self.assertIn('.gdt-link.video-stream-live::after', css)
         self.assertIn("content: ' !!'", css)
         self.assertIn('color: #f33', css)
+        self.assertIn('video-stream-live-blink 3.14s', css)
         self.assertIn('prefers-reduced-motion: reduce', css)
 
 
