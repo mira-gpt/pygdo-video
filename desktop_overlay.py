@@ -516,7 +516,7 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
         previous = layers.get('image')
         reset = request.get('transition_start') is True or not previous
         transition = request.get('transition')
-        if transition not in (None, 'fade', 'throw'):
+        if transition not in (None, 'fade', 'throw', 'cyclone'):
             raise ValueError('Invalid media transition')
         layers.put('image', {'pixbuf': pixbuf, 'x': x, 'y': y,
                              'transition': transition if reset else previous['transition'],

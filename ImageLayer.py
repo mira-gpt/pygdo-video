@@ -17,7 +17,7 @@ class ImageLayer:
     def __init__(self, image, width='25%', height='25%', x='2%', y='2%', transition=None):
         self.image = image.convert('RGBA')
         self.width, self.height, self.x, self.y = width, height, x, y
-        if transition not in (None, 'fade', 'throw'):
+        if transition not in (None, 'fade', 'throw', 'cyclone'):
             raise ValueError('Invalid media transition')
         self.transition = transition
         self.transition_start = None

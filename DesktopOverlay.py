@@ -489,7 +489,7 @@ class DesktopOverlay:
         from gdo.ui.GDT_CSSLength import GDT_CSSLength
         from gdo.video.WebMedia import validate_url
         validate_url(url)
-        if transition not in ('fade', 'throw'):
+        if transition not in ('fade', 'throw', 'cyclone'):
             raise ValueError('Invalid media transition')
         if not self.is_running():
             raise RuntimeError('Desktop overlay is not running')

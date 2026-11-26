@@ -6,6 +6,15 @@ from gdo.video.DesktopOverlay import DesktopOverlay
 
 
 class WebMediaTest(unittest.TestCase):
+    def test_cyclone_spirals_into_final_position(self):
+        from gdo.video.MediaTransition import media_transition
+        start = media_transition('cyclone', 0, 1000, 100, 100)
+        middle = media_transition('cyclone', .25, 1000, 100, 100)
+        end = media_transition('cyclone', 2, 1000, 100, 100)
+        self.assertNotEqual(start[:2], end[:2])
+        self.assertGreater(middle[1], 100)
+        self.assertEqual(end, (100.0, 100.0, 0.0, 1.0))
+
     def test_url_validation(self):
         for url in ('https://example.org/a', 'http://example.org', 'file:///tmp/a.png'):
             self.assertEqual(validate_url(url), url)

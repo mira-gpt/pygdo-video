@@ -18,7 +18,7 @@ class media(Method):
                 GDT_CSSLength('height').not_null().initial('25%').tooltip('tt_video_image_height'),
                 GDT_CSSLength('x').not_null().initial('2%').tooltip('tt_video_image_x'),
                 GDT_CSSLength('y').not_null().initial('2%').tooltip('tt_video_image_y'),
-                GDT_Enum('transition').not_null().initial('fade').choices({'fade': 'Fade', 'throw': 'Throw'}).tooltip('tt_video_media_transition')]
+                GDT_Enum('transition').not_null().initial('fade').choices({'fade': 'Fade', 'throw': 'Throw', 'cyclone': 'Cyclone'}).tooltip('tt_video_media_transition')]
 
     def gdo_execute(self):
         values = [self.param_val(key) for key in ('url', 'width', 'height', 'x', 'y', 'transition')]

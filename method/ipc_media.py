@@ -18,7 +18,7 @@ class ipc_media(Method):
     def gdo_parameters(self):
         return [GDT_String('url').not_null().maxlen(768).positional(),
                 *[GDT_CSSLength(name).not_null().positional() for name in ('width', 'height', 'x', 'y')],
-                GDT_Enum('transition').initial('fade').choices({'fade': 'Fade', 'throw': 'Throw'}).positional()]
+                GDT_Enum('transition').initial('fade').choices({'fade': 'Fade', 'throw': 'Throw', 'cyclone': 'Cyclone'}).positional()]
 
     async def gdo_execute(self):
         if Application.IS_DOG:
