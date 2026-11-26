@@ -30,6 +30,7 @@ class DesktopOverlay:
         self.duck_source = None
         self.duck3d_pythonpath = None
         self.mic_language = ''
+        self.speech_volume = None
         self.liveshow_enabled = False
         self.virtual_output = None
         self.live_mode = 'off'
@@ -293,7 +294,8 @@ class DesktopOverlay:
                 for name in ('duck-closed.png', 'duck-open.png'):
                     with open(os.path.join(root, name), 'rb') as stream:
                         poses.append(base64.b64encode(stream.read()).decode('ascii'))
-                self._send_payload({'effect': 'duck', 'poses': poses, 'language': self.mic_language})
+                self._send_payload({'effect': 'duck', 'poses': poses, 'language': self.mic_language,
+                                    'volume': self.speech_volume})
             else:
                 self._send_payload({'effect': 'duck', 'remove': True})
             self.duck_enabled = enabled
@@ -304,6 +306,12 @@ class DesktopOverlay:
             self.mic_language = language or ''
             if self.is_running() and self.duck_enabled:
                 self._send_payload({'effect': 'duck_language', 'language': self.mic_language})
+
+    def set_speech_volume(self, volume):
+        with self.lock:
+            self.speech_volume = volume
+            if self.is_running() and self.duck_enabled:
+                self._send_payload({'effect': 'duck_volume', 'volume': volume})
 
     def duck3d(self, enabled):
         if not enabled:

@@ -2,7 +2,8 @@
 import textwrap
 import time
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+from gdo.video.DuckStatus import volume_label
 
 
 class DuckLayer:
@@ -18,16 +19,22 @@ class DuckLayer:
         self.caption_until = 0
         self._scaled = {}
         self.mic_language = ''
+        self.speech_volume = None
 
     def draw_mic_language(self, frame):
-        if not self.mic_language:
+        labels = [label for label in (self.mic_language.upper(), volume_label(self.speech_volume)) if label]
+        if not labels:
             return
         draw = ImageDraw.Draw(frame)
-        text = self.mic_language.upper()
-        box = draw.textbbox((0, 0), text, stroke_width=1)
-        x = max(0, frame.width - (box[2] - box[0]) - 14)
-        y = max(0, frame.height - (box[3] - box[1]) - 14)
-        draw.text((x, y), text, fill='white', stroke_width=1, stroke_fill='black')
+        try:
+            font = ImageFont.truetype('DejaVuSans-Bold.ttf', 9)
+        except OSError:
+            font = ImageFont.load_default()
+        for index, text in enumerate(labels):
+            box = draw.textbbox((0, 0), text, font=font, stroke_width=1)
+            x = max(0, frame.width - (box[2] - box[0]) - 14)
+            y = max(0, frame.height - 14 - (len(labels) - index) * 11)
+            draw.text((x, y), text, font=font, fill='white', stroke_width=1, stroke_fill='black')
 
     def caption(self, text):
         self.caption_text = text

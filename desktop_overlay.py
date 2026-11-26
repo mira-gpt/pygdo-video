@@ -29,6 +29,7 @@ from MicTicker import TickerScroll
 from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED, commentary_speed
 from AwayScreen import AwayScreen, HEADER
 from XCompositeDesktop import XCompositeDesktop
+from DuckStatus import volume_label
 
 
 def main(image_path, screensharing=False, window_suffix='', geometry=None):
@@ -231,12 +232,15 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                 Gdk.cairo_set_source_pixbuf(context, pixbuf, duck_x, 187 + 32 * 360 / effect_height)
                 context.paint()
                 language = layer.get('language', '')
-                if language:
+                labels = [label for label in (language.upper(), volume_label(layer.get('volume'))) if label]
+                for index, label in enumerate(labels):
                     layout = PangoCairo.create_layout(context)
-                    layout.set_font_description(Pango.FontDescription('Sans Bold 12px'))
-                    layout.set_text(language.upper(), -1)
+                    layout.set_font_description(Pango.FontDescription('Sans Bold 10px'))
+                    layout.set_text(label, -1)
                     text_width, text_height = layout.get_pixel_size()
-                    context.move_to(min(640 - text_width - 4, duck_x + 146 - text_width), min(356 - text_height, 187 + 32 * 360 / effect_height + 146 - text_height))
+                    bottom = min(356, 187 + 32 * 360 / effect_height + 146)
+                    context.move_to(min(640 - text_width - 4, duck_x + 146 - text_width),
+                                    bottom - (len(labels) - index) * (text_height + 1))
                     PangoCairo.layout_path(context, layout)
                     context.set_source_rgba(0, 0, 0, .95)
                     context.set_line_width(3)
@@ -535,11 +539,15 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                             loader.close()
                             images.append(loader.get_pixbuf().scale_simple(150, 150, GdkPixbuf.InterpType.BILINEAR))
                         language = request.get('language', '')
-                        layers.put('duck', {'closed': images[0], 'open': images[1], 'speaking': False, 'text': '', 'language': language if isinstance(language, str) else ''})
+                        layers.put('duck', {'closed': images[0], 'open': images[1], 'speaking': False, 'text': '', 'language': language if isinstance(language, str) else '', 'volume': request.get('volume')})
                 elif request.get('effect') == 'duck_language':
                     duck = layers.get('duck')
                     if duck and isinstance(request.get('language'), str):
                         duck['language'] = request['language'][:16]
+                elif request.get('effect') == 'duck_volume':
+                    duck = layers.get('duck')
+                    if duck:
+                        duck['volume'] = request.get('volume')
                 elif request.get('effect') == 'duck_speech':
                     duck = layers.get('duck')
                     if duck and isinstance(request.get('speaking'), bool) and isinstance(text, str):
