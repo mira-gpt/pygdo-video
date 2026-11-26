@@ -33,3 +33,4 @@ md_video_record = "Eine private lokale Aufnahme starten, stoppen oder ihren Stat
 link_video_stream = "Livestream"
 video_stream_sidebar = "Livestream-Link anzeigen"
 tt_video_stream_sidebar = "Den Livestream-Link in der linken Seitenleiste anzeigen."
+md_video_youtube = "YouTube-Sender steuern: start, stop oder status (Standard). Beim Start können der konfigurierte Desktop und Ton gesendet werden."
