@@ -296,6 +296,14 @@ when the meter is hidden no border is visible.
   compositor, where video loops until removed or replaced. New media replaces
   the `media` layer; `$video.media off` removes it. Loading is queued for Dog;
   only show media and URLs appropriate for the audience.
+- `$video.yt.embed <url>` prints HTML embed code for a single YouTube video.
+  Desktop media windows also recognize common YouTube video links and present
+  the embedded player, initially paused. Embedding and playback depend on
+  YouTube permissions, WebKit support, and the configured site identity.
+  For direct videos or YouTube embeds, `video.media --autoplay=1 <url>` requests
+  automatic playback; the default is `--autoplay=0`. Browser/site policies may
+  still block autoplay. In non-interactive compositor mode, video requires
+  `--autoplay=1`; paused playback is not available there.
 - `$video.magnify <1|0> [--zoom=2] [--radius=90]` toggles a mouse-following
   lens in virtual-webcam mode. It requires an enabled X11 desktop source;
   the radius is in composite pixels. Screensharing magnification is TODO.

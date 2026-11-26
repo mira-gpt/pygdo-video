@@ -485,9 +485,9 @@ class DesktopOverlay:
                 process.kill()
                 process.wait()
 
-    def show_web_media(self, url, width, height, x, y, transition):
+    def show_web_media(self, url, width, height, x, y, transition, autoplay=False):
         from gdo.ui.GDT_CSSLength import GDT_CSSLength
-        from gdo.video.WebMedia import validate_url
+        from gdo.video.WebMedia import validate_url, youtube_video_id
         validate_url(url)
         if transition not in ('fade', 'throw', 'cyclone'):
             raise ValueError('Invalid media transition')
@@ -502,9 +502,18 @@ class DesktopOverlay:
             raise ValueError('Media size is outside supported bounds')
         self.remove_effect('media')
         script = os.path.join(os.path.dirname(__file__), 'web_media_window.py')
+        args = ['/usr/bin/python3', script, url, str(px), str(py), str(w), str(h), transition]
+        base_uri = ''
+        if youtube_video_id(url):
+            from gdo.base.Application import Application
+            from urllib.parse import urlsplit
+            domain = Application.config('core.domain', '')
+            parsed = urlsplit('https://' + domain)
+            if parsed.hostname and not parsed.username and not parsed.password and not parsed.path and not parsed.query and not parsed.fragment:
+                base_uri = 'https://' + parsed.netloc + '/'
+        args.extend((base_uri, '1' if autoplay else '0'))
         with self.lock:
-            self.web_media = subprocess.Popen(['/usr/bin/python3', script, url, str(px), str(py),
-                                               str(w), str(h), transition],
+            self.web_media = subprocess.Popen(args,
                                               stdin=subprocess.DEVNULL)
 
     def status(self):

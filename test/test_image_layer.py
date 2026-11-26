@@ -35,7 +35,7 @@ class ImageLayerTest(unittest.TestCase):
 
     def test_command_queues_image_and_geometry(self):
         command = media()
-        values = {'url': 'file:///tmp/image.png', 'width': '25%', 'height': '25%', 'x': '2%', 'y': '2%', 'transition': 'throw'}
+        values = {'url': 'file:///tmp/image.png', 'width': '25%', 'height': '25%', 'x': '2%', 'y': '2%', 'transition': 'throw', 'autoplay': '0'}
         command.param_val = MagicMock(side_effect=values.get)
         command.reply = MagicMock(return_value='queued')
         db = MagicMock()

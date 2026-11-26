@@ -15,7 +15,7 @@ from WebMedia import document_for, validate_url
 from MediaTransition import media_transition
 
 
-def main(url, x, y, width, height, transition):
+def main(url, x, y, width, height, transition, base_uri=None, autoplay=False):
     validate_url(url)
     window = Gtk.Window(title='PyGDO Media')
     window.set_default_size(width, height)
@@ -31,7 +31,7 @@ def main(url, x, y, width, height, transition):
     settings = view.get_settings()
     settings.set_allow_file_access_from_file_urls(False)
     settings.set_allow_universal_access_from_file_urls(False)
-    settings.set_media_playback_requires_user_gesture(True)
+    settings.set_media_playback_requires_user_gesture(not autoplay)
     def deny_permission(_view, request):
         request.deny()
         return True
@@ -121,11 +121,11 @@ def main(url, x, y, width, height, transition):
         view.connect('load-changed', on_load)
         GLib.timeout_add_seconds(12, finish)
 
-    document = document_for(url)
+    document = document_for(url, autoplay=autoplay)
     if document is None:
         view.load_uri(url)
     else:
-        view.load_html(document, None)
+        view.load_html(document, base_uri)
     window.show_all()
     started = time.monotonic()
     if transition == 'fade':
@@ -149,4 +149,6 @@ def main(url, x, y, width, height, transition):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], *(int(value) for value in sys.argv[2:6]), sys.argv[6])
+    main(sys.argv[1], *(int(value) for value in sys.argv[2:6]), sys.argv[6],
+         (sys.argv[7] or None) if len(sys.argv) > 7 else None,
+         sys.argv[8] == '1' if len(sys.argv) > 8 else False)
