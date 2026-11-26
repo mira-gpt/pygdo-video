@@ -114,6 +114,7 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
         Application.EVENTS.subscribe('module_mira_agent_name_changed', self.on_indicator_name_changed)
         Application.EVENTS.subscribe('module_mira_mira_show_host_changed', self.on_indicator_name_changed)
+        Application.EVENTS.subscribe('module_audio_audio_microphone_language_changed', self.on_mic_language_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
 
     async def video_timer_tick(self):
@@ -151,6 +152,17 @@ class module_video(GDO_Module):
                 and self.get_config_value('video_thoughts_audio') and worker):
             language = audio.get_config_val('audio_microphone_language') or 'en'
             worker.announce(Trans.tiso2(language, 'mira_current_song_playing', (artist, title)))
+
+    async def on_mic_language_changed(self, module, field):
+        connector = getattr(self, 'connector', None)
+        if connector and hasattr(connector, 'set_mic_language'):
+            connector.set_mic_language(field.get_val())
+
+    @staticmethod
+    def current_mic_language():
+        from gdo.base.ModuleLoader import ModuleLoader
+        audio = ModuleLoader.instance().get_module('audio')
+        return (audio.get_config_val('audio_microphone_language') or '') if audio and audio.is_enabled() else ''
 
     async def commentary_tick(self):
         from gdo.base.Application import Application
@@ -409,6 +421,7 @@ class module_video(GDO_Module):
             raise ValueError('Video mode is off')
         if mode == 'screensharing':
             worker = DesktopOverlay(screensharing=True, geometry=self.monitor_geometry())
+            worker.set_mic_language(self.current_mic_language())
             worker.recording_active = lambda: bool(getattr(self, 'recorder', None) and self.recorder.active())
             worker.duck3d_pythonpath = self.get_config_val('video_duck3d_pythonpath')
             worker.start(self.get_config_val('video_overlay_image_url'))
@@ -430,6 +443,7 @@ class module_video(GDO_Module):
                 or self.get_config_value('video_duck_overlay')):
             raise ValueError('Video file, webcam and duck layers are not implemented yet')
         worker = VideoConnector()
+        worker.set_mic_language(self.current_mic_language())
         if self.get_config_val('video_desktop_url'):
             worker.geometry = self.monitor_geometry()
         worker.recording_active = lambda: bool(getattr(self, 'recorder', None) and self.recorder.active())

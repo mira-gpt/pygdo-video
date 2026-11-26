@@ -32,6 +32,7 @@ class VideoConnector:
         self.effects = LayerStack()
         self.enabled = {'desktop': False, 'bg_image': False}
         self.duck3d_pythonpath = None
+        self.mic_language = ''
         self.liveshow_enabled = False
         self.live_mode = 'off'
         self.recording_active = lambda: False
@@ -286,7 +287,9 @@ class VideoConnector:
     def duck(self, enabled):
         from gdo.video.DuckLayer import DuckLayer
         if enabled:
-            self.put_effect('duck', DuckLayer())
+            layer = DuckLayer()
+            layer.mic_language = self.mic_language
+            self.put_effect('duck', layer)
         else:
             self.remove_effect('duck')
 
@@ -295,6 +298,7 @@ class VideoConnector:
             from gdo.video.Duck3DLayer import Duck3DLayer
             from gdo.video.Duck3DSource import Duck3DSource
             layer = Duck3DLayer(Duck3DSource(pythonpath=self.duck3d_pythonpath))
+            layer.mic_language = self.mic_language
             try:
                 layer.source.wait_ready()
                 self.put_effect('duck', layer)
@@ -303,6 +307,13 @@ class VideoConnector:
                 raise
         else:
             self.remove_effect('duck')
+
+    def set_mic_language(self, language):
+        with self.lock:
+            self.mic_language = language or ''
+            duck = self.effects.get('duck')
+            if duck:
+                duck.mic_language = self.mic_language
 
     def duck_animation(self, mode):
         with self.lock:

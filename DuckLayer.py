@@ -17,6 +17,17 @@ class DuckLayer:
         self.caption_text = ''
         self.caption_until = 0
         self._scaled = {}
+        self.mic_language = ''
+
+    def draw_mic_language(self, frame):
+        if not self.mic_language:
+            return
+        draw = ImageDraw.Draw(frame)
+        text = self.mic_language.upper()
+        box = draw.textbbox((0, 0), text, stroke_width=1)
+        x = max(0, frame.width - (box[2] - box[0]) - 14)
+        y = max(0, frame.height - (box[3] - box[1]) - 14)
+        draw.text((x, y), text, fill='white', stroke_width=1, stroke_fill='black')
 
     def caption(self, text):
         self.caption_text = text
@@ -42,6 +53,7 @@ class DuckLayer:
             self._scaled[key] = ImageOps.contain(image, (side, side), Image.Resampling.LANCZOS)
         image = self._scaled[key]
         frame.paste(image, (max(0, width - side - 10), max(0, height - side - 8)), image)
+        self.draw_mic_language(frame)
         caption = self.text if speaking else self.caption_text if time.monotonic() < self.caption_until else ''
         if caption:
             draw = ImageDraw.Draw(frame)

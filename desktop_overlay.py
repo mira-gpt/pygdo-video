@@ -138,6 +138,19 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                 duck_x = 245 if os.environ.get('MIRA_DUCK_POSITION') == 'center' else 506
                 Gdk.cairo_set_source_pixbuf(context, pixbuf, duck_x, 187 + 32 * 360 / effect_height)
                 context.paint()
+                language = layer.get('language', '')
+                if language:
+                    layout = PangoCairo.create_layout(context)
+                    layout.set_font_description(Pango.FontDescription('Sans Bold 12px'))
+                    layout.set_text(language.upper(), -1)
+                    text_width, text_height = layout.get_pixel_size()
+                    context.move_to(min(640 - text_width - 4, duck_x + 146 - text_width), min(356 - text_height, 187 + 32 * 360 / effect_height + 146 - text_height))
+                    PangoCairo.layout_path(context, layout)
+                    context.set_source_rgba(0, 0, 0, .95)
+                    context.set_line_width(3)
+                    context.stroke_preserve()
+                    context.set_source_rgb(1, 1, 1)
+                    context.fill()
                 caption = layer['text'] if layer['speaking'] else layer.get('caption', '') if time.monotonic() < layer.get('caption_until', 0) else ''
                 if caption:
                     layout = PangoCairo.create_layout(context)
@@ -427,7 +440,12 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                             loader.write(base64.b64decode(pose, validate=True))
                             loader.close()
                             images.append(loader.get_pixbuf().scale_simple(150, 150, GdkPixbuf.InterpType.BILINEAR))
-                        layers.put('duck', {'closed': images[0], 'open': images[1], 'speaking': False, 'text': ''})
+                        language = request.get('language', '')
+                        layers.put('duck', {'closed': images[0], 'open': images[1], 'speaking': False, 'text': '', 'language': language if isinstance(language, str) else ''})
+                elif request.get('effect') == 'duck_language':
+                    duck = layers.get('duck')
+                    if duck and isinstance(request.get('language'), str):
+                        duck['language'] = request['language'][:16]
                 elif request.get('effect') == 'duck_speech':
                     duck = layers.get('duck')
                     if duck and isinstance(request.get('speaking'), bool) and isinstance(text, str):
