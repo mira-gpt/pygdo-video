@@ -178,6 +178,16 @@ class DirectStreamTest(unittest.TestCase):
 
 
 class StreamPresenceTest(unittest.IsolatedAsyncioTestCase):
+    async def test_count_is_an_expiring_aggregate_without_ids(self):
+        from gdo.base.Cache import Cache
+        from gdo.video.StreamPresence import StreamPresence
+        presence = StreamPresence(AsyncMock())
+        await presence.update('a' * 32, 'join')
+        redis = MagicMock()
+        with patch.object(Cache, 'RCACHE', redis):
+            presence.publish_count()
+        redis.set.assert_called_once_with(presence.REDIS_COUNT, 1, ex=presence.COUNT_TTL)
+
     async def test_join_heartbeat_quit_and_timeout(self):
         from gdo.video.StreamPresence import StreamPresence
         now = [100.0]

@@ -6,6 +6,8 @@ import time
 class StreamPresence:
     MAX_VIEWERS = 16
     TIMEOUT = 20.0
+    REDIS_COUNT = 'video:stream:viewers:v1'
+    COUNT_TTL = 15
 
     def __init__(self, publish, clock=time.monotonic):
         self.publish = publish
@@ -35,3 +37,13 @@ class StreamPresence:
             if all_viewers or now - last >= self.TIMEOUT:
                 del self.viewers[viewer]
                 await self.publish('gdo_stream_quit', viewer)
+
+    def publish_count(self):
+        """Expose a short-lived aggregate to separate web workers, not viewer IDs."""
+        from gdo.base.Cache import Cache
+        from redis.exceptions import RedisError
+        if Cache.RCACHE is not None:
+            try:
+                Cache.RCACHE.set(self.REDIS_COUNT, len(self.viewers), ex=self.COUNT_TTL)
+            except RedisError:
+                pass

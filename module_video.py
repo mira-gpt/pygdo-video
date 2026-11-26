@@ -126,6 +126,7 @@ class module_video(GDO_Module):
         from gdo.base.Application import Application
         if Application.IS_DOG:
             await self.stream_presence.expire(all_viewers=not self.direct_stream.active())
+            self.stream_presence.publish_count()
 
     async def codex_activity_tick(self):
         from gdo.base.Application import Application
