@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from gdo.video.CommentaryTicker import CommentaryTicker
-from gdo.video.CommentaryFollower import commentary
+from gdo.video.CommentaryFollower import commentary, commentary_pair
 
 
 class CommentaryTickerTest(unittest.TestCase):
@@ -38,6 +38,33 @@ class CommentaryTickerTest(unittest.TestCase):
             payload.update(role=role, phase=phase)
             self.assertIsNone(commentary(json.dumps(event)))
         self.assertIsNone(commentary('not json'))
+
+    def test_paired_commentary_has_separate_ticker_and_speech(self):
+        self.assertEqual(('Hello everyone', 'أهلاً بالجميع'), commentary_pair('Hello everyone ␟ أهلاً بالجميع'))
+        self.assertEqual(('ordinary', 'ordinary'), commentary_pair('ordinary'))
+        self.assertEqual(('␟ missing', '␟ missing'), commentary_pair('␟ missing'))
+
+    def test_paired_commentary_reaches_ticker_and_speech_separately(self):
+        from gdo.video.CommentaryFollower import CommentaryFollower
+        event = {'type': 'response_item', 'payload': {'type': 'message', 'role': 'assistant', 'phase': 'commentary',
+                 'content': [{'type': 'output_text', 'text': 'Hello everyone ␟ أهلاً بالجميع'}]}}
+        observed = threading.Event()
+        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as log:
+            worker = CommentaryFollower(log.name, 'show')
+            worker.set_audio(True, language='ar')
+            with patch('gdo.base.Thread.Thread.run'), patch.object(CommentaryTicker, 'set', side_effect=lambda text: observed.set()) as publish:
+                worker.start()
+                try:
+                    self.assertTrue(worker.ready.wait(2))
+                    log.write(json.dumps(event, ensure_ascii=False) + '\n')
+                    log.flush()
+                    self.assertTrue(observed.wait(2))
+                    with worker.mode_lock:
+                        publish.assert_called_once_with('Hello everyone')
+                        self.assertEqual(['أهلاً بالجميع'], list(worker.speech_queue))
+                finally:
+                    worker.stop()
+                    worker.join(timeout=2)
 
     def test_fifo_waits_for_matching_renderer_ack(self):
         CommentaryTicker.set('First')

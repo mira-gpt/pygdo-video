@@ -546,6 +546,10 @@ Set `audio_announce_songs` in the Audio module to enable announcements of new
 song titles in this panel and its speech queue. It defaults to off and requires
 both the thoughts panel and its audio to be enabled; the normal music ticker is
 unchanged. Announcements are queued, not guaranteed to be displayed or heard.
+Commentary may use `ticker text ␟ spoken text`: the left side appears in the
+thoughts ticker and the right side is spoken in the configured voice language.
+Without the separator, the same commentary is displayed and spoken. This
+format does not translate text automatically.
 Speech strips paired Markdown emphasis markers, preserves standalone asterisks,
 and substitutes a localized phrase for URL schemes and
 bare-domain URLs; the visible ticker remains unchanged. The pending speech queue is

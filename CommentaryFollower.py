@@ -11,6 +11,7 @@ from gdo.video.CommentaryTicker import CommentaryTicker
 
 MAX_LINE = 1024 * 1024
 LIVE_MODES = frozenset(('work', 'show', 'discuss', 'recording'))
+COMMENTARY_SEPARATOR = '␟'
 SPEECH_URL = re.compile(
     r'(?i)(?<![\w@])(?:(?:[a-z][a-z0-9+.-]*://|mailto:)[^\s<>\[\]()]+'
     r'|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}'
@@ -65,6 +66,14 @@ def commentary(line):
         return ' '.join(text.split()) or None
     except (ValueError, TypeError, AttributeError):
         return None
+
+
+def commentary_pair(text):
+    """Split ticker and speech text; ordinary commentary serves both."""
+    ticker, separator, spoken = text.partition(COMMENTARY_SEPARATOR)
+    if separator and ticker.strip() and spoken.strip() and COMMENTARY_SEPARATOR not in spoken:
+        return ticker.strip(), spoken.strip()
+    return text, text
 
 
 class CommentaryFollower(Thread):
@@ -144,10 +153,11 @@ class CommentaryFollower(Thread):
                                 if not oversized and (text := commentary(pending)):
                                     with self.mode_lock:
                                         if self.mode in LIVE_MODES and not self.stop_event.is_set():
-                                            for part in textwrap.wrap(text, width=300):
+                                            ticker, spoken = commentary_pair(text)
+                                            for part in textwrap.wrap(ticker, width=300):
                                                 CommentaryTicker.set(part)
                                             if self.audio_enabled:
-                                                self.speech_queue.extend(speech_sentences(speech_filter(text, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
+                                                self.speech_queue.extend(speech_sentences(speech_filter(spoken, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
                                 pending, oversized = b'', False
             except OSError:
                 self.stop_event.wait(2)
