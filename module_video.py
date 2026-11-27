@@ -36,7 +36,7 @@ class module_video(GDO_Module):
     connector = VideoConnector()
 
     def gdo_friendencies(self) -> list:
-        return ['audio']
+        return ['audio', 'translate']
 
     def gdo_classes(self) -> list[type[GDO]]:
         return []
@@ -77,6 +77,7 @@ class module_video(GDO_Module):
             GDT_Path('video_commentary_log').maxlen(2048).tooltip('tt_video_commentary_log'),
             GDT_Bool('video_thoughts_overlay').not_null().initial('0').tooltip('tt_video_thoughts_overlay'),
             GDT_Bool('video_thoughts_audio').not_null().initial('0').tooltip('tt_video_thoughts_audio'),
+            GDT_Bool('video_thoughts_translate').not_null().initial('0').tooltip('tt_video_thoughts_translate'),
         ]
 
     def gdo_user_config(self) -> list[GDT]:
@@ -114,6 +115,7 @@ class module_video(GDO_Module):
         Application.EVENTS.subscribe('module_mira_mira_livemode_changed', self.on_mira_livemode_changed)
         Application.EVENTS.subscribe('module_mira_agent_name_changed', self.on_indicator_name_changed)
         Application.EVENTS.subscribe('module_mira_mira_show_host_changed', self.on_indicator_name_changed)
+        Application.EVENTS.subscribe('module_mira_mira_show_title_changed', self.on_indicator_name_changed)
         Application.EVENTS.subscribe('module_audio_audio_microphone_language_changed', self.on_mic_language_changed)
         Application.EVENTS.subscribe('module_audio_audio_speech_volume_changed', self.on_speech_volume_changed)
         Application.EVENTS.subscribe('user_joined_channel_live', self.on_live_join_welcome)
@@ -201,7 +203,9 @@ class module_video(GDO_Module):
         if path and not worker:
             from gdo.video.CommentaryFollower import CommentaryFollower
             self._commentary_follower = worker = CommentaryFollower(path, mode)
-            worker.start()
+            new_worker = True
+        else:
+            new_worker = False
         if worker:
             worker.set_mode(mode)
             audio = ModuleLoader.instance().get_module('audio')
@@ -216,6 +220,12 @@ class module_video(GDO_Module):
             url_phrase = Trans.tiso2(language or 'en', 'mira_audio_some_url') if enabled else 'a link'
             smile_phrase = Trans.tiso2(language or 'en', 'mira_audio_emoji_smile') if enabled else 'smile'
             worker.set_audio(enabled, url_phrase, smile_phrase, language or 'en')
+            translate = ModuleLoader.instance().get_module('translate')
+            translate_enabled = bool(self.get_config_value('video_thoughts_translate') and translate and translate.is_enabled())
+            base = mira.get_config_val('mira_ticker_baselang') if mira else 'en'
+            worker.set_translation(translate_enabled, base or 'en', self.current_mic_language() or 'en')
+            if new_worker:
+                worker.start()
             from gdo.video.CommentaryFollower import LIVE_MODES
             previous_language = getattr(self, '_thought_audio_language', None)
             if previous_language and previous_language != language:
@@ -232,6 +242,28 @@ class module_video(GDO_Module):
         language = getattr(self, '_thought_audio_language', None)
         if worker and worker.audio_enabled and worker.mode in LIVE_MODES and language:
             self.queue_thought_speech(worker, language)
+        task = getattr(self, '_thought_translate_task', None)
+        if worker and (not task or task.done()):
+            if pending := worker.next_translation():
+                self._thought_translate_task = asyncio.create_task(self.translate_thought(worker, *pending))
+
+    async def translate_thought(self, worker, original, config, generation):
+        from gdo.base.Logger import Logger
+        from gdo.base.ModuleLoader import ModuleLoader
+        from gdo.translate.GTranslate import GTranslate, GTranslateError
+        base, target = config
+        try:
+            if base == target:
+                translated = original
+            else:
+                module = ModuleLoader.instance().get_module('translate')
+                translated = (await GTranslate.translate(original, source=base, target=target,
+                                                        api_key=module.cfg_google_api_key())).text
+            if not translated.strip():
+                raise GTranslateError('Empty translation')
+            worker.publish_translation(original, translated, generation)
+        except (GTranslateError, AttributeError, TypeError, ValueError):
+            Logger.warning('Thought translation failed; ticker and speech suppressed.')
 
     def cancel_thought_prefetch(self):
         tasks = [task for task in getattr(self, '_thought_speech_tasks', []) if not task.done()]
@@ -305,7 +337,7 @@ class module_video(GDO_Module):
         if worker := getattr(self, '_commentary_follower', None):
             worker.set_mode(mode)
         self.connector.liveshow(mode == 'show')
-        self.connector.live_indicator(mode, self.indicator_name(mode))
+        self.connector.live_indicator(mode, self.indicator_name(mode), self.show_title(mode))
 
     async def on_indicator_name_changed(self, module, field):
         self.sync_liveshow()
@@ -324,6 +356,15 @@ class module_video(GDO_Module):
             return None
         return ''.join(c for c in name if c.isprintable())[:64].strip() or None
 
+    @staticmethod
+    def show_title(mode):
+        from gdo.base.ModuleLoader import ModuleLoader
+        try:
+            mira = ModuleLoader.instance().get_module('mira')
+            return mira.get_config_val('mira_show_title') if mira and mode == 'show' else None
+        except AttributeError:
+            return None
+
     def sync_liveshow(self):
         from gdo.base.ModuleLoader import ModuleLoader
         try:
@@ -332,7 +373,7 @@ class module_video(GDO_Module):
             mira = None
         self.connector.liveshow(mira.cfg_mira_livemode() == 'show' if mira else False)
         mode = mira.cfg_mira_livemode() if mira else 'off'
-        self.connector.live_indicator(mode, self.indicator_name(mode))
+        self.connector.live_indicator(mode, self.indicator_name(mode), self.show_title(mode))
 
     def restore_overlays(self):
         from gdo.base.Logger import Logger

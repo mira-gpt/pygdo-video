@@ -18,7 +18,7 @@ class DuckVolumeTest(unittest.IsolatedAsyncioTestCase):
             await method.gdo_execute()
         audio.save_config_val.assert_awaited_once_with('audio_speech_volume', '42')
         method.reply.assert_called_once_with('video_duck_volume_set', ('42',))
-        self.assertEqual('duck.vol', method.gdo_trig())
+        self.assertEqual('vol', method.gdo_trig())
         self.assertEqual('owner', method.gdo_user_permission())
 
     def test_volume_parameter_is_bounded(self):

@@ -6,7 +6,7 @@ from gdo.core.GDT_Percent import GDT_Percent
 class duckvol(Method):
     @classmethod
     def gdo_trig(cls):
-        return 'duck.vol'
+        return 'vol'
 
     def gdo_user_permission(self):
         return 'owner'

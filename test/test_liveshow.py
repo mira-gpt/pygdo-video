@@ -130,7 +130,7 @@ class LiveShowTest(unittest.IsolatedAsyncioTestCase):
         field = GDT_MiraLiveMode().val('show')
         await module.on_mira_livemode_changed(None, field)
         module.connector.liveshow.assert_called_once_with(True)
-        module.connector.live_indicator.assert_called_once_with('show', None)
+        module.connector.live_indicator.assert_called_once_with('show', None, None)
         module.connector.start.assert_not_called()
         module.connector.microphone_meter.assert_not_called()
 

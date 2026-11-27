@@ -164,6 +164,21 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
         context.scale(effect_width / 640, effect_height / 360)
         context.set_source_rgb(1, .86, .18)
         context.select_font_face('Sans', cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        indicator = layers.get('live_indicator')
+        if indicator and indicator['mode'] == 'show' and indicator.get('title'):
+            layout = PangoCairo.create_layout(context)
+            layout.set_font_description(Pango.FontDescription('Sans Bold 10px'))
+            layout.set_width(400 * Pango.SCALE)
+            layout.set_ellipsize(Pango.EllipsizeMode.END)
+            layout.set_alignment(Pango.Alignment.CENTER)
+            layout.set_text(indicator['title'], -1)
+            context.move_to(120, 3)
+            PangoCairo.layout_path(context, layout)
+            context.set_source_rgb(0, 0, 0)
+            context.set_line_width(2)
+            context.stroke_preserve()
+            context.set_source_rgb(1, 1, 1)
+            context.fill()
         for key, layer in layers.ordered():
             if key == 'live_indicator':
                 context.save()
@@ -493,7 +508,7 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                     show_state['liveshow'] = request['enabled']
                 elif request.get('effect') == 'live_indicator' and request.get('mode') in ('off', 'work', 'show', 'discuss', 'recording') and isinstance(request.get('active'), bool):
                     label = request.get('label')
-                    layers.put('live_indicator', {'mode': request['mode'], 'label': label if isinstance(label, str) else None, 'active': request['active'],
+                    layers.put('live_indicator', {'mode': request['mode'], 'label': label if isinstance(label, str) else None, 'title': request.get('title'), 'active': request['active'],
                                                   'recording': request.get('recording') is True}, z=8000)
                 elif request.get('effect') == 'thoughts':
                     if request.get('remove') is True:

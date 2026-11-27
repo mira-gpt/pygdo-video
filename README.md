@@ -196,6 +196,21 @@ enable live-show mode when that is intended. No stream or microphone is started.
 whether a stream is broadcasting. `$live off|work|show|discuss` selects
 `mira_livemode`; the old `$live 0|1` forms mean `off|show`. An old
 `mira_quacking` setting remains the fallback until a new mode is saved.
+
+`$live.show <speech-iso> <ticker-iso> <host> [title] [--channel=1]` configures
+show mode. The optional channel flag marks the current channel as live; all
+marked channels use the speech language. The ticker language is a hint, not an
+automatic translation. The title appears at the top center during the show.
+Show mode alone does not confirm broadcasting.
+
+`video_thoughts_translate` is off by default. When enabled with the optional
+`translate` module installed and enabled, show commentary is written in
+`mira_ticker_baselang`, then sent to Google Translate for speech in
+`audio_microphone_language`. Only after translation succeeds does the ticker
+show the original and speech receive the translation. A translation failure
+suppresses both and logs an error. If translation is disabled or the module is
+unavailable, the existing commentary behavior is used. Google Cloud Translation
+requires the translate module's API key and sends commentary to Google.
 Selecting `show` requests the 3D duck and microphone meter overlays on; other
 modes request them off. `work` and `discuss` do not themselves control music or
 microphone routing. The video connector must already be running; the requests

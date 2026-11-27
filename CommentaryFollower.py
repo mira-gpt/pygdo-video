@@ -87,6 +87,9 @@ class CommentaryFollower(Thread):
         self.audio_smile_phrase = 'smile'
         self.audio_language = 'en'
         self.speech_queue = deque(maxlen=16)
+        self.translation_queue = deque(maxlen=16)
+        self.translation_config = None
+        self.translation_generation = 0
         self.stop_event = threading.Event()
         self.ready = threading.Event()
         self.name = 'video-commentary-follower'
@@ -97,6 +100,47 @@ class CommentaryFollower(Thread):
             if mode not in LIVE_MODES:
                 CommentaryTicker.clear()
                 self.speech_queue.clear()
+                self.translation_queue.clear()
+                self.translation_generation += 1
+
+    def set_translation(self, enabled, base='en', target='en'):
+        config = (base, target) if enabled else None
+        with self.mode_lock:
+            if config != self.translation_config:
+                self.translation_config = config
+                self.translation_queue.clear()
+                self.translation_generation += 1
+
+    def next_translation(self):
+        with self.mode_lock:
+            if self.translation_config and self.mode in LIVE_MODES and self.translation_queue:
+                return self.translation_queue.popleft(), self.translation_config, self.translation_generation
+            return None
+
+    def publish_translation(self, original, translated, generation):
+        with self.mode_lock:
+            if generation != self.translation_generation or self.mode not in LIVE_MODES or self.stop_event.is_set():
+                return False
+            for part in textwrap.wrap(original, width=300):
+                CommentaryTicker.set(part)
+            if self.audio_enabled:
+                self.speech_queue.extend(speech_sentences(speech_filter(
+                    translated, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
+            return True
+
+    def accept_commentary(self, text):
+        with self.mode_lock:
+            if self.mode not in LIVE_MODES or self.stop_event.is_set():
+                return
+            ticker, spoken = commentary_pair(text)
+            if self.translation_config:
+                self.translation_queue.append(ticker)
+            else:
+                for part in textwrap.wrap(ticker, width=300):
+                    CommentaryTicker.set(part)
+                if self.audio_enabled:
+                    self.speech_queue.extend(speech_sentences(speech_filter(
+                        spoken, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
 
     def set_audio(self, enabled, url_phrase='a link', smile_phrase='smile', language='en'):
         with self.mode_lock:
@@ -151,13 +195,7 @@ class CommentaryFollower(Thread):
                                     pending, oversized = b'', True
                             if part.endswith(b'\n'):
                                 if not oversized and (text := commentary(pending)):
-                                    with self.mode_lock:
-                                        if self.mode in LIVE_MODES and not self.stop_event.is_set():
-                                            ticker, spoken = commentary_pair(text)
-                                            for part in textwrap.wrap(ticker, width=300):
-                                                CommentaryTicker.set(part)
-                                            if self.audio_enabled:
-                                                self.speech_queue.extend(speech_sentences(speech_filter(spoken, self.audio_url_phrase, self.audio_smile_phrase, self.audio_language)))
+                                    self.accept_commentary(text)
                                 pending, oversized = b'', False
             except OSError:
                 self.stop_event.wait(2)

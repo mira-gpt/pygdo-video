@@ -13,7 +13,7 @@ from gdo.core.GDT_Container import GDT_Container
 SHOW_SETTINGS = {
     'video': ('video_mode', 'video_monitor', 'video_desktop_url',
               'video_duck_overlay', 'video_duck3d_overlay', 'video_mic_overlay',
-              'video_thoughts_overlay', 'video_thoughts_audio', 'video_stream_sidebar',
+              'video_thoughts_overlay', 'video_thoughts_audio', 'video_thoughts_translate', 'video_stream_sidebar',
               'video_timer_frequency'),
     'audio': ('audio_output_device', 'audio_output_session_user',
               'audio_microphone_session_user', 'audio_microphone',

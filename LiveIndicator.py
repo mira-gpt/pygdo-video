@@ -8,14 +8,17 @@ def indicator_text(mode, recording, now, label=None):
 
 
 class LiveIndicator:
-    def __init__(self, mode='off', recording_active=None, label=None):
+    def __init__(self, mode='off', recording_active=None, label=None, title=None):
         self.mode = mode
         self.label = label
+        self.title = title
         self.recording_active = recording_active or (lambda: False)
         try:
             self.font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 16)
+            self.title_font = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 10)
         except OSError:
             self.font = ImageFont.load_default()
+            self.title_font = self.font
 
     def draw(self, frame):
         try:
@@ -29,4 +32,8 @@ class LiveIndicator:
             color = (220, 0, 0)
         ImageDraw.Draw(frame).text((10, 10), text, font=self.font, fill=color,
                                    stroke_width=1, stroke_fill=(255, 255, 255))
+        if self.mode == 'show' and self.title:
+            draw = ImageDraw.Draw(frame)
+            draw.text((frame.width // 2, 4), self.title, font=self.title_font, fill='white',
+                      stroke_width=1, stroke_fill='black', anchor='mt')
         return True
