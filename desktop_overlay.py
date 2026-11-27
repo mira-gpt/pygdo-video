@@ -30,6 +30,7 @@ from TickerLayout import ticker_bounds, next_message_x, COMMENTARY_SPEED, commen
 from AwayScreen import AwayScreen, HEADER
 from XCompositeDesktop import XCompositeDesktop
 from DuckStatus import volume_label
+from StarWarsText import draw_line as draw_starwars_line
 
 
 def main(image_path, screensharing=False, window_suffix='', geometry=None):
@@ -418,10 +419,7 @@ def main(image_path, screensharing=False, window_suffix='', geometry=None):
                 y = 360 - scroll + i * 28
                 if not -40 <= y < 360:
                     continue
-                context.set_font_size(max(10, 12 + 15 * max(0, y) / 360))
-                extents = context.text_extents(line)
-                context.move_to((640 - extents.width) / 2, y)
-                context.show_text(line)
+                draw_starwars_line(context, line, y)
         return False
 
     def tick_effect():
